@@ -1,0 +1,995 @@
+{
+    "generated_at":  "2026-03-04T21:45:26.6811871Z",
+    "source":  "docs/R3AKTClient/APIANnalysis_clientImplementationSet.md",
+    "operation_count":  104,
+    "groups":  [
+                   {
+                       "name":  "Core Discovery and Session",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /Client",
+                                              "description":  "Lists all clients currently connected to the Hub, including their Reticulum identities and connection metadata"
+                                          },
+                                          {
+                                              "operation":  "GET /Events",
+                                              "description":  "Return recent hub events."
+                                          },
+                                          {
+                                              "operation":  "GET /Examples",
+                                              "description":  "Return command descriptions and JSON payload examples."
+                                          },
+                                          {
+                                              "operation":  "GET /Help",
+                                              "description":  "Return the list of supported commands."
+                                          },
+                                          {
+                                              "operation":  "POST /RCH",
+                                              "description":  "Join an RCH instance as the supplied identity."
+                                          },
+                                          {
+                                              "operation":  "PUT /RCH",
+                                              "description":  "Leave an RCH instance as the supplied identity."
+                                          },
+                                          {
+                                              "operation":  "POST /RTH",
+                                              "description":  "Legacy compatibility alias for join."
+                                          },
+                                          {
+                                              "operation":  "PUT /RTH",
+                                              "description":  "Legacy compatibility alias for leave."
+                                          },
+                                          {
+                                              "operation":  "GET /Status",
+                                              "description":  "Return dashboard status metrics."
+                                          },
+                                          {
+                                              "operation":  "GET /api/v1/app/info",
+                                              "description":  "returns the configured application metadata and component versions"
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "Telemetry and Live Status",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /Telemetry",
+                                              "description":  "Retrieve telemetry snapshots since a timestamp."
+                                          },
+                                          {
+                                              "operation":  "GET /events/system",
+                                              "description":  "WebSocket stream for system status + events."
+                                          },
+                                          {
+                                              "operation":  "GET /telemetry/stream",
+                                              "description":  "WebSocket stream for live telemetry."
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "Messaging and Chat",
+                       "operations":  [
+                                          {
+                                              "operation":  "POST /Message",
+                                              "description":  "Send a message into the hub."
+                                          },
+                                          {
+                                              "operation":  "GET /messages/stream",
+                                              "description":  "WebSocket stream for inbound/outbound messages."
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "Topics and Distribution",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /Topic",
+                                              "description":  "Retrieves a list of all Topic"
+                                          },
+                                          {
+                                              "operation":  "POST /Topic/Subscribe",
+                                              "description":  "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted)."
+                                          },
+                                          {
+                                              "operation":  "GET /Topic/{id}",
+                                              "description":  "retrieve an existing Topic record based on the provided ID."
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "Files and Media",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /File",
+                                              "description":  "List stored file attachments."
+                                          },
+                                          {
+                                              "operation":  "GET /File/{id}",
+                                              "description":  "Retrieve a stored file by its ID."
+                                          },
+                                          {
+                                              "operation":  "DELETE /File/{id}",
+                                              "description":  "Delete a stored file by its ID."
+                                          },
+                                          {
+                                              "operation":  "GET /File/{id}/raw",
+                                              "description":  "Download a stored file by its ID (raw bytes)."
+                                          },
+                                          {
+                                              "operation":  "GET /Image",
+                                              "description":  "List stored images."
+                                          },
+                                          {
+                                              "operation":  "GET /Image/{id}",
+                                              "description":  "Retrieve a stored image by its ID."
+                                          },
+                                          {
+                                              "operation":  "DELETE /Image/{id}",
+                                              "description":  "Delete a stored image by its ID."
+                                          },
+                                          {
+                                              "operation":  "GET /Image/{id}/raw",
+                                              "description":  "Download a stored image by its ID (raw bytes)."
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "Map, Markers, and Zones",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /api/markers",
+                                              "description":  "List stored operator markers."
+                                          },
+                                          {
+                                              "operation":  "POST /api/markers",
+                                              "description":  "Create a new operator marker."
+                                          },
+                                          {
+                                              "operation":  "GET /api/markers/symbols",
+                                              "description":  "List available marker symbols."
+                                          },
+                                          {
+                                              "operation":  "PATCH /api/markers/{object_destination_hash}/position",
+                                              "description":  "Update marker coordinates."
+                                          },
+                                          {
+                                              "operation":  "GET /api/zones",
+                                              "description":  "List stored operational zones."
+                                          },
+                                          {
+                                              "operation":  "POST /api/zones",
+                                              "description":  "Create a new operational zone."
+                                          },
+                                          {
+                                              "operation":  "PATCH /api/zones/{zone_id}",
+                                              "description":  "Update zone metadata and/or polygon points."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/zones/{zone_id}",
+                                              "description":  "Delete an operational zone."
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "R3AKT Mission Core",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /api/r3akt/capabilities/{identity}",
+                                              "description":  "List capability grants for an identity."
+                                          },
+                                          {
+                                              "operation":  "PUT /api/r3akt/capabilities/{identity}/{capability}",
+                                              "description":  "Grant capability to identity."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/capabilities/{identity}/{capability}",
+                                              "description":  "Revoke capability from identity."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/events",
+                                              "description":  "List domain events."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/log-entries",
+                                              "description":  "List mission log entries."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/log-entries",
+                                              "description":  "Create or update mission log entry."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/mission-changes",
+                                              "description":  "List mission changes."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/mission-changes",
+                                              "description":  "Create or update mission change."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/missions",
+                                              "description":  "List missions."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/missions",
+                                              "description":  "Create or update mission."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/missions/{mission_uid}",
+                                              "description":  "Retrieve mission by identifier."
+                                          },
+                                          {
+                                              "operation":  "PATCH /api/r3akt/missions/{mission_uid}",
+                                              "description":  "Patch mission fields."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/missions/{mission_uid}",
+                                              "description":  "Soft-delete mission."
+                                          },
+                                          {
+                                              "operation":  "PUT /api/r3akt/missions/{mission_uid}/parent",
+                                              "description":  "Set or clear mission parent."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/missions/{mission_uid}/rde",
+                                              "description":  "Retrieve mission role descriptor."
+                                          },
+                                          {
+                                              "operation":  "PUT /api/r3akt/missions/{mission_uid}/rde",
+                                              "description":  "Create or update mission role descriptor."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/missions/{mission_uid}/zones",
+                                              "description":  "List mission zone identifiers."
+                                          },
+                                          {
+                                              "operation":  "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}",
+                                              "description":  "Link mission to zone."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/missions/{mission_uid}/zones/{zone_id}",
+                                              "description":  "Unlink mission from zone."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/snapshots",
+                                              "description":  "List domain snapshots."
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "R3AKT Teams, People, and Skills",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /api/r3akt/skills",
+                                              "description":  "List skills."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/skills",
+                                              "description":  "Create or update skill."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/task-skill-requirements",
+                                              "description":  "List task skill requirements."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/task-skill-requirements",
+                                              "description":  "Create or update task skill requirement."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/team-member-skills",
+                                              "description":  "List team member skills."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/team-member-skills",
+                                              "description":  "Create or update team member skill."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/team-members",
+                                              "description":  "List team members."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/team-members",
+                                              "description":  "Create or update team member."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/team-members/{team_member_uid}",
+                                              "description":  "Retrieve a team member by uid."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/team-members/{team_member_uid}",
+                                              "description":  "Delete a team member."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/team-members/{team_member_uid}/clients",
+                                              "description":  "List linked client identities for a team member."
+                                          },
+                                          {
+                                              "operation":  "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}",
+                                              "description":  "Link a team member to a client identity."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}",
+                                              "description":  "Unlink a team member from a client identity."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/teams",
+                                              "description":  "List teams."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/teams",
+                                              "description":  "Create or update team."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/teams/{team_uid}",
+                                              "description":  "Retrieve a team by uid."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/teams/{team_uid}",
+                                              "description":  "Delete a team."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/teams/{team_uid}/missions",
+                                              "description":  "List mission assignments for a team."
+                                          },
+                                          {
+                                              "operation":  "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
+                                              "description":  "Link a team to a mission."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
+                                              "description":  "Unlink a team from a mission."
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "R3AKT Assets and Assignments",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /api/r3akt/assets",
+                                              "description":  "List assets."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/assets",
+                                              "description":  "Create or update asset."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/assets/{asset_uid}",
+                                              "description":  "Retrieve an asset by uid."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/assets/{asset_uid}",
+                                              "description":  "Delete an asset."
+                                          },
+                                          {
+                                              "operation":  "GET /api/r3akt/assignments",
+                                              "description":  "List mission task assignments."
+                                          },
+                                          {
+                                              "operation":  "POST /api/r3akt/assignments",
+                                              "description":  "Create or update assignment."
+                                          },
+                                          {
+                                              "operation":  "PUT /api/r3akt/assignments/{assignment_uid}/assets",
+                                              "description":  "Replace assignment asset links."
+                                          },
+                                          {
+                                              "operation":  "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}",
+                                              "description":  "Link assignment to asset."
+                                          },
+                                          {
+                                              "operation":  "DELETE /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}",
+                                              "description":  "Unlink assignment from asset."
+                                          }
+                                      ]
+                   },
+                   {
+                       "name":  "Checklists",
+                       "operations":  [
+                                          {
+                                              "operation":  "GET /checklists",
+                                              "description":  "List active checklists."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists",
+                                              "description":  "Create online checklist."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/import/csv",
+                                              "description":  "Import checklist from CSV."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/offline",
+                                              "description":  "Create offline checklist."
+                                          },
+                                          {
+                                              "operation":  "GET /checklists/templates",
+                                              "description":  "List checklist templates."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/templates",
+                                              "description":  "Create checklist template."
+                                          },
+                                          {
+                                              "operation":  "GET /checklists/templates/{template_id}",
+                                              "description":  "Get checklist template details."
+                                          },
+                                          {
+                                              "operation":  "PATCH /checklists/templates/{template_id}",
+                                              "description":  "Update checklist template."
+                                          },
+                                          {
+                                              "operation":  "DELETE /checklists/templates/{template_id}",
+                                              "description":  "Delete checklist template."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/templates/{template_id}/clone",
+                                              "description":  "Clone checklist template."
+                                          },
+                                          {
+                                              "operation":  "GET /checklists/{checklist_id}",
+                                              "description":  "Get checklist details."
+                                          },
+                                          {
+                                              "operation":  "PATCH /checklists/{checklist_id}",
+                                              "description":  "Update checklist metadata and mission link."
+                                          },
+                                          {
+                                              "operation":  "DELETE /checklists/{checklist_id}",
+                                              "description":  "Delete checklist instance."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/{checklist_id}/feeds/{feed_id}",
+                                              "description":  "Publish checklist to mission feed."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/{checklist_id}/join",
+                                              "description":  "Join checklist updates."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/{checklist_id}/tasks",
+                                              "description":  "Add checklist task row."
+                                          },
+                                          {
+                                              "operation":  "DELETE /checklists/{checklist_id}/tasks/{task_id}",
+                                              "description":  "Delete checklist task row."
+                                          },
+                                          {
+                                              "operation":  "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}",
+                                              "description":  "Set checklist task cell value."
+                                          },
+                                          {
+                                              "operation":  "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style",
+                                              "description":  "Set checklist task row style."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/{checklist_id}/tasks/{task_id}/status",
+                                              "description":  "Set checklist task status."
+                                          },
+                                          {
+                                              "operation":  "POST /checklists/{checklist_id}/upload",
+                                              "description":  "Upload checklist and mark synced."
+                                          }
+                                      ]
+                   }
+               ],
+    "operations":  [
+                       {
+                           "operation":  "GET /Client",
+                           "description":  "Lists all clients currently connected to the Hub, including their Reticulum identities and connection metadata",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "PATCH /checklists/{checklist_id}",
+                           "description":  "Update checklist metadata and mission link.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "GET /Topic/{id}",
+                           "description":  "retrieve an existing Topic record based on the provided ID.",
+                           "group":  "Topics and Distribution"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/team-members/{team_member_uid}/clients",
+                           "description":  "List linked client identities for a team member.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /Telemetry",
+                           "description":  "Retrieve telemetry snapshots since a timestamp.",
+                           "group":  "Telemetry and Live Status"
+                       },
+                       {
+                           "operation":  "PUT /RCH",
+                           "description":  "Leave an RCH instance as the supplied identity.",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/team-member-skills",
+                           "description":  "List team member skills.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /api/v1/app/info",
+                           "description":  "returns the configured application metadata and component versions",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/teams/{team_uid}/missions",
+                           "description":  "List mission assignments for a team.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "DELETE /checklists/{checklist_id}",
+                           "description":  "Delete checklist instance.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "GET /checklists",
+                           "description":  "List active checklists.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "POST /checklists/{checklist_id}/upload",
+                           "description":  "Upload checklist and mark synced.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/assets",
+                           "description":  "List assets.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "PATCH /api/r3akt/missions/{mission_uid}",
+                           "description":  "Patch mission fields.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /File/{id}/raw",
+                           "description":  "Download a stored file by its ID (raw bytes).",
+                           "group":  "Files and Media"
+                       },
+                       {
+                           "operation":  "GET /checklists/templates",
+                           "description":  "List checklist templates.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}",
+                           "description":  "Unlink a team member from a client identity.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/log-entries",
+                           "description":  "List mission log entries.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}",
+                           "description":  "Link mission to zone.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/mission-changes",
+                           "description":  "Create or update mission change.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "POST /Message",
+                           "description":  "Send a message into the hub.",
+                           "group":  "Messaging and Chat"
+                       },
+                       {
+                           "operation":  "GET /Help",
+                           "description":  "Return the list of supported commands.",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "PUT /RTH",
+                           "description":  "Legacy compatibility alias for leave.",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "GET /messages/stream",
+                           "description":  "WebSocket stream for inbound/outbound messages.",
+                           "group":  "Messaging and Chat"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/mission-changes",
+                           "description":  "List mission changes.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /api/markers",
+                           "description":  "List stored operator markers.",
+                           "group":  "Map, Markers, and Zones"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/task-skill-requirements",
+                           "description":  "Create or update task skill requirement.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "POST /checklists/{checklist_id}/join",
+                           "description":  "Join checklist updates.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "GET /Image",
+                           "description":  "List stored images.",
+                           "group":  "Files and Media"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/team-member-skills",
+                           "description":  "Create or update team member skill.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /api/zones",
+                           "description":  "List stored operational zones.",
+                           "group":  "Map, Markers, and Zones"
+                       },
+                       {
+                           "operation":  "GET /events/system",
+                           "description":  "WebSocket stream for system status + events.",
+                           "group":  "Telemetry and Live Status"
+                       },
+                       {
+                           "operation":  "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style",
+                           "description":  "Set checklist task row style.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "DELETE /Image/{id}",
+                           "description":  "Delete a stored image by its ID.",
+                           "group":  "Files and Media"
+                       },
+                       {
+                           "operation":  "POST /checklists/{checklist_id}/feeds/{feed_id}",
+                           "description":  "Publish checklist to mission feed.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "POST /Topic/Subscribe",
+                           "description":  "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted).",
+                           "group":  "Topics and Distribution"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/team-members/{team_member_uid}",
+                           "description":  "Delete a team member.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/teams/{team_uid}",
+                           "description":  "Delete a team.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/team-members/{team_member_uid}",
+                           "description":  "Retrieve a team member by uid.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /Status",
+                           "description":  "Return dashboard status metrics.",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/team-members",
+                           "description":  "List team members.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /Topic",
+                           "description":  "Retrieves a list of all Topic",
+                           "group":  "Topics and Distribution"
+                       },
+                       {
+                           "operation":  "DELETE /api/zones/{zone_id}",
+                           "description":  "Delete an operational zone.",
+                           "group":  "Map, Markers, and Zones"
+                       },
+                       {
+                           "operation":  "GET /Events",
+                           "description":  "Return recent hub events.",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/teams/{team_uid}",
+                           "description":  "Retrieve a team by uid.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "DELETE /checklists/templates/{template_id}",
+                           "description":  "Delete checklist template.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/missions/{mission_uid}/zones",
+                           "description":  "List mission zone identifiers.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "POST /checklists/{checklist_id}/tasks",
+                           "description":  "Add checklist task row.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "PUT /api/r3akt/missions/{mission_uid}/rde",
+                           "description":  "Create or update mission role descriptor.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}",
+                           "description":  "Unlink assignment from asset.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/missions/{mission_uid}/zones/{zone_id}",
+                           "description":  "Unlink mission from zone.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "DELETE /File/{id}",
+                           "description":  "Delete a stored file by its ID.",
+                           "group":  "Files and Media"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/snapshots",
+                           "description":  "List domain snapshots.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/assets",
+                           "description":  "Create or update asset.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "DELETE /checklists/{checklist_id}/tasks/{task_id}",
+                           "description":  "Delete checklist task row.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/team-members",
+                           "description":  "Create or update team member.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "PUT /api/r3akt/capabilities/{identity}/{capability}",
+                           "description":  "Grant capability to identity.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/task-skill-requirements",
+                           "description":  "List task skill requirements.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}",
+                           "description":  "Set checklist task cell value.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "POST /api/markers",
+                           "description":  "Create a new operator marker.",
+                           "group":  "Map, Markers, and Zones"
+                       },
+                       {
+                           "operation":  "POST /checklists/templates",
+                           "description":  "Create checklist template.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "PATCH /api/markers/{object_destination_hash}/position",
+                           "description":  "Update marker coordinates.",
+                           "group":  "Map, Markers, and Zones"
+                       },
+                       {
+                           "operation":  "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
+                           "description":  "Link a team to a mission.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/missions/{mission_uid}",
+                           "description":  "Soft-delete mission.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "POST /checklists",
+                           "description":  "Create online checklist.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "POST /checklists/import/csv",
+                           "description":  "Import checklist from CSV.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/log-entries",
+                           "description":  "Create or update mission log entry.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/missions/{mission_uid}/rde",
+                           "description":  "Retrieve mission role descriptor.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/capabilities/{identity}",
+                           "description":  "List capability grants for an identity.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "PUT /api/r3akt/assignments/{assignment_uid}/assets",
+                           "description":  "Replace assignment asset links.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "PATCH /checklists/templates/{template_id}",
+                           "description":  "Update checklist template.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/missions",
+                           "description":  "Create or update mission.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /File",
+                           "description":  "List stored file attachments.",
+                           "group":  "Files and Media"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/assignments",
+                           "description":  "Create or update assignment.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}",
+                           "description":  "Link assignment to asset.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/teams",
+                           "description":  "List teams.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /Image/{id}",
+                           "description":  "Retrieve a stored image by its ID.",
+                           "group":  "Files and Media"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/assets/{asset_uid}",
+                           "description":  "Delete an asset.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "GET /telemetry/stream",
+                           "description":  "WebSocket stream for live telemetry.",
+                           "group":  "Telemetry and Live Status"
+                       },
+                       {
+                           "operation":  "POST /RCH",
+                           "description":  "Join an RCH instance as the supplied identity.",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "PUT /api/r3akt/missions/{mission_uid}/parent",
+                           "description":  "Set or clear mission parent.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "POST /checklists/{checklist_id}/tasks/{task_id}/status",
+                           "description":  "Set checklist task status.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/missions/{mission_uid}",
+                           "description":  "Retrieve mission by identifier.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "POST /checklists/offline",
+                           "description":  "Create offline checklist.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/missions",
+                           "description":  "List missions.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/assets/{asset_uid}",
+                           "description":  "Retrieve an asset by uid.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "GET /Image/{id}/raw",
+                           "description":  "Download a stored image by its ID (raw bytes).",
+                           "group":  "Files and Media"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/capabilities/{identity}/{capability}",
+                           "description":  "Revoke capability from identity.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/skills",
+                           "description":  "List skills.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}",
+                           "description":  "Link a team member to a client identity.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /api/markers/symbols",
+                           "description":  "List available marker symbols.",
+                           "group":  "Map, Markers, and Zones"
+                       },
+                       {
+                           "operation":  "POST /RTH",
+                           "description":  "Legacy compatibility alias for join.",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "PATCH /api/zones/{zone_id}",
+                           "description":  "Update zone metadata and/or polygon points.",
+                           "group":  "Map, Markers, and Zones"
+                       },
+                       {
+                           "operation":  "GET /Examples",
+                           "description":  "Return command descriptions and JSON payload examples.",
+                           "group":  "Core Discovery and Session"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/teams",
+                           "description":  "Create or update team.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /File/{id}",
+                           "description":  "Retrieve a stored file by its ID.",
+                           "group":  "Files and Media"
+                       },
+                       {
+                           "operation":  "POST /api/zones",
+                           "description":  "Create a new operational zone.",
+                           "group":  "Map, Markers, and Zones"
+                       },
+                       {
+                           "operation":  "GET /checklists/{checklist_id}",
+                           "description":  "Get checklist details.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "POST /checklists/templates/{template_id}/clone",
+                           "description":  "Clone checklist template.",
+                           "group":  "Checklists"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/assignments",
+                           "description":  "List mission task assignments.",
+                           "group":  "R3AKT Assets and Assignments"
+                       },
+                       {
+                           "operation":  "DELETE /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
+                           "description":  "Unlink a team from a mission.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "POST /api/r3akt/skills",
+                           "description":  "Create or update skill.",
+                           "group":  "R3AKT Teams, People, and Skills"
+                       },
+                       {
+                           "operation":  "GET /api/r3akt/events",
+                           "description":  "List domain events.",
+                           "group":  "R3AKT Mission Core"
+                       },
+                       {
+                           "operation":  "GET /checklists/templates/{template_id}",
+                           "description":  "Get checklist template details.",
+                           "group":  "Checklists"
+                       }
+                   ]
+}

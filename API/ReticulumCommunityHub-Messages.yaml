@@ -1,0 +1,477 @@
+catalog_version: 0.1.0
+status: starter
+product:
+  name: ReticulumCommunityHub-Messages
+  objective: >
+    Canonical starter message catalog for the Android-first RCH client that runs
+    a local Rust Reticulum + LXMF stack on-device.
+  target_clients:
+    - android
+    - ios
+sources:
+  openapi_contract: C:/Users/broth/Documents/work/ATAK/src/Reticulum-Telemetry-Hub/API/ReticulumCommunityHub-OAS.yaml
+  operation_inventory: docs/R3AKTClient/APIANnalysis.md
+  client_allowlist: docs/R3AKTClient/APIANnalysis_clientImplementationSet.md
+  lxmf_contract: docs/R3AKTClient/R3AKT_ReticulumPayload.md
+  backend_reference_repo: C:/Users/broth/Documents/work/ATAK/src/Reticulum-Telemetry-Hub
+scope:
+  include_only: client
+  exclude:
+    - server-only
+    - unknown
+notes:
+  - This is a starter catalog, not the full 104-operation inventory.
+  - Message type identifiers are the canonical names for the mobile client.
+  - Southbound bindings may use either legacy LXMF commands or mission-sync envelopes depending on current RCH behavior.
+canonical_envelope:
+  description: Shared logical envelope for internal runtime, native bridge, and TypeScript surfaces.
+  fields:
+    api_version:
+      type: string
+      required: true
+      example: "1.0"
+    message_id:
+      type: string
+      required: true
+    correlation_id:
+      type: string
+      required: false
+      notes:
+        - Required on replies, async results, and propagated errors.
+    kind:
+      type: string
+      required: true
+      enum:
+        - command
+        - query
+        - result
+        - event
+        - error
+    type:
+      type: string
+      required: true
+    issuer:
+      type: string
+      required: true
+      enum:
+        - ui
+        - mobile-runtime
+        - reticulum
+        - rch
+        - peer
+        - internal
+    issued_at:
+      type: string
+      required: true
+      format: date-time
+    payload:
+      type: object
+      required: true
+transport_bindings:
+  southbound:
+    protocol: reticulum-lxmf
+    variants:
+      legacy_command:
+        request:
+          body_mode: escape-prefixed-text-or-json
+          request_shape:
+            command: string
+            args: object
+        response:
+          fields:
+            results: FIELD_RESULTS
+            event: FIELD_EVENT
+      mission_sync:
+        request:
+          preferred_field: FIELD_COMMANDS
+          field_hex: "0x09"
+          envelope:
+            command_id: string
+            source:
+              rns_identity: string
+            timestamp: date-time
+            command_type: string
+            args: object
+            correlation_id: string?
+            topics:
+              - string
+        response:
+          fields:
+            results:
+              name: FIELD_RESULTS
+              hex: "0x0A"
+            group:
+              name: FIELD_GROUP
+              hex: "0x0B"
+            event:
+              name: FIELD_EVENT
+              hex: "0x0D"
+            custom_type:
+              name: FIELD_CUSTOM_TYPE
+              hex: "0xFB"
+            custom_data:
+              name: FIELD_CUSTOM_DATA
+              hex: "0xFC"
+            custom_meta:
+              name: FIELD_CUSTOM_META
+              hex: "0xFD"
+  northbound:
+    protocol: capacitor-plugin
+    path: packages/node-client -> apps/mobile
+starter_messages:
+  - type: client.session.join
+    kind: command
+    phase: 1
+    source_operation: POST /RCH
+    capability: mission.join
+    southbound:
+      mode: mission_sync
+      command_type: mission.join
+      args:
+        required:
+          - identity
+        properties:
+          identity: string
+    result:
+      payload:
+        identity: string
+        joined: boolean
+    emitted_events:
+      - event_type: mission.joined
+        payload_ref: client.session.join.result
+
+  - type: client.session.leave
+    kind: command
+    phase: 1
+    source_operation: PUT /RCH
+    capability: mission.leave
+    southbound:
+      mode: mission_sync
+      command_type: mission.leave
+      args:
+        required:
+          - identity
+        properties:
+          identity: string
+    result:
+      payload:
+        identity: string
+        left: boolean
+    emitted_events:
+      - event_type: mission.left
+        payload_ref: client.session.leave.result
+
+  - type: client.system.events.list
+    kind: query
+    phase: 1
+    source_operation: GET /Events
+    capability: mission.audit.read
+    southbound:
+      mode: mission_sync
+      command_type: mission.events.list
+      args:
+        required: []
+        properties: {}
+    result:
+      payload:
+        events:
+          type: array
+          items: object
+    emitted_events:
+      - event_type: mission.events.listed
+        payload_ref: client.system.events.list.result
+
+  - type: client.message.send
+    kind: command
+    phase: 3
+    source_operation: POST /Message
+    capability: mission.message.send
+    southbound:
+      mode: mission_sync
+      command_type: mission.message.send
+      args:
+        required:
+          - content
+        properties:
+          content: string
+          topic_id: string?
+          destination: string?
+    result:
+      payload:
+        sent: boolean
+        content: string
+        topic_id: string?
+        destination: string?
+    emitted_events:
+      - event_type: mission.message.sent
+        payload_ref: client.message.send.result
+
+  - type: client.topic.list
+    kind: query
+    phase: 4
+    source_operation: GET /Topic
+    capability: topic.read
+    southbound:
+      mode: mission_sync
+      command_type: topic.list
+      args:
+        required: []
+        properties: {}
+    result:
+      payload:
+        topics:
+          type: array
+          items:
+            topic_id: string
+            topic_name: string?
+            topic_path: string?
+            topic_description: string?
+    emitted_events:
+      - event_type: mission.topic.listed
+        payload_ref: client.topic.list.result
+
+  - type: client.topic.subscribe
+    kind: command
+    phase: 4
+    source_operation: POST /Topic/Subscribe
+    capability: topic.subscribe
+    southbound:
+      mode: mission_sync
+      command_type: topic.subscribe
+      args:
+        required:
+          - topic_id
+        properties:
+          topic_id: string
+          destination: string?
+          reject_tests: integer?
+          metadata: object?
+    result:
+      payload:
+        subscriber: object
+    emitted_events:
+      - event_type: mission.topic.subscribed
+        payload_ref: client.topic.subscribe.result
+
+  - type: client.marker.list
+    kind: query
+    phase: 6
+    source_operation: GET /api/markers
+    capability: mission.content.read
+    southbound:
+      mode: mission_sync
+      command_type: mission.marker.list
+      args:
+        required: []
+        properties: {}
+    result:
+      payload:
+        markers:
+          type: array
+          items: object
+    emitted_events:
+      - event_type: mission.marker.listed
+        payload_ref: client.marker.list.result
+
+  - type: client.marker.create
+    kind: command
+    phase: 6
+    source_operation: POST /api/markers
+    capability: mission.content.write
+    southbound:
+      mode: mission_sync
+      command_type: mission.marker.create
+      args:
+        required:
+          - lat
+          - lon
+        properties:
+          lat: number
+          lon: number
+          name: string?
+          description: string?
+          symbol: string?
+          mission_uid: string?
+    result:
+      payload:
+        marker: object
+    emitted_events:
+      - event_type: mission.marker.created
+        payload_ref: client.marker.create.result
+
+  - type: client.r3akt.mission.list
+    kind: query
+    phase: 7
+    source_operation: GET /api/r3akt/missions
+    capability: mission.registry.mission.read
+    southbound:
+      mode: mission_sync
+      command_type: mission.registry.mission.list
+      args:
+        required: []
+        properties:
+          expand_topic: boolean?
+          expand:
+            type: string-or-string-array
+    result:
+      payload:
+        missions:
+          type: array
+          items: object
+    emitted_events:
+      - event_type: mission.registry.mission.listed
+        payload_ref: client.r3akt.mission.list.result
+
+  - type: client.r3akt.mission.upsert
+    kind: command
+    phase: 7
+    source_operation: POST /api/r3akt/missions
+    capability: mission.registry.mission.write
+    southbound:
+      mode: mission_sync
+      command_type: mission.registry.mission.upsert
+      args:
+        required: []
+        properties:
+          uid: string?
+          mission_name: string?
+          name: string?
+          description: string?
+          topic_id: string?
+          path: string?
+          classification: string?
+          tool: string?
+          keywords:
+            type: array
+            items: string
+          parent_uid: string?
+          feeds:
+            type: array
+            items: string
+          password_hash: string?
+          default_role: string?
+          owner_role: string?
+          mission_status: string?
+          mission_priority: integer?
+          token: string?
+          invite_only: boolean?
+          expiration: date-time?
+          mission_rde_role: string?
+    result:
+      payload:
+        mission: object
+    emitted_events:
+      - event_type: mission.registry.mission.upserted
+        payload_ref: client.r3akt.mission.upsert.result
+
+  - type: client.r3akt.log_entry.list
+    kind: query
+    phase: 7
+    source_operation: GET /api/r3akt/log-entries
+    capability: mission.registry.log.read
+    southbound:
+      mode: mission_sync
+      command_type: mission.registry.log_entry.list
+      args:
+        required: []
+        properties:
+          mission_uid: string?
+          marker_ref: string?
+    result:
+      payload:
+        log_entries:
+          type: array
+          items: object
+    emitted_events:
+      - event_type: mission.registry.log_entry.listed
+        payload_ref: client.r3akt.log_entry.list.result
+
+  - type: client.r3akt.log_entry.upsert
+    kind: command
+    phase: 7
+    source_operation: POST /api/r3akt/log-entries
+    capability: mission.registry.log.write
+    southbound:
+      mode: mission_sync
+      command_type: mission.registry.log_entry.upsert
+      args:
+        required:
+          - mission_uid
+        properties:
+          entry_uid: string?
+          uid: string?
+          mission_uid: string
+          mission_id: string?
+          content: string?
+          server_time: date-time?
+          servertime: date-time?
+          client_time: date-time?
+          clientTime: date-time?
+          clienttime: date-time?
+          content_hashes:
+            type: array
+            items: string
+          contenthashes:
+            type: array
+            items: string
+          keywords:
+            type: array
+            items: string
+    result:
+      payload:
+        entry_uid: string
+        mission_uid: string
+        content: string
+        server_time: date-time
+        client_time: date-time?
+        content_hashes:
+          type: array
+          items: string
+        keywords:
+          type: array
+          items: string
+        created_at: date-time
+        updated_at: date-time
+    emitted_events:
+      - event_type: mission.registry.log_entry.upserted
+        payload_ref: client.r3akt.log_entry.upsert.result
+      - event_type: mission.registry.mission_change.upserted
+        payload_ref: r3akt.mission.delta.custom
+        transport_field: FIELD_CUSTOM_DATA
+
+  - type: client.stream.system
+    kind: event
+    phase: 2
+    source_operation: GET /events/system
+    northbound:
+      subscription: system
+      payloads:
+        - system.status
+        - system.event
+
+  - type: client.stream.messages
+    kind: event
+    phase: 3
+    source_operation: GET /messages/stream
+    northbound:
+      subscription: messages
+      payloads:
+        - message.receive
+        - message.sent
+
+  - type: client.stream.telemetry
+    kind: event
+    phase: 2
+    source_operation: GET /telemetry/stream
+    northbound:
+      subscription: telemetry
+      payloads:
+        - telemetry.update
+backlog_reference:
+  remaining_operation_source: docs/R3AKTClient/APIANnalysis_clientImplementationSet.md
+  next_families_to_expand:
+    - files-and-media
+    - zones
+    - r3akt-team-and-skill-registries
+    - assets-and-assignments
+    - checklists
