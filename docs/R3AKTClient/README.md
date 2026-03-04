@@ -22,6 +22,22 @@ client for the client-safe feature surface that RCH already exposes.
   RCH operations classified as `client`, including the R3AKT mission,
   checklist, team, asset, and assignment workflows.
 
+## Consolidated Runtime Dependencies
+
+The runtime is pinned to the sibling consolidated `LXMF-rs` checkout rather
+than mixed crates.io/git transport crates.
+
+- Required sibling path: `../LXMF-rs`
+- Validated commit: `0052218f1247c68f8c925988299d33d0678d81b4`
+- Runtime adapter model: in-process `lxmf-sdk` (`v2.5` contract shape) backed
+  by local legacy transport crates from the same consolidated repository
+
+Build validation gates:
+
+1. `cargo check -p reticulum_mobile`
+2. `npm run node-client:build`
+3. `npm run mobile:build`
+
 ## Primary Documents
 
 - [../../API/ReticulumCommunityHub-Messages.yaml](../../API/ReticulumCommunityHub-Messages.yaml): canonical starter message catalog for the mobile client

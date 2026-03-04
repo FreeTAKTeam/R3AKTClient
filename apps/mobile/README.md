@@ -58,10 +58,20 @@ separate app.
 
 ## Local development
 
+Rust runtime dependencies for this app are sourced from the sibling consolidated
+`LXMF-rs` checkout (`../LXMF-rs`) and validated against commit
+`0052218f1247c68f8c925988299d33d0678d81b4`.
+
 From repo root:
 
 1. Install dependencies (once): `npm install`
 2. Start app dev server: `npm run mobile:dev`
+
+Validation gates from repo root:
+
+1. `cargo check -p reticulum_mobile`
+2. `npm run node-client:build`
+3. `npm run mobile:build`
 
 Or from `apps/mobile` directly:
 

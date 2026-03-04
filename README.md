@@ -28,3 +28,31 @@ The target state extends that scaffold into full `client`-scoped RCH parity.
 - `crates/reticulum_mobile`: Rust UniFFI wrapper crate
 - `tools/codegen`: scripts for UniFFI code generation
 - `docs/R3AKTClient`: architecture, scope, and wire-contract references for the RCH client work
+
+## Consolidated LXMF-rs Dependency Model
+
+`R3AKTClient` now consumes the local consolidated `LXMF-rs` checkout instead of
+mixing crates.io and git transport dependencies.
+
+Required sibling layout:
+
+- `../R3AKTClient`
+- `../LXMF-rs`
+
+Pinned and validated against `LXMF-rs` commit:
+
+- `0052218f1247c68f8c925988299d33d0678d81b4`
+
+Rust dependency sources used by `crates/reticulum_mobile`:
+
+- `../LXMF-rs/crates/internal/reticulum-legacy` (`reticulum`)
+- `../LXMF-rs/crates/internal/lxmf-legacy` (`lxmf`)
+- `../LXMF-rs/crates/libs/lxmf-sdk` (`lxmf-sdk`, `std` feature only)
+
+## Validation Commands
+
+From repo root:
+
+1. `cargo check -p reticulum_mobile`
+2. `npm run node-client:build`
+3. `npm run mobile:build`

@@ -4,6 +4,7 @@ mod jni_bridge;
 mod logger;
 mod node;
 mod runtime;
+mod sdk_backend;
 mod types;
 
 pub use node::{EventSubscription, Node};

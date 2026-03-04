@@ -2,6 +2,7 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 
 import {
   CLIENT_OPERATION_CATALOG,
+  CLIENT_OPERATION_KEYS,
   type ClientFeatureGroup,
   type ClientOperation,
   type ClientOperationEntry,

@@ -860,9 +860,9 @@ checksum = "6800badb6cb2082ffd7b6a67e6125bb39f18782f793520caee8cb8846be06112"
 
 [[package]]
 name = "libsqlite3-sys"
-version = "0.30.1"
+version = "0.28.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e99fb7a497b1e3339bc746195567ed8d3e24945ecd636e3619d20b9de9e9149"
+checksum = "0c10584274047cb335c23d3e61bcef8e323adae7c5c8c760540f73610177fc3f"
 dependencies = [
  "cc",
  "pkg-config",
@@ -898,23 +898,35 @@ checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
 name = "lxmf"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2c457f41e740450b22880ce7669558b661e04e1176f41d1c697ff6b50d100b8"
+version = "0.3.0"
 dependencies = [
  "base64",
  "ed25519-dalek",
  "hex",
  "hkdf",
  "rand_core 0.6.4",
- "reticulum-rs",
+ "reticulum",
  "rmp-serde",
  "rmpv",
  "serde",
  "serde_bytes",
+ "serde_json",
  "sha2",
  "thiserror 1.0.69",
  "x25519-dalek",
+]
+
+[[package]]
+name = "lxmf-sdk"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "hmac",
+ "serde",
+ "serde_json",
+ "sha2",
+ "thiserror 1.0.69",
+ "zeroize",
 ]
 
 [[package]]
@@ -1262,9 +1274,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "reticulum-rs"
+name = "reticulum"
 version = "0.1.3"
-source = "git+https://github.com/FreeTAKTeam/Reticulum-rs#b164567d9f4fd3036db9d8c91b3662ae972bc8e7"
 dependencies = [
  "aes",
  "bzip2",
@@ -1300,10 +1311,11 @@ dependencies = [
  "jni",
  "log",
  "lxmf",
+ "lxmf-sdk",
  "rand_core 0.6.4",
  "regex",
  "reqwest",
- "reticulum-rs",
+ "reticulum",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -1357,9 +1369,9 @@ dependencies = [
 
 [[package]]
 name = "rusqlite"
-version = "0.32.1"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7753b721174eb8ff87a9a0e799e2d7bc3749323e773db92e0984debb00019d6e"
+checksum = "b838eba278d213a8beaf485bd313fd580ca4505a00d5871caeb1457c55322cae"
 dependencies = [
  "bitflags",
  "fallible-iterator",

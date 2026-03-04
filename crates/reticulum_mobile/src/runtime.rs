@@ -6,6 +6,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crossbeam_channel as cb;
 use fs_err as fs;
 use lxmf::message::Message as LxmfMessage;
+use lxmf_sdk::{
+    Client as SdkClient, ErrorCategory as SdkErrorCategory, EventBatch, EventCursor, LxmfSdk,
+    SdkConfig, SendRequest as SdkSendRequest, StartRequest as SdkStartRequest,
+};
 use rand_core::OsRng;
 use regex::Regex;
 use reticulum::destination::link::{LinkEvent, LinkStatus};
@@ -19,6 +23,7 @@ use tokio::sync::{mpsc, Mutex as TokioMutex};
 
 use crate::event_bus::EventBus;
 use crate::generated::client_operations::CLIENT_OPERATION_KEYS;
+use crate::sdk_backend::InProcessSdkBackend;
 use crate::types::{
     EnvelopeKind, HubMode, MessageEnvelope, NodeConfig, NodeError, NodeEvent, NodeStatus,
     PeerChange, PeerState, SendOutcome,
@@ -319,6 +324,73 @@ fn validate_envelope(mut envelope: MessageEnvelope) -> Result<MessageEnvelope, N
     }
     Ok(envelope)
 }
+
+fn node_error_from_sdk(error: lxmf_sdk::SdkError) -> NodeError {
+    match error.category {
+        SdkErrorCategory::Validation | SdkErrorCategory::Capability | SdkErrorCategory::Config => {
+            NodeError::InvalidConfig {}
+        }
+        SdkErrorCategory::Transport | SdkErrorCategory::Timeout => NodeError::NetworkError {},
+        SdkErrorCategory::Runtime => NodeError::InternalError {},
+        _ => NodeError::InternalError {},
+    }
+}
+
+fn sdk_start_request() -> SdkStartRequest {
+    SdkStartRequest::new(SdkConfig::desktop_local_default())
+        .with_requested_capability("sdk.capability.cursor_replay")
+        .with_requested_capability("sdk.capability.config_revision_cas")
+}
+
+fn envelope_kind_as_str(kind: &EnvelopeKind) -> &'static str {
+    match kind {
+        EnvelopeKind::Command => "command",
+        EnvelopeKind::Query => "query",
+        EnvelopeKind::Result => "result",
+        EnvelopeKind::Event => "event",
+        EnvelopeKind::Error => "error",
+    }
+}
+
+fn sdk_send_request(
+    envelope: &MessageEnvelope,
+    source_identity_hex: &str,
+    hub_identity_hex: &str,
+) -> SdkSendRequest {
+    let mut request = SdkSendRequest::new(
+        source_identity_hex,
+        hub_identity_hex,
+        serde_json::json!({
+            "api_version": envelope.api_version,
+            "message_id": envelope.message_id,
+            "correlation_id": envelope.correlation_id,
+            "kind": envelope_kind_as_str(&envelope.kind),
+            "type": envelope.r#type,
+            "issuer": envelope.issuer,
+            "issued_at": envelope.issued_at,
+            "payload": envelope.payload,
+        }),
+    )
+    .with_idempotency_key(envelope.message_id.clone());
+    if let Some(correlation) = envelope.correlation_id.clone() {
+        request = request.with_correlation_id(correlation);
+    }
+    request
+}
+
+fn response_json_from_event_batch(batch: &EventBatch, message_id: &str) -> Option<String> {
+    batch.events.iter().rev().find_map(|event| {
+        if event.message_id.as_deref() != Some(message_id) {
+            return None;
+        }
+        event
+            .payload
+            .get("response_json")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string)
+    })
+}
+
 fn create_transport_data_packet(destination: AddressHash, bytes: &[u8]) -> Packet {
     let mut packet = Packet::default();
     packet.header.propagation_type = PropagationType::Transport;
@@ -676,6 +748,37 @@ pub async fn run_node(
         bus.emit(NodeEvent::StatusChanged { status: guard.clone() });
     }
 
+    let sdk_executor = {
+        let config = config.clone();
+        let state = state.clone();
+        Arc::new(move |envelope: MessageEnvelope| -> Result<String, NodeError> {
+            let config = config.clone();
+            let state = state.clone();
+            let task = async move { execute_envelope_over_lxmf(&config, &state, &envelope).await };
+            match tokio::runtime::Handle::try_current() {
+                Ok(handle) => tokio::task::block_in_place(|| handle.block_on(task)),
+                Err(_) => {
+                    let runtime =
+                        tokio::runtime::Runtime::new().map_err(|_| NodeError::InternalError {})?;
+                    runtime.block_on(task)
+                }
+            }
+        })
+    };
+    let sdk_backend = InProcessSdkBackend::new(identity.address_hash().to_hex_string(), sdk_executor);
+    let sdk_client = SdkClient::new(sdk_backend.clone());
+    let mut sdk_started = match sdk_client.start(sdk_start_request()) {
+        Ok(_) => true,
+        Err(error) => {
+            bus.emit(NodeEvent::Error {
+                code: error.machine_code,
+                message: error.message,
+            });
+            false
+        }
+    };
+    let mut sdk_event_cursor: Option<EventCursor> = None;
+
     // Announces.
     {
         let transport = transport.clone();
@@ -996,7 +1099,53 @@ pub async fn run_node(
                             };
                             serde_json::to_string(&result).map_err(|_| NodeError::InternalError {})?
                         }
-                        HubMode::RchLxmf {} => execute_envelope_over_lxmf(&config, &state, &envelope).await?,
+                        HubMode::RchLxmf {} => {
+                            if !sdk_started {
+                                sdk_started = match sdk_client.start(sdk_start_request()) {
+                                    Ok(_) => true,
+                                    Err(error) => {
+                                        let result = MessageEnvelope {
+                                            api_version: envelope.api_version.clone(),
+                                            message_id: envelope.message_id.clone(),
+                                            correlation_id: envelope
+                                                .correlation_id
+                                                .clone()
+                                                .or_else(|| Some(envelope.message_id.clone())),
+                                            kind: EnvelopeKind::Error,
+                                            r#type: envelope.r#type.clone(),
+                                            issuer: "reticulum".to_string(),
+                                            issued_at: now_iso(),
+                                            payload: serde_json::json!({
+                                                "status": "rejected",
+                                                "reason": "SDK start failed",
+                                                "code": error.machine_code,
+                                                "detail": error.message,
+                                            }),
+                                        };
+                                        return serde_json::to_string(&result)
+                                            .map_err(|_| NodeError::InternalError {});
+                                    }
+                                };
+                            }
+
+                            let hub_identity = config.hub_identity_hash.clone().unwrap_or_default();
+                            let source_identity = state.identity.address_hash().to_hex_string();
+                            let send_request = sdk_send_request(&envelope, &source_identity, &hub_identity);
+                            let message_id = sdk_client
+                                .send(send_request)
+                                .map_err(node_error_from_sdk)?;
+                            let _status = sdk_client
+                                .status(message_id.clone())
+                                .map_err(node_error_from_sdk)?;
+                            let event_batch = sdk_client
+                                .poll_events(sdk_event_cursor.clone(), 16)
+                                .map_err(node_error_from_sdk)?;
+                            sdk_event_cursor = Some(event_batch.next_cursor.clone());
+
+                            response_json_from_event_batch(&event_batch, message_id.0.as_str())
+                                .or_else(|| sdk_client.backend().response_for(&message_id))
+                                .ok_or(NodeError::InternalError {})?
+                        }
                     };
 
                     if let Ok(response_envelope) = serde_json::from_str::<MessageEnvelope>(&response_json) {
