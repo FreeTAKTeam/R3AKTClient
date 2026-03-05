@@ -65,6 +65,55 @@ pub enum EnvelopeKind {
     Error,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SendMethod {
+    Direct,
+    Opportunistic,
+    Propagated,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DeliveryState {
+    Queued,
+    Sent,
+    Delivered,
+    Failed,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MessageDirection {
+    Outbound,
+    Inbound,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatAttachmentRef {
+    pub id: String,
+    pub name: String,
+    #[serde(default)]
+    pub mime_type: Option<String>,
+    #[serde(default)]
+    pub size_bytes: Option<u64>,
+    #[serde(default)]
+    pub direction: Option<String>,
+    #[serde(default)]
+    pub transfer_state: Option<String>,
+    #[serde(default)]
+    pub url: Option<String>,
+    #[serde(default)]
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MessageReaction {
+    pub key: String,
+    pub by: String,
+    pub at: String,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MessageEnvelope {
     pub api_version: String,

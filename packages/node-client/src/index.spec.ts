@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   MESSAGES_OPERATIONS,
   SESSION_OPERATIONS,
+  type ChatEvent,
   createReticulumNodeClient,
   createRchClient,
   type DomainEventPayload,
@@ -19,6 +20,8 @@ class FakeNodeClient implements ReticulumNodeClient {
   private listeners = new Map<string, Set<(payload: unknown) => void>>();
 
   lastEnvelope: RchEnvelope<unknown> | null = null;
+  allEnvelopes: RchEnvelope<unknown>[] = [];
+  failExecuteCount = 0;
 
   async start(_config: NodeConfig): Promise<void> {}
 
@@ -64,6 +67,11 @@ class FakeNodeClient implements ReticulumNodeClient {
     envelope: RchEnvelope<TPayload>,
   ): Promise<RchEnvelope<TResult>> {
     this.lastEnvelope = envelope as RchEnvelope<unknown>;
+    this.allEnvelopes.push(envelope as RchEnvelope<unknown>);
+    if (this.failExecuteCount > 0) {
+      this.failExecuteCount -= 1;
+      throw new Error("simulated execute failure");
+    }
     return {
       ...envelope,
       kind: "result",
@@ -192,6 +200,62 @@ describe("RchClient grouped feature API", () => {
     const stopped = await client.getServiceStatus();
     expect(stopped.state).toBe("Stopped");
     expect(stopped.running).toBe(false);
+
+    unsubscribe();
+  });
+
+  it("uses chat send fallback policy opportunistic -> propagated", async () => {
+    const fake = new FakeNodeClient();
+    fake.failExecuteCount = 1;
+    const client = createRchClient(fake);
+
+    const response = await client.chat.sendMessage({
+      content: "hello",
+      destination: "aa11bb22cc33dd44ee55ff66aa77bb88",
+      sendMethod: "opportunistic",
+      tryPropagationOnFail: true,
+    });
+
+    expect(fake.allEnvelopes.length).toBe(2);
+    expect(fake.allEnvelopes[0]?.type).toBe("POST /Message");
+    expect((fake.allEnvelopes[1]?.payload as Record<string, unknown>).method).toBe(
+      "propagated",
+    );
+    expect(response.payload.sendMethod).toBe("propagated");
+  });
+
+  it("emits ordered, de-duped chat events from domain events", async () => {
+    const fake = new FakeNodeClient();
+    const client = createRchClient(fake);
+    const observed: ChatEvent[] = [];
+    const unsubscribe = client.on("chatEvent", (event) => {
+      observed.push(event);
+    });
+
+    fake.emitDomainEvent({
+      eventType: "message.receive",
+      payloadJson:
+        "{\"networkMessageId\":\"net-1\",\"localMessageId\":\"loc-1\",\"content\":\"incoming\",\"source\":\"abcd\"}",
+      correlationId: "corr-1",
+    });
+    fake.emitDomainEvent({
+      eventType: "message.receive",
+      payloadJson:
+        "{\"networkMessageId\":\"net-1\",\"localMessageId\":\"loc-1\",\"content\":\"incoming duplicate\"}",
+      correlationId: "corr-1",
+    });
+    fake.emitDomainEvent({
+      eventType: "message.delivery",
+      payloadJson:
+        "{\"localMessageId\":\"loc-1\",\"networkMessageId\":\"net-1\",\"state\":\"delivered\"}",
+      correlationId: "corr-1",
+    });
+
+    expect(observed.length).toBe(2);
+    expect(observed[0]?.type).toBe("message.receive");
+    expect(observed[0]?.meta.sequence).toBe(1);
+    expect(observed[1]?.type).toBe("message.delivery");
+    expect(observed[1]?.meta.sequence).toBe(2);
 
     unsubscribe();
   });

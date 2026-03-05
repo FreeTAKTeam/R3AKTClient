@@ -403,6 +403,260 @@ fn response_json_from_event_batch(batch: &EventBatch, message_id: &str) -> Optio
     })
 }
 
+fn payload_string(value: &serde_json::Value, keys: &[&str]) -> Option<String> {
+    for key in keys {
+        let Some(raw) = value.get(*key) else {
+            continue;
+        };
+        if let Some(text) = raw.as_str() {
+            let trimmed = text.trim();
+            if !trimmed.is_empty() {
+                return Some(trimmed.to_string());
+            }
+            continue;
+        }
+        if raw.is_number() || raw.is_boolean() {
+            return Some(raw.to_string());
+        }
+    }
+    None
+}
+
+fn payload_bool(value: &serde_json::Value, keys: &[&str]) -> Option<bool> {
+    for key in keys {
+        let Some(raw) = value.get(*key) else {
+            continue;
+        };
+        if let Some(flag) = raw.as_bool() {
+            return Some(flag);
+        }
+        if let Some(text) = raw.as_str() {
+            match text.trim().to_ascii_lowercase().as_str() {
+                "true" => return Some(true),
+                "false" => return Some(false),
+                _ => {}
+            }
+        }
+    }
+    None
+}
+
+fn payload_u64(value: &serde_json::Value, keys: &[&str]) -> Option<u64> {
+    for key in keys {
+        let Some(raw) = value.get(*key) else {
+            continue;
+        };
+        if let Some(number) = raw.as_u64() {
+            return Some(number);
+        }
+        if let Some(text) = raw.as_str() {
+            if let Ok(parsed) = text.trim().parse::<u64>() {
+                return Some(parsed);
+            }
+        }
+    }
+    None
+}
+
+fn normalize_delivery_state(raw: Option<String>, fallback: &str) -> String {
+    let normalized = raw
+        .unwrap_or_else(|| fallback.to_string())
+        .trim()
+        .to_ascii_lowercase();
+    match normalized.as_str() {
+        "queued" | "sent" | "delivered" | "failed" => normalized,
+        _ => fallback.to_string(),
+    }
+}
+
+fn emit_domain_event(bus: &EventBus, event_type: &str, payload: serde_json::Value, correlation_id: Option<String>) {
+    bus.emit(NodeEvent::DomainEvent {
+        event_type: event_type.to_string(),
+        payload_json: payload.to_string(),
+        correlation_id,
+    });
+}
+
+fn emit_chat_domain_events(
+    bus: &EventBus,
+    request: &MessageEnvelope,
+    response: &MessageEnvelope,
+) {
+    match request.r#type.as_str() {
+        "POST /Message" => {
+            let local_message_id = payload_string(
+                &request.payload,
+                &["localMessageId", "local_message_id", "message_id"],
+            )
+            .unwrap_or_else(|| request.message_id.clone());
+            let network_message_id = payload_string(
+                &response.payload,
+                &["networkMessageId", "network_message_id", "message_id", "id"],
+            );
+            let conversation_id = payload_string(
+                &request.payload,
+                &["conversationId", "conversation_id"],
+            )
+            .or_else(|| payload_string(&request.payload, &["topicId", "topic_id"]).map(|value| format!("topic:{value}")))
+            .or_else(|| {
+                payload_string(&request.payload, &["destination"]).map(|value| format!("dm:{value}"))
+            })
+            .unwrap_or_else(|| "conversation:global".to_string());
+            let state = normalize_delivery_state(
+                payload_string(&response.payload, &["deliveryState", "state", "status"]),
+                if matches!(response.kind, EnvelopeKind::Error) {
+                    "failed"
+                } else {
+                    "sent"
+                },
+            );
+
+            let message_payload = serde_json::json!({
+                "conversationId": conversation_id,
+                "localMessageId": local_message_id,
+                "networkMessageId": network_message_id,
+                "direction": "outbound",
+                "deliveryState": state,
+                "sendMethod": payload_string(&request.payload, &["sendMethod", "method"]).unwrap_or_else(|| "opportunistic".to_string()),
+                "content": payload_string(&request.payload, &["content", "body", "message"]).unwrap_or_default(),
+                "destination": payload_string(&request.payload, &["destination"]),
+                "topicId": payload_string(&request.payload, &["topicId", "topic_id"]),
+                "threadId": payload_string(&request.payload, &["threadId", "thread_id"]),
+                "groupId": payload_string(&request.payload, &["groupId", "group_id"]),
+                "replyToLocalMessageId": payload_string(&request.payload, &["replyToLocalMessageId", "reply_to_local_message_id"]),
+                "replyToNetworkMessageId": payload_string(&request.payload, &["replyToNetworkMessageId", "reply_to_network_message_id", "replyTo"]),
+                "issuedAt": request.issued_at,
+                "updatedAt": now_iso(),
+                "attachments": request.payload.get("attachments").cloned().unwrap_or_else(|| serde_json::json!([])),
+                "reactions": response.payload.get("reactions").cloned().unwrap_or_else(|| serde_json::json!([])),
+                "error": payload_string(&response.payload, &["error", "errorMessage", "reason"]),
+            });
+
+            emit_domain_event(
+                bus,
+                "message.sent",
+                message_payload,
+                response
+                    .correlation_id
+                    .clone()
+                    .or_else(|| request.correlation_id.clone())
+                    .or_else(|| Some(request.message_id.clone())),
+            );
+
+            emit_domain_event(
+                bus,
+                "message.delivery",
+                serde_json::json!({
+                    "conversationId": conversation_id,
+                    "localMessageId": local_message_id,
+                    "networkMessageId": network_message_id,
+                    "state": state,
+                    "reason": payload_string(&response.payload, &["reason", "error", "errorMessage"]),
+                }),
+                response
+                    .correlation_id
+                    .clone()
+                    .or_else(|| request.correlation_id.clone())
+                    .or_else(|| Some(request.message_id.clone())),
+            );
+
+            if let Some(reaction) = response.payload.get("reaction").cloned() {
+                emit_domain_event(
+                    bus,
+                    "message.reaction",
+                    serde_json::json!({
+                        "conversationId": conversation_id,
+                        "localMessageId": local_message_id,
+                        "networkMessageId": network_message_id,
+                        "reaction": reaction,
+                    }),
+                    response
+                        .correlation_id
+                        .clone()
+                        .or_else(|| request.correlation_id.clone())
+                        .or_else(|| Some(request.message_id.clone())),
+                );
+            }
+        }
+        "GET /messages/stream" => {
+            let subscription_payload = serde_json::json!({
+                "cursor": payload_string(&response.payload, &["cursor", "nextCursor", "next_cursor"]),
+                "destination": payload_string(&response.payload, &["destination", "destinationHex"]),
+                "topicId": payload_string(&response.payload, &["topicId", "topic_id"]),
+            });
+            emit_domain_event(
+                bus,
+                "message.subscribed",
+                subscription_payload,
+                response
+                    .correlation_id
+                    .clone()
+                    .or_else(|| request.correlation_id.clone())
+                    .or_else(|| Some(request.message_id.clone())),
+            );
+
+            let fetched_count = payload_u64(&response.payload, &["fetchedCount", "fetched_count", "count"])
+                .unwrap_or(0);
+            let done = payload_bool(&response.payload, &["done", "complete", "isComplete"]).unwrap_or(true);
+            emit_domain_event(
+                bus,
+                "message.syncProgress",
+                serde_json::json!({
+                    "cursor": payload_string(&response.payload, &["cursor", "nextCursor", "next_cursor"]),
+                    "fetchedCount": fetched_count,
+                    "done": done,
+                }),
+                response
+                    .correlation_id
+                    .clone()
+                    .or_else(|| request.correlation_id.clone())
+                    .or_else(|| Some(request.message_id.clone())),
+            );
+
+            if let Some(events) = response.payload.get("events").and_then(serde_json::Value::as_array) {
+                for event in events {
+                    let Some(event_type) = payload_string(
+                        event,
+                        &["type", "eventType", "event_type", "event"],
+                    ) else {
+                        continue;
+                    };
+                    if !event_type.starts_with("message.") {
+                        continue;
+                    }
+                    emit_domain_event(
+                        bus,
+                        event_type.as_str(),
+                        event.clone(),
+                        response
+                            .correlation_id
+                            .clone()
+                            .or_else(|| request.correlation_id.clone())
+                            .or_else(|| Some(request.message_id.clone())),
+                    );
+                }
+            }
+        }
+        "POST /Topic/Subscribe" => {
+            emit_domain_event(
+                bus,
+                "message.subscribed",
+                serde_json::json!({
+                    "topicId": payload_string(&request.payload, &["topicId", "topic_id"]),
+                    "destination": payload_string(&request.payload, &["destination"]),
+                    "cursor": payload_string(&response.payload, &["cursor"]),
+                }),
+                response
+                    .correlation_id
+                    .clone()
+                    .or_else(|| request.correlation_id.clone())
+                    .or_else(|| Some(request.message_id.clone())),
+            );
+        }
+        _ => {}
+    }
+}
+
 fn create_transport_data_packet(destination: AddressHash, bytes: &[u8]) -> Packet {
     let mut packet = Packet::default();
     packet.header.propagation_type = PropagationType::Transport;
@@ -1162,10 +1416,11 @@ pub async fn run_node(
 
                     if let Ok(response_envelope) = serde_json::from_str::<MessageEnvelope>(&response_json) {
                         bus.emit(NodeEvent::DomainEvent {
-                            event_type: response_envelope.r#type,
+                            event_type: response_envelope.r#type.clone(),
                             payload_json: response_envelope.payload.to_string(),
-                            correlation_id: response_envelope.correlation_id,
+                            correlation_id: response_envelope.correlation_id.clone(),
                         });
+                        emit_chat_domain_events(&bus, &envelope, &response_envelope);
                     }
 
                     Ok::<String, NodeError>(response_json)
@@ -1307,5 +1562,53 @@ mod tests {
         let text = collect_lxmf_text(&message);
         assert!(text.contains("Title"));
         assert!(text.contains("Content"));
+    }
+
+    #[test]
+    fn emit_chat_domain_events_for_post_message_emits_sent_and_delivery() {
+        let bus = EventBus::new();
+        let rx = bus.subscribe();
+
+        let request = MessageEnvelope {
+            api_version: "1.0".to_string(),
+            message_id: "msg-chat-1".to_string(),
+            correlation_id: Some("corr-chat-1".to_string()),
+            kind: EnvelopeKind::Command,
+            r#type: "POST /Message".to_string(),
+            issuer: "ui".to_string(),
+            issued_at: "2026-03-05T00:00:00Z".to_string(),
+            payload: serde_json::json!({
+                "localMessageId": "local-1",
+                "conversationId": "dm:test",
+                "content": "hello",
+                "method": "direct",
+            }),
+        };
+
+        let response = MessageEnvelope {
+            api_version: "1.0".to_string(),
+            message_id: "msg-chat-1".to_string(),
+            correlation_id: Some("corr-chat-1".to_string()),
+            kind: EnvelopeKind::Result,
+            r#type: "POST /Message".to_string(),
+            issuer: "reticulum".to_string(),
+            issued_at: "2026-03-05T00:00:01Z".to_string(),
+            payload: serde_json::json!({
+                "networkMessageId": "net-1",
+                "state": "delivered",
+            }),
+        };
+
+        emit_chat_domain_events(&bus, &request, &response);
+
+        let mut event_types = Vec::new();
+        while let Ok(event) = rx.try_recv() {
+            if let NodeEvent::DomainEvent { event_type, .. } = event {
+                event_types.push(event_type);
+            }
+        }
+
+        assert!(event_types.iter().any(|event| event == "message.sent"));
+        assert!(event_types.iter().any(|event| event == "message.delivery"));
     }
 }

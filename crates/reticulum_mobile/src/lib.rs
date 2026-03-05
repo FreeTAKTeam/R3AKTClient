@@ -9,8 +9,8 @@ mod types;
 
 pub use node::{EventSubscription, Node};
 pub use types::{
-    HubMode, LogLevel, NodeConfig, NodeError, NodeEvent, NodeStatus, PeerChange, PeerState,
-    SendOutcome,
+    ChatAttachmentRef, DeliveryState, HubMode, LogLevel, MessageDirection, MessageReaction,
+    NodeConfig, NodeError, NodeEvent, NodeStatus, PeerChange, PeerState, SendMethod, SendOutcome,
 };
 
 pub fn healthcheck() -> String {

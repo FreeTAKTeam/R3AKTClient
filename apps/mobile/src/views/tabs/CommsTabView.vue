@@ -2,16 +2,11 @@
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 
-import FeatureFamilyShell from "../../components/shells/FeatureFamilyShell.vue";
-import { useFilesMediaStore } from "../../stores/filesMediaStore";
-import { useMessagingStore } from "../../stores/messagingStore";
-import { useTopicsStore } from "../../stores/topicsStore";
+import CommsChatPanel from "../../components/comms/CommsChatPanel.vue";
+import CommsFilesPanel from "../../components/comms/CommsFilesPanel.vue";
+import CommsTopicsPanel from "../../components/comms/CommsTopicsPanel.vue";
 
 const route = useRoute();
-
-const messaging = useMessagingStore();
-const topics = useTopicsStore();
-const filesMedia = useFilesMediaStore();
 
 const section = computed(() => {
   const value = route.params.section;
@@ -20,30 +15,6 @@ const section = computed(() => {
   }
   return "chat";
 });
-
-const activeStore = computed(() => {
-  if (section.value === "topics") {
-    return topics;
-  }
-  if (section.value === "files") {
-    return filesMedia;
-  }
-  return messaging;
-});
-
-const sectionTitle = computed(() => {
-  if (section.value === "topics") {
-    return "Comms Topics";
-  }
-  if (section.value === "files") {
-    return "Comms Files and Media";
-  }
-  return "Comms Chat";
-});
-
-function execute(operation: string, payloadJson: string): void {
-  activeStore.value.executeFromJson(operation, payloadJson).catch(() => undefined);
-}
 </script>
 
 <template>
@@ -69,18 +40,9 @@ function execute(operation: string, payloadJson: string): void {
       </RouterLink>
     </nav>
 
-    <FeatureFamilyShell
-      :title="sectionTitle"
-      subtitle="All feature operations execute through typed envelopes."
-      :operations="activeStore.operations"
-      :wired="activeStore.wired"
-      :busy="activeStore.busy"
-      :last-operation="activeStore.lastOperation"
-      :last-response-json="activeStore.lastResponseJson"
-      :last-error="activeStore.lastError"
-      @wire="activeStore.wire().catch(() => undefined)"
-      @execute="execute"
-    />
+    <CommsChatPanel v-if="section === 'chat'" />
+    <CommsTopicsPanel v-else-if="section === 'topics'" />
+    <CommsFilesPanel v-else />
   </section>
 </template>
 

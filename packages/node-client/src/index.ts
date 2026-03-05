@@ -39,6 +39,160 @@ export interface DomainEventPayload {
   correlationId?: string;
 }
 
+export type SendMethod = "direct" | "opportunistic" | "propagated";
+export type DeliveryState = "queued" | "sent" | "delivered" | "failed";
+export type MessageDirection = "outbound" | "inbound";
+export type AttachmentDirection = "upload" | "download";
+export type AttachmentTransferState =
+  | "queued"
+  | "in_progress"
+  | "completed"
+  | "failed";
+
+export interface ChatAttachmentRef {
+  id: string;
+  name: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  direction: AttachmentDirection;
+  transferState: AttachmentTransferState;
+  url?: string;
+  error?: string;
+}
+
+export interface MessageReaction {
+  key: string;
+  by: string;
+  at: string;
+}
+
+export interface ChatMessage {
+  conversationId: string;
+  localMessageId: string;
+  networkMessageId?: string;
+  direction: MessageDirection;
+  deliveryState: DeliveryState;
+  sendMethod: SendMethod;
+  content: string;
+  destination?: string;
+  source?: string;
+  topicId?: string;
+  threadId?: string;
+  groupId?: string;
+  issuedAt: string;
+  updatedAt: string;
+  attachments: ChatAttachmentRef[];
+  reactions: MessageReaction[];
+  replyToLocalMessageId?: string;
+  replyToNetworkMessageId?: string;
+  error?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface SendMessageInput {
+  content: string;
+  localMessageId?: string;
+  conversationId?: string;
+  destination?: string;
+  topicId?: string;
+  threadId?: string;
+  groupId?: string;
+  sendMethod?: SendMethod;
+  tryPropagationOnFail?: boolean;
+  attachments?: ChatAttachmentRef[];
+  replyToLocalMessageId?: string;
+  replyToNetworkMessageId?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface RetryMessageRequest {
+  localMessageId: string;
+  networkMessageId?: string;
+  sendMethod?: SendMethod;
+}
+
+export interface SyncRequest {
+  cursor?: string;
+  since?: string;
+  replayLimit?: number;
+}
+
+export interface ReactionInput {
+  localMessageId: string;
+  networkMessageId?: string;
+  reactionKey: string;
+  by: string;
+}
+
+export interface TopicSubscription {
+  topicId: string;
+  destination?: string;
+  rejectTests?: number;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ChatEventMeta {
+  sessionId: string;
+  sequence: number;
+  receivedAtMs: number;
+  sourceEventType: string;
+}
+
+export interface MessageEvent {
+  type: "message.receive" | "message.sent";
+  message: ChatMessage;
+  meta: ChatEventMeta;
+}
+
+export interface DeliveryEvent {
+  type: "message.delivery";
+  conversationId: string;
+  localMessageId: string;
+  networkMessageId?: string;
+  state: DeliveryState;
+  reason?: string;
+  meta: ChatEventMeta;
+}
+
+export interface ReactionEvent {
+  type: "message.reaction";
+  conversationId: string;
+  localMessageId: string;
+  networkMessageId?: string;
+  reaction: MessageReaction;
+  meta: ChatEventMeta;
+}
+
+export interface SubscribedEvent {
+  type: "message.subscribed";
+  topicId?: string;
+  destination?: string;
+  cursor?: string;
+  meta: ChatEventMeta;
+}
+
+export interface SyncProgressEvent {
+  type: "message.syncProgress";
+  cursor?: string;
+  fetchedCount: number;
+  done: boolean;
+  meta: ChatEventMeta;
+}
+
+export type ChatEvent =
+  | MessageEvent
+  | DeliveryEvent
+  | ReactionEvent
+  | SubscribedEvent
+  | SyncProgressEvent;
+
+export interface ChatSendResult {
+  localMessageId: string;
+  networkMessageId?: string;
+  state: DeliveryState;
+  sendMethod: SendMethod;
+}
+
 export type GroupOperation<G extends ClientFeatureGroup> = Extract<
   ClientOperationEntry,
   { group: G }
@@ -453,6 +607,283 @@ function toServiceStateChangedEvent(
     (raw.service as Record<string, unknown> | undefined) ?? raw;
   return {
     service: toServiceStatus(serviceRaw),
+  };
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
+function parsePayloadJson(payloadJson: string): Record<string, unknown> {
+  try {
+    return asRecord(JSON.parse(payloadJson));
+  } catch {
+    return {};
+  }
+}
+
+function readStringCandidate(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): string | undefined {
+  for (const key of keys) {
+    const raw = value[key];
+    if (raw === undefined || raw === null) {
+      continue;
+    }
+    const normalized = String(raw).trim();
+    if (normalized) {
+      return normalized;
+    }
+  }
+  return undefined;
+}
+
+function readNumberCandidate(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): number | undefined {
+  for (const key of keys) {
+    const raw = value[key];
+    if (raw === undefined || raw === null) {
+      continue;
+    }
+    const parsed = Number(raw);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return undefined;
+}
+
+function readBooleanCandidate(
+  value: Record<string, unknown>,
+  keys: readonly string[],
+): boolean | undefined {
+  for (const key of keys) {
+    const raw = value[key];
+    if (raw === undefined || raw === null) {
+      continue;
+    }
+    if (typeof raw === "boolean") {
+      return raw;
+    }
+    const normalized = String(raw).trim().toLowerCase();
+    if (normalized === "true") {
+      return true;
+    }
+    if (normalized === "false") {
+      return false;
+    }
+  }
+  return undefined;
+}
+
+function normalizeSendMethod(raw: unknown): SendMethod {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (value === "direct" || value === "opportunistic" || value === "propagated") {
+    return value;
+  }
+  return "opportunistic";
+}
+
+function normalizeDeliveryState(raw: unknown, fallback: DeliveryState = "sent"): DeliveryState {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (value === "queued" || value === "sent" || value === "delivered" || value === "failed") {
+    return value;
+  }
+  return fallback;
+}
+
+function normalizeMessageDirection(raw: unknown, fallback: MessageDirection): MessageDirection {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (value === "inbound" || value === "receive" || value === "received") {
+    return "inbound";
+  }
+  if (value === "outbound" || value === "sent" || value === "send") {
+    return "outbound";
+  }
+  return fallback;
+}
+
+function normalizeAttachmentDirection(raw: unknown): AttachmentDirection {
+  const value = String(raw ?? "").trim().toLowerCase();
+  return value === "download" ? "download" : "upload";
+}
+
+function normalizeAttachmentState(raw: unknown): AttachmentTransferState {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (
+    value === "queued"
+    || value === "in_progress"
+    || value === "completed"
+    || value === "failed"
+  ) {
+    return value;
+  }
+  return "queued";
+}
+
+function normalizeTimestamp(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (raw) {
+    return raw;
+  }
+  return new Date().toISOString();
+}
+
+function inferConversationId(payload: Record<string, unknown>): string {
+  const explicit = readStringCandidate(payload, [
+    "conversationId",
+    "conversation_id",
+  ]);
+  if (explicit) {
+    return explicit;
+  }
+  const topicId = readStringCandidate(payload, ["topicId", "topic_id"]);
+  if (topicId) {
+    return `topic:${topicId}`;
+  }
+  const destination = readStringCandidate(payload, ["destination", "destinationHex"]);
+  if (destination) {
+    return `dm:${normalizeHex(destination)}`;
+  }
+  const source = readStringCandidate(payload, ["source", "sourceHex"]);
+  if (source) {
+    return `dm:${normalizeHex(source)}`;
+  }
+  return "conversation:global";
+}
+
+function toAttachmentRefs(raw: unknown): ChatAttachmentRef[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .map((entry, index) => {
+      const value = asRecord(entry);
+      const id = readStringCandidate(value, ["id", "attachmentId", "attachment_id"])
+        ?? `attachment-${index}-${Date.now()}`;
+      const name = readStringCandidate(value, ["name", "fileName", "file_name"])
+        ?? "attachment";
+      return {
+        id,
+        name,
+        mimeType: readStringCandidate(value, ["mimeType", "mime_type", "contentType"]),
+        sizeBytes: readNumberCandidate(value, ["sizeBytes", "size_bytes", "size"]),
+        direction: normalizeAttachmentDirection(
+          readStringCandidate(value, ["direction", "transferDirection"]),
+        ),
+        transferState: normalizeAttachmentState(
+          readStringCandidate(value, ["transferState", "transfer_state", "state"]),
+        ),
+        url: readStringCandidate(value, ["url", "uri", "path"]),
+        error: readStringCandidate(value, ["error", "errorMessage", "error_message"]),
+      } satisfies ChatAttachmentRef;
+    })
+    .filter((entry) => entry.id.trim().length > 0);
+}
+
+function toReactions(raw: unknown): MessageReaction[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw
+    .map((entry) => {
+      const value = asRecord(entry);
+      const key = readStringCandidate(value, ["key", "reaction", "emoji"]) ?? "";
+      if (!key) {
+        return null;
+      }
+      return {
+        key,
+        by: readStringCandidate(value, ["by", "sender", "identity"]) ?? "unknown",
+        at: normalizeTimestamp(
+          readStringCandidate(value, ["at", "createdAt", "created_at"]),
+        ),
+      } satisfies MessageReaction;
+    })
+    .filter((entry): entry is MessageReaction => Boolean(entry));
+}
+
+function toChatMessage(
+  payload: Record<string, unknown>,
+  fallback: {
+    localMessageId: string;
+    direction: MessageDirection;
+    sendMethod: SendMethod;
+    deliveryState: DeliveryState;
+  },
+): ChatMessage {
+  const networkMessageId = readStringCandidate(payload, [
+    "networkMessageId",
+    "network_message_id",
+    "messageId",
+    "message_id",
+    "id",
+  ]);
+  return {
+    conversationId: inferConversationId(payload),
+    localMessageId:
+      readStringCandidate(payload, ["localMessageId", "local_message_id"])
+      ?? fallback.localMessageId,
+    networkMessageId,
+    direction: normalizeMessageDirection(payload.direction, fallback.direction),
+    deliveryState: normalizeDeliveryState(payload.deliveryState ?? payload.state, fallback.deliveryState),
+    sendMethod: normalizeSendMethod(payload.sendMethod ?? payload.method ?? fallback.sendMethod),
+    content: readStringCandidate(payload, ["content", "body", "message", "text"]) ?? "",
+    destination: readStringCandidate(payload, ["destination", "destinationHex", "to"]),
+    source: readStringCandidate(payload, ["source", "sourceHex", "from"]),
+    topicId: readStringCandidate(payload, ["topicId", "topic_id"]),
+    threadId: readStringCandidate(payload, ["threadId", "thread_id"]),
+    groupId: readStringCandidate(payload, ["groupId", "group_id"]),
+    issuedAt: normalizeTimestamp(
+      readStringCandidate(payload, ["issuedAt", "issued_at", "createdAt", "created_at"]),
+    ),
+    updatedAt: normalizeTimestamp(
+      readStringCandidate(payload, ["updatedAt", "updated_at", "modifiedAt", "modified_at"]),
+    ),
+    attachments: toAttachmentRefs(payload.attachments),
+    reactions: toReactions(payload.reactions),
+    replyToLocalMessageId: readStringCandidate(payload, [
+      "replyToLocalMessageId",
+      "reply_to_local_message_id",
+    ]),
+    replyToNetworkMessageId: readStringCandidate(payload, [
+      "replyToNetworkMessageId",
+      "reply_to_network_message_id",
+      "replyTo",
+      "reply_to",
+    ]),
+    error: readStringCandidate(payload, ["error", "errorMessage", "error_message"]),
+    metadata: asRecord(payload.metadata),
+  };
+}
+
+function toChatSendResult(
+  payload: Record<string, unknown>,
+  fallback: {
+    localMessageId: string;
+    sendMethod: SendMethod;
+    deliveryState: DeliveryState;
+  },
+): ChatSendResult {
+  return {
+    localMessageId:
+      readStringCandidate(payload, ["localMessageId", "local_message_id"])
+      ?? fallback.localMessageId,
+    networkMessageId: readStringCandidate(payload, [
+      "networkMessageId",
+      "network_message_id",
+      "messageId",
+      "message_id",
+      "id",
+    ]),
+    state: normalizeDeliveryState(payload.deliveryState ?? payload.state, fallback.deliveryState),
+    sendMethod: normalizeSendMethod(payload.sendMethod ?? payload.method ?? fallback.sendMethod),
   };
 }
 
@@ -1188,8 +1619,41 @@ export interface RchFeatureExecutor<K extends RchFeatureKey> {
   ): Promise<RchEnvelopeResponse<TResult>>;
 }
 
+export interface ChatClient {
+  sendMessage(
+    input: SendMessageInput,
+    options?: ExecuteEnvelopeOptions,
+  ): Promise<RchEnvelopeResponse<ChatSendResult>>;
+  subscribeMessages(
+    request?: SyncRequest,
+    options?: ExecuteEnvelopeOptions,
+  ): Promise<RchEnvelopeResponse<unknown>>;
+  subscribeTopic(
+    request: TopicSubscription,
+    options?: ExecuteEnvelopeOptions,
+  ): Promise<RchEnvelopeResponse<unknown>>;
+  listTopics(
+    payload?: Record<string, unknown>,
+    options?: ExecuteEnvelopeOptions,
+  ): Promise<RchEnvelopeResponse<unknown>>;
+  retryMessage(
+    request: RetryMessageRequest,
+    options?: ExecuteEnvelopeOptions,
+  ): Promise<RchEnvelopeResponse<ChatSendResult>>;
+  syncMessages(
+    request?: SyncRequest,
+    options?: ExecuteEnvelopeOptions,
+  ): Promise<RchEnvelopeResponse<unknown>>;
+  sendReaction(
+    input: ReactionInput,
+    options?: ExecuteEnvelopeOptions,
+  ): Promise<RchEnvelopeResponse<unknown>>;
+  onEvent(handler: (event: ChatEvent) => void): () => void;
+}
+
 export interface RchClientEvents {
   domainEvent: DomainEventPayload;
+  chatEvent: ChatEvent;
 }
 
 export interface RchClient {
@@ -1203,6 +1667,7 @@ export interface RchClient {
   readonly teamsSkills: RchFeatureExecutor<"teamsSkills">;
   readonly assetsAssignments: RchFeatureExecutor<"assetsAssignments">;
   readonly checklists: RchFeatureExecutor<"checklists">;
+  readonly chat: ChatClient;
   execute<TPayload = unknown, TResult = unknown>(
     operation: ClientOperation,
     payload?: TPayload,
@@ -1246,6 +1711,25 @@ export const ASSETS_ASSIGNMENTS_OPERATIONS = operationsByGroup(
   "R3AKT Assets and Assignments",
 );
 export const CHECKLISTS_OPERATIONS = operationsByGroup("Checklists");
+export const CHAT_MESSAGE_SEND_OPERATION: MessagingOperation = "POST /Message";
+export const CHAT_MESSAGE_STREAM_OPERATION: MessagingOperation = "GET /messages/stream";
+export const CHAT_TOPIC_LIST_OPERATION: TopicsOperation = "GET /Topic";
+export const CHAT_TOPIC_SUBSCRIBE_OPERATION: TopicsOperation = "POST /Topic/Subscribe";
+export const CHAT_BRIDGE_COMMANDS = {
+  send: "chat.send",
+  retry: "chat.retry",
+  sync: "chat.sync",
+  react: "chat.react",
+  subscribe: "chat.subscribe",
+} as const;
+export const CHAT_BRIDGE_EVENTS = {
+  messageReceive: "message.receive",
+  messageSent: "message.sent",
+  messageDelivery: "message.delivery",
+  messageReaction: "message.reaction",
+  messageSubscribed: "message.subscribed",
+  messageSyncProgress: "message.syncProgress",
+} as const;
 
 const FEATURE_OPERATION_SETS: {
   [K in RchFeatureKey]: ReadonlySet<RchFeatureOperationMap[K]>;
@@ -1338,15 +1822,23 @@ class RchClientImpl implements RchClient {
   readonly teamsSkills: RchFeatureExecutor<"teamsSkills">;
   readonly assetsAssignments: RchFeatureExecutor<"assetsAssignments">;
   readonly checklists: RchFeatureExecutor<"checklists">;
+  readonly chat: ChatClient;
 
   private readonly emitter = new TypedEmitter<RchClientEvents>();
   private readonly unsubscribeDomainEvent: () => void;
+  private readonly chatSessionId = createMessageId();
+  private chatSequence = 0;
+  private readonly pendingMessages = new Map<string, SendMessageInput>();
+  private readonly localConversationMap = new Map<string, string>();
+  private readonly networkToLocalMap = new Map<string, string>();
+  private readonly receiveDedupNetworkIds = new Set<string>();
 
   constructor(private readonly nodeClient: ReticulumNodeClient) {
     this.unsubscribeDomainEvent = this.nodeClient.on(
       "domainEvent",
       (payload: DomainEventPayload) => {
         this.emitter.emit("domainEvent", payload);
+        this.handleChatDomainEvent(payload);
       },
     );
 
@@ -1360,6 +1852,7 @@ class RchClientImpl implements RchClient {
     this.teamsSkills = this.createFeatureExecutor("teamsSkills");
     this.assetsAssignments = this.createFeatureExecutor("assetsAssignments");
     this.checklists = this.createFeatureExecutor("checklists");
+    this.chat = this.createChatClient();
   }
 
   private createFeatureExecutor<K extends RchFeatureKey>(
@@ -1376,6 +1869,551 @@ class RchClientImpl implements RchClient {
         return this.execute(operation, payload, options);
       },
     };
+  }
+
+  private createChatMeta(sourceEventType: string): ChatEventMeta {
+    this.chatSequence += 1;
+    return {
+      sessionId: this.chatSessionId,
+      sequence: this.chatSequence,
+      receivedAtMs: Date.now(),
+      sourceEventType,
+    };
+  }
+
+  private emitMessageEvent(
+    type: MessageEvent["type"],
+    message: ChatMessage,
+    sourceEventType: string,
+  ): void {
+    if (type === "message.receive" && message.networkMessageId) {
+      if (this.receiveDedupNetworkIds.has(message.networkMessageId)) {
+        return;
+      }
+      this.receiveDedupNetworkIds.add(message.networkMessageId);
+      if (this.receiveDedupNetworkIds.size > 4096) {
+        const oldest = this.receiveDedupNetworkIds.values().next().value as string | undefined;
+        if (oldest) {
+          this.receiveDedupNetworkIds.delete(oldest);
+        }
+      }
+    }
+    this.emitter.emit("chatEvent", {
+      type,
+      message,
+      meta: this.createChatMeta(sourceEventType),
+    });
+  }
+
+  private emitDeliveryEvent(
+    payload: Omit<DeliveryEvent, "type" | "meta">,
+    sourceEventType: string,
+  ): void {
+    this.emitter.emit("chatEvent", {
+      type: "message.delivery",
+      ...payload,
+      meta: this.createChatMeta(sourceEventType),
+    });
+  }
+
+  private emitReactionEvent(
+    payload: Omit<ReactionEvent, "type" | "meta">,
+    sourceEventType: string,
+  ): void {
+    this.emitter.emit("chatEvent", {
+      type: "message.reaction",
+      ...payload,
+      meta: this.createChatMeta(sourceEventType),
+    });
+  }
+
+  private emitSubscribedEvent(
+    payload: Omit<SubscribedEvent, "type" | "meta">,
+    sourceEventType: string,
+  ): void {
+    this.emitter.emit("chatEvent", {
+      type: "message.subscribed",
+      ...payload,
+      meta: this.createChatMeta(sourceEventType),
+    });
+  }
+
+  private emitSyncProgressEvent(
+    payload: Omit<SyncProgressEvent, "type" | "meta">,
+    sourceEventType: string,
+  ): void {
+    this.emitter.emit("chatEvent", {
+      type: "message.syncProgress",
+      ...payload,
+      meta: this.createChatMeta(sourceEventType),
+    });
+  }
+
+  private rememberMessage(message: ChatMessage): void {
+    this.localConversationMap.set(message.localMessageId, message.conversationId);
+    if (message.networkMessageId) {
+      this.networkToLocalMap.set(message.networkMessageId, message.localMessageId);
+    }
+  }
+
+  private normalizeChatEventType(
+    eventType: string,
+    payload: Record<string, unknown>,
+  ): string {
+    const payloadType = readStringCandidate(payload, [
+      "type",
+      "eventType",
+      "event_type",
+      "event",
+    ]);
+    if (payloadType?.startsWith("message.")) {
+      return payloadType;
+    }
+    if (eventType.startsWith("message.")) {
+      return eventType;
+    }
+    if (eventType === CHAT_MESSAGE_SEND_OPERATION) {
+      return "message.sent";
+    }
+    if (eventType === CHAT_TOPIC_SUBSCRIBE_OPERATION) {
+      return "message.subscribed";
+    }
+    return eventType;
+  }
+
+  private buildSendPayload(input: SendMessageInput): Record<string, unknown> {
+    return {
+      local_message_id: input.localMessageId,
+      conversation_id: input.conversationId,
+      content: input.content,
+      destination: input.destination,
+      topic_id: input.topicId,
+      thread_id: input.threadId,
+      group_id: input.groupId,
+      method: normalizeSendMethod(input.sendMethod),
+      try_propagation_on_fail: Boolean(input.tryPropagationOnFail),
+      reply_to_local_message_id: input.replyToLocalMessageId,
+      reply_to_network_message_id: input.replyToNetworkMessageId,
+      attachments: (input.attachments ?? []).map((attachment) => ({
+        id: attachment.id,
+        name: attachment.name,
+        mime_type: attachment.mimeType,
+        size_bytes: attachment.sizeBytes,
+        direction: attachment.direction,
+        transfer_state: attachment.transferState,
+        url: attachment.url,
+      })),
+      metadata: input.metadata ?? {},
+    };
+  }
+
+  private createChatClient(): ChatClient {
+    return {
+      sendMessage: async (
+        input: SendMessageInput,
+        options?: ExecuteEnvelopeOptions,
+      ): Promise<RchEnvelopeResponse<ChatSendResult>> => {
+        const localMessageId = input.localMessageId?.trim() || createMessageId();
+        const sendMethod = normalizeSendMethod(input.sendMethod);
+        const prepared: SendMessageInput = {
+          ...input,
+          localMessageId,
+          sendMethod,
+        };
+
+        const sendPayload = this.buildSendPayload(prepared);
+        this.pendingMessages.set(localMessageId, prepared);
+
+        const runSend = async (
+          payload: Record<string, unknown>,
+          source: string,
+          method: SendMethod,
+        ): Promise<RchEnvelopeResponse<ChatSendResult>> => {
+          const response = await this.execute<Record<string, unknown>, Record<string, unknown>>(
+            CHAT_MESSAGE_SEND_OPERATION,
+            payload,
+            {
+              ...options,
+              messageId: options?.messageId ?? localMessageId,
+              correlationId: options?.correlationId ?? localMessageId,
+            },
+          );
+
+          const responsePayload = asRecord(response.payload);
+          const message = toChatMessage(
+            {
+              ...payload,
+              ...responsePayload,
+            },
+            {
+              localMessageId,
+              direction: "outbound",
+              sendMethod: method,
+              deliveryState: "sent",
+            },
+          );
+          this.rememberMessage(message);
+          this.emitMessageEvent("message.sent", message, source);
+          this.emitDeliveryEvent(
+            {
+              conversationId: message.conversationId,
+              localMessageId: message.localMessageId,
+              networkMessageId: message.networkMessageId,
+              state: normalizeDeliveryState(
+                responsePayload.deliveryState ?? responsePayload.state,
+                message.deliveryState,
+              ),
+              reason: readStringCandidate(responsePayload, ["reason", "error", "errorMessage"]),
+            },
+            source,
+          );
+
+          return {
+            ...response,
+            payload: toChatSendResult(responsePayload, {
+              localMessageId,
+              sendMethod: method,
+              deliveryState: message.deliveryState,
+            }),
+          };
+        };
+
+        try {
+          return await runSend(sendPayload, CHAT_BRIDGE_COMMANDS.send, sendMethod);
+        } catch (error: unknown) {
+          this.emitDeliveryEvent(
+            {
+              conversationId: prepared.conversationId ?? inferConversationId(sendPayload),
+              localMessageId,
+              state: "failed",
+              reason: error instanceof Error ? error.message : String(error),
+            },
+            CHAT_BRIDGE_COMMANDS.send,
+          );
+
+          if (sendMethod === "opportunistic" && prepared.tryPropagationOnFail) {
+            const fallbackPayload = {
+              ...sendPayload,
+              method: "propagated",
+              fallback_reason: "opportunistic_send_failed",
+            };
+            return runSend(fallbackPayload, "chat.send.fallback", "propagated");
+          }
+
+          throw error;
+        }
+      },
+      subscribeMessages: async (
+        request?: SyncRequest,
+        options?: ExecuteEnvelopeOptions,
+      ): Promise<RchEnvelopeResponse<unknown>> => {
+        const response = await this.execute<Record<string, unknown>, unknown>(
+          CHAT_MESSAGE_STREAM_OPERATION,
+          {
+            subscribe: true,
+            cursor: request?.cursor,
+            since: request?.since,
+            replay_limit: request?.replayLimit,
+          },
+          options,
+        );
+        const payload = asRecord(response.payload);
+        this.emitSubscribedEvent(
+          {
+            cursor: readStringCandidate(payload, ["cursor", "nextCursor", "next_cursor"]),
+            destination: readStringCandidate(payload, ["destination", "destinationHex"]),
+          },
+          CHAT_BRIDGE_COMMANDS.subscribe,
+        );
+        return response;
+      },
+      subscribeTopic: async (
+        request: TopicSubscription,
+        options?: ExecuteEnvelopeOptions,
+      ): Promise<RchEnvelopeResponse<unknown>> => {
+        const response = await this.execute<TopicSubscription, unknown>(
+          CHAT_TOPIC_SUBSCRIBE_OPERATION,
+          request,
+          options,
+        );
+        this.emitSubscribedEvent(
+          {
+            topicId: request.topicId,
+            destination: request.destination,
+          },
+          CHAT_BRIDGE_COMMANDS.subscribe,
+        );
+        return response;
+      },
+      listTopics: async (
+        payload?: Record<string, unknown>,
+        options?: ExecuteEnvelopeOptions,
+      ): Promise<RchEnvelopeResponse<unknown>> => {
+        return this.execute<Record<string, unknown>, unknown>(
+          CHAT_TOPIC_LIST_OPERATION,
+          payload ?? {},
+          options,
+        );
+      },
+      retryMessage: async (
+        request: RetryMessageRequest,
+        options?: ExecuteEnvelopeOptions,
+      ): Promise<RchEnvelopeResponse<ChatSendResult>> => {
+        const previous = this.pendingMessages.get(request.localMessageId);
+        const sendMethod = normalizeSendMethod(
+          request.sendMethod ?? previous?.sendMethod ?? "opportunistic",
+        );
+        const retryPayload = this.buildSendPayload({
+          ...previous,
+          content: previous?.content ?? "",
+          localMessageId: request.localMessageId,
+          sendMethod,
+        });
+        retryPayload.retry_of =
+          request.networkMessageId
+          ?? readStringCandidate(retryPayload, ["network_message_id"])
+          ?? request.localMessageId;
+        retryPayload.retry = true;
+
+        const response = await this.execute<Record<string, unknown>, Record<string, unknown>>(
+          CHAT_MESSAGE_SEND_OPERATION,
+          retryPayload,
+          {
+            ...options,
+            messageId: options?.messageId ?? request.localMessageId,
+            correlationId: options?.correlationId ?? request.localMessageId,
+          },
+        );
+        const responsePayload = asRecord(response.payload);
+        const result = toChatSendResult(responsePayload, {
+          localMessageId: request.localMessageId,
+          sendMethod,
+          deliveryState: "sent",
+        });
+        this.emitDeliveryEvent(
+          {
+            conversationId:
+              this.localConversationMap.get(request.localMessageId)
+              ?? inferConversationId(retryPayload),
+            localMessageId: result.localMessageId,
+            networkMessageId: result.networkMessageId,
+            state: result.state,
+          },
+          CHAT_BRIDGE_COMMANDS.retry,
+        );
+        return {
+          ...response,
+          payload: result,
+        };
+      },
+      syncMessages: async (
+        request?: SyncRequest,
+        options?: ExecuteEnvelopeOptions,
+      ): Promise<RchEnvelopeResponse<unknown>> => {
+        const response = await this.execute<Record<string, unknown>, unknown>(
+          CHAT_MESSAGE_STREAM_OPERATION,
+          {
+            sync: true,
+            cursor: request?.cursor,
+            since: request?.since,
+            replay_limit: request?.replayLimit,
+          },
+          options,
+        );
+        const payload = asRecord(response.payload);
+        this.emitSyncProgressEvent(
+          {
+            cursor: readStringCandidate(payload, ["cursor", "nextCursor", "next_cursor"]),
+            fetchedCount: readNumberCandidate(payload, ["fetchedCount", "fetched_count", "count"]) ?? 0,
+            done: readBooleanCandidate(payload, ["done", "complete", "isComplete"]) ?? true,
+          },
+          CHAT_BRIDGE_COMMANDS.sync,
+        );
+        return response;
+      },
+      sendReaction: async (
+        input: ReactionInput,
+        options?: ExecuteEnvelopeOptions,
+      ): Promise<RchEnvelopeResponse<unknown>> => {
+        const response = await this.execute<Record<string, unknown>, unknown>(
+          CHAT_MESSAGE_SEND_OPERATION,
+          {
+            content: "",
+            reaction: {
+              key: input.reactionKey,
+              by: input.by,
+              at: new Date().toISOString(),
+            },
+            local_message_id: input.localMessageId,
+            network_message_id: input.networkMessageId,
+            type: "message.reaction",
+          },
+          options,
+        );
+        this.emitReactionEvent(
+          {
+            conversationId:
+              this.localConversationMap.get(input.localMessageId) ?? "conversation:global",
+            localMessageId: input.localMessageId,
+            networkMessageId: input.networkMessageId,
+            reaction: {
+              key: input.reactionKey,
+              by: input.by,
+              at: new Date().toISOString(),
+            },
+          },
+          CHAT_BRIDGE_COMMANDS.react,
+        );
+        return response;
+      },
+      onEvent: (handler: (event: ChatEvent) => void): (() => void) =>
+        this.on("chatEvent", handler),
+    };
+  }
+
+  private handleChatDomainEvent(payload: DomainEventPayload): void {
+    const parsedPayload = parsePayloadJson(payload.payloadJson);
+    const normalizedType = this.normalizeChatEventType(payload.eventType, parsedPayload);
+
+    if (normalizedType === "message.sent" || normalizedType === "message.receive") {
+      const fallbackNetworkId = readStringCandidate(parsedPayload, [
+        "networkMessageId",
+        "network_message_id",
+        "messageId",
+        "message_id",
+      ]);
+      const fallbackLocalMessageId =
+        readStringCandidate(parsedPayload, ["localMessageId", "local_message_id"])
+        ?? (fallbackNetworkId ? this.networkToLocalMap.get(fallbackNetworkId) : undefined)
+        ?? createMessageId();
+      const message = toChatMessage(parsedPayload, {
+        localMessageId: fallbackLocalMessageId,
+        direction: normalizedType === "message.receive" ? "inbound" : "outbound",
+        sendMethod: normalizeSendMethod(parsedPayload.method),
+        deliveryState: normalizedType === "message.receive" ? "delivered" : "sent",
+      });
+      this.rememberMessage(message);
+      this.emitMessageEvent(
+        normalizedType,
+        message,
+        payload.eventType || normalizedType,
+      );
+      if (normalizedType === "message.sent") {
+        this.emitDeliveryEvent(
+          {
+            conversationId: message.conversationId,
+            localMessageId: message.localMessageId,
+            networkMessageId: message.networkMessageId,
+            state: message.deliveryState,
+          },
+          payload.eventType || normalizedType,
+        );
+      }
+      return;
+    }
+
+    if (normalizedType === "message.delivery") {
+      const networkMessageId = readStringCandidate(parsedPayload, [
+        "networkMessageId",
+        "network_message_id",
+        "messageId",
+        "message_id",
+      ]);
+      const localMessageId =
+        readStringCandidate(parsedPayload, ["localMessageId", "local_message_id"])
+        ?? (networkMessageId ? this.networkToLocalMap.get(networkMessageId) : undefined)
+        ?? createMessageId();
+      this.emitDeliveryEvent(
+        {
+          conversationId:
+            this.localConversationMap.get(localMessageId) ?? inferConversationId(parsedPayload),
+          localMessageId,
+          networkMessageId,
+          state: normalizeDeliveryState(
+            parsedPayload.deliveryState ?? parsedPayload.state,
+            "sent",
+          ),
+          reason: readStringCandidate(parsedPayload, ["reason", "error", "errorMessage"]),
+        },
+        payload.eventType || normalizedType,
+      );
+      return;
+    }
+
+    if (normalizedType === "message.reaction") {
+      const networkMessageId = readStringCandidate(parsedPayload, [
+        "networkMessageId",
+        "network_message_id",
+        "messageId",
+        "message_id",
+      ]);
+      const localMessageId =
+        readStringCandidate(parsedPayload, ["localMessageId", "local_message_id"])
+        ?? (networkMessageId ? this.networkToLocalMap.get(networkMessageId) : undefined)
+        ?? createMessageId();
+      const reactionRecord = asRecord(parsedPayload.reaction);
+      const reaction: MessageReaction = {
+        key:
+          readStringCandidate(reactionRecord, ["key", "reaction", "emoji"])
+          ?? readStringCandidate(parsedPayload, ["reaction", "emoji"])
+          ?? "",
+        by:
+          readStringCandidate(reactionRecord, ["by", "sender", "identity"])
+          ?? readStringCandidate(parsedPayload, ["by", "sender", "identity"])
+          ?? "unknown",
+        at: normalizeTimestamp(
+          readStringCandidate(reactionRecord, ["at", "createdAt", "created_at"]),
+        ),
+      };
+      if (!reaction.key) {
+        return;
+      }
+      this.emitReactionEvent(
+        {
+          conversationId:
+            this.localConversationMap.get(localMessageId) ?? inferConversationId(parsedPayload),
+          localMessageId,
+          networkMessageId,
+          reaction,
+        },
+        payload.eventType || normalizedType,
+      );
+      return;
+    }
+
+    if (normalizedType === "message.subscribed") {
+      this.emitSubscribedEvent(
+        {
+          topicId: readStringCandidate(parsedPayload, ["topicId", "topic_id"]),
+          destination: readStringCandidate(parsedPayload, ["destination", "destinationHex"]),
+          cursor: readStringCandidate(parsedPayload, ["cursor", "nextCursor", "next_cursor"]),
+        },
+        payload.eventType || normalizedType,
+      );
+      return;
+    }
+
+    if (normalizedType === "message.syncProgress") {
+      this.emitSyncProgressEvent(
+        {
+          cursor: readStringCandidate(parsedPayload, ["cursor", "nextCursor", "next_cursor"]),
+          fetchedCount: readNumberCandidate(parsedPayload, ["fetchedCount", "fetched_count", "count"]) ?? 0,
+          done: readBooleanCandidate(parsedPayload, ["done", "complete", "isComplete"]) ?? true,
+        },
+        payload.eventType || normalizedType,
+      );
+      return;
+    }
+
+    if (payload.eventType === CHAT_MESSAGE_STREAM_OPERATION) {
+      this.emitSubscribedEvent(
+        {
+          cursor: readStringCandidate(parsedPayload, ["cursor", "nextCursor", "next_cursor"]),
+          destination: readStringCandidate(parsedPayload, ["destination", "destinationHex"]),
+        },
+        payload.eventType,
+      );
+    }
   }
 
   async execute<TPayload = unknown, TResult = unknown>(
@@ -1401,6 +2439,10 @@ class RchClientImpl implements RchClient {
 
   dispose(): void {
     this.unsubscribeDomainEvent();
+    this.pendingMessages.clear();
+    this.localConversationMap.clear();
+    this.networkToLocalMap.clear();
+    this.receiveDedupNetworkIds.clear();
     this.emitter.clear();
   }
 }
