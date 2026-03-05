@@ -9,6 +9,7 @@ use jni::JNIEnv;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::generated::client_operations::CLIENT_OPERATION_CATALOG;
 use crate::node::{EventSubscription, Node};
 use crate::types::{
     HubMode, LogLevel, NodeConfig, NodeError, NodeEvent, NodeStatus, PeerState, SendOutcome,
@@ -715,25 +716,10 @@ pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_getClien
     mut env: JNIEnv,
     _class: JClass,
 ) -> jstring {
-    let guard = match bridge_state().lock() {
-        Ok(v) => v,
-        Err(_) => {
-            set_last_error("InternalError", "bridge lock poisoned");
-            return ptr::null_mut();
-        }
-    };
-    let node = match guard.node.as_ref() {
-        Some(v) => v,
-        None => {
-            set_last_error("NotRunning", "node not initialized");
-            return ptr::null_mut();
-        }
-    };
-
-    match node.get_client_operation_catalog_json() {
+    match serde_json::to_string(CLIENT_OPERATION_CATALOG) {
         Ok(response) => make_jstring_or_null(&mut env, response),
-        Err(err) => {
-            set_last_node_error(err);
+        Err(_) => {
+            set_last_error("InternalError", "failed to serialize client operation catalog");
             ptr::null_mut()
         }
     }
