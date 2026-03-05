@@ -4,4 +4,16 @@
     <string name="title_activity_main">Reticulum Mobile Emergency Management</string>
     <string name="package_name">network.reticulum.emergency</string>
     <string name="custom_url_scheme">network.reticulum.emergency</string>
+    <string name="node_service_notification_channel_name">Reticulum Runtime</string>
+    <string name="node_service_notification_channel_description">Foreground runtime status for the local Reticulum node.</string>
+    <string name="node_service_notification_title">Reticulum node service</string>
+    <string name="node_service_notification_action_stop">Stop</string>
+    <string name="node_service_notification_action_restart">Restart</string>
+    <string name="node_service_notification_state_created">Service initialized</string>
+    <string name="node_service_notification_state_foreground">Service in foreground</string>
+    <string name="node_service_notification_state_running">Node running</string>
+    <string name="node_service_notification_state_stopping">Node stopping</string>
+    <string name="node_service_notification_state_stopped">Node stopped</string>
+    <string name="node_service_notification_state_error">Node service error</string>
+    <string name="node_service_notification_state_error_with_message">Error: %1$s</string>
 </resources>

@@ -5,6 +5,7 @@ import { copyToClipboard, shareText } from "../services/peerExchange";
 import { useNodeStore } from "../stores/nodeStore";
 
 const nodeStore = useNodeStore();
+type HubModeForm = "Disabled" | "RchLxmf";
 
 const form = reactive({
   clientMode: nodeStore.settings.clientMode,
@@ -14,7 +15,9 @@ const form = reactive({
   announceIntervalSeconds: nodeStore.settings.announceIntervalSeconds,
   tcpClientsText: nodeStore.settings.tcpClients.join("\n"),
   broadcast: nodeStore.settings.broadcast,
-  hubMode: nodeStore.settings.hub.mode === "RchLxmf" ? "RchLxmf" : "Disabled",
+  hubMode: (nodeStore.settings.hub.mode === "RchLxmf"
+    ? "RchLxmf"
+    : "Disabled") as HubModeForm,
   hubIdentityHash: nodeStore.settings.hub.identityHash,
   hubApiBaseUrl: nodeStore.settings.hub.apiBaseUrl,
   hubApiKey: nodeStore.settings.hub.apiKey,
@@ -39,7 +42,7 @@ function applySettings(): void {
       .filter((line: string) => line.length > 0),
     broadcast: form.broadcast,
     hub: {
-      mode: form.hubMode,
+      mode: form.hubMode as "Disabled" | "RchLxmf" | "RchHttp",
       identityHash: form.hubIdentityHash.trim(),
       apiBaseUrl: form.hubApiBaseUrl.trim(),
       apiKey: form.hubApiKey.trim(),

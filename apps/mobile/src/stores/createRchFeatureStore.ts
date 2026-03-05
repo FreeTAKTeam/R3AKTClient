@@ -1,6 +1,7 @@
 import type {
   ExecuteEnvelopeOptions,
   RchEnvelopeResponse,
+  RchFeatureExecutor,
   RchFeatureKey,
   RchFeatureOperationMap,
 } from "@reticulum/node-client";
@@ -47,7 +48,8 @@ export function createRchFeatureStore<K extends RchFeatureKey>(
       lastError.value = "";
       try {
         const client = await rchClientStore.requireClient();
-        const response = await client[feature].execute(operation, payload, options);
+        const featureExecutor = client[feature] as unknown as RchFeatureExecutor<K>;
+        const response = await featureExecutor.execute(operation, payload, options);
         lastOperation.value = operation;
         lastResponse.value = response;
         return response;

@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
   MESSAGES_OPERATIONS,
   SESSION_OPERATIONS,
+  createReticulumNodeClient,
   createRchClient,
   type DomainEventPayload,
   type LogLevel,
   type NodeClientEvents,
   type NodeConfig,
+  type ServiceStatus,
   type NodeStatus,
   type ReticulumNodeClient,
   type RchEnvelope,
@@ -31,6 +33,16 @@ class FakeNodeClient implements ReticulumNodeClient {
       identityHex: "a".repeat(32),
       appDestinationHex: "b".repeat(32),
       lxmfDestinationHex: "c".repeat(32),
+    };
+  }
+
+  async getServiceStatus(): Promise<ServiceStatus> {
+    return {
+      state: "Running",
+      running: true,
+      foreground: true,
+      droppedEvents: 0,
+      updatedAtMs: Date.now(),
     };
   }
 
@@ -148,5 +160,39 @@ describe("RchClient grouped feature API", () => {
     await expect(
       client.session.execute(MESSAGES_OPERATIONS[0] as never, {}),
     ).rejects.toThrow(/feature group allowlist/);
+  });
+
+  it("exposes additive service lifecycle API on web client", async () => {
+    const client = createReticulumNodeClient({ mode: "web" });
+    const states: string[] = [];
+    const unsubscribe = client.on("serviceStateChanged", (event) => {
+      states.push(event.service.state);
+    });
+
+    const initial = await client.getServiceStatus();
+    expect(initial.state).toBe("Created");
+
+    await client.start({
+      name: "web-client",
+      tcpClients: [],
+      broadcast: true,
+      announceIntervalSeconds: 30,
+      announceCapabilities: "R3AKT,EMergencyMessages",
+      hubMode: "Disabled",
+      hubRefreshIntervalSeconds: 300,
+    });
+
+    const running = await client.getServiceStatus();
+    expect(running.state).toBe("Running");
+    expect(running.running).toBe(true);
+    expect(states).toContain("Foreground");
+    expect(states).toContain("Running");
+
+    await client.stop();
+    const stopped = await client.getServiceStatus();
+    expect(stopped.state).toBe("Stopped");
+    expect(stopped.running).toBe(false);
+
+    unsubscribe();
   });
 });

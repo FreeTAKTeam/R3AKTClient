@@ -66,6 +66,24 @@ export interface NodeStatus {
   lxmfDestinationHex: string;
 }
 
+export type ServiceLifecycleState =
+  | "Created"
+  | "Foreground"
+  | "Running"
+  | "Stopping"
+  | "Stopped"
+  | "Error";
+
+export interface ServiceStatus {
+  state: ServiceLifecycleState;
+  running: boolean;
+  foreground: boolean;
+  droppedEvents: number;
+  updatedAtMs: number;
+  lastErrorCode?: string;
+  lastErrorMessage?: string;
+}
+
 export interface PeerChange {
   destinationHex: string;
   state: PeerState;
@@ -114,8 +132,13 @@ export interface NodeErrorEvent {
   message: string;
 }
 
+export interface ServiceStateChangedEvent {
+  service: ServiceStatus;
+}
+
 export interface NodeClientEvents {
   statusChanged: StatusChangedEvent;
+  serviceStateChanged: ServiceStateChangedEvent;
   announceReceived: AnnounceReceivedEvent;
   peerChanged: PeerChangedEvent;
   packetReceived: PacketReceivedEvent;
@@ -131,6 +154,7 @@ export interface ReticulumNodeClient {
   stop(): Promise<void>;
   restart(config: NodeConfig): Promise<void>;
   getStatus(): Promise<NodeStatus>;
+  getServiceStatus(): Promise<ServiceStatus>;
   connectPeer(destinationHex: string): Promise<void>;
   disconnectPeer(destinationHex: string): Promise<void>;
   sendBytes(destinationHex: string, bytes: Uint8Array): Promise<void>;
@@ -208,6 +232,7 @@ interface ReticulumNodePlugin {
   stopNode(): Promise<void>;
   restartNode(options: { config: Record<string, unknown> }): Promise<void>;
   getStatus(): Promise<Record<string, unknown>>;
+  getServiceStatus(): Promise<Record<string, unknown>>;
   connectPeer(options: { destinationHex: string }): Promise<void>;
   disconnectPeer(options: { destinationHex: string }): Promise<void>;
   send(options: { destinationHex: string; bytesBase64: string }): Promise<void>;
@@ -394,6 +419,43 @@ function toErrorEvent(raw: Record<string, unknown>): NodeErrorEvent {
   };
 }
 
+function toServiceLifecycleState(raw: unknown): ServiceLifecycleState {
+  const value = String(raw ?? "");
+  if (
+    value === "Created"
+    || value === "Foreground"
+    || value === "Running"
+    || value === "Stopping"
+    || value === "Stopped"
+    || value === "Error"
+  ) {
+    return value;
+  }
+  return "Created";
+}
+
+function toServiceStatus(raw: Record<string, unknown>): ServiceStatus {
+  return {
+    state: toServiceLifecycleState(raw.state),
+    running: Boolean(raw.running),
+    foreground: Boolean(raw.foreground),
+    droppedEvents: Number(raw.droppedEvents ?? raw.dropped_events ?? 0),
+    updatedAtMs: Number(raw.updatedAtMs ?? raw.updated_at_ms ?? Date.now()),
+    lastErrorCode: (raw.lastErrorCode ?? raw.last_error_code) as string | undefined,
+    lastErrorMessage: (raw.lastErrorMessage ?? raw.last_error_message) as string | undefined,
+  };
+}
+
+function toServiceStateChangedEvent(
+  raw: Record<string, unknown>,
+): ServiceStateChangedEvent {
+  const serviceRaw =
+    (raw.service as Record<string, unknown> | undefined) ?? raw;
+  return {
+    service: toServiceStatus(serviceRaw),
+  };
+}
+
 function configToPlugin(config: NodeConfig): Record<string, unknown> {
   return {
     name: config.name,
@@ -439,6 +501,7 @@ class CapacitorReticulumNodeClient implements ReticulumNodeClient {
       };
 
       await register("statusChanged", toStatusChangedEvent);
+      await register("serviceStateChanged", toServiceStateChangedEvent);
       await register("announceReceived", toAnnounceReceivedEvent);
       await register("peerChanged", toPeerChangedEvent);
       await register("packetReceived", toPacketReceivedEvent);
@@ -475,6 +538,12 @@ class CapacitorReticulumNodeClient implements ReticulumNodeClient {
     await this.ready();
     const status = await this.plugin.getStatus();
     return toNodeStatus(status);
+  }
+
+  async getServiceStatus(): Promise<ServiceStatus> {
+    await this.ready();
+    const status = await this.plugin.getServiceStatus();
+    return toServiceStatus(status);
   }
 
   async connectPeer(destinationHex: string): Promise<void> {
@@ -575,14 +644,46 @@ class WebReticulumNodeClient implements ReticulumNodeClient {
     appDestinationHex: randomHex32(),
     lxmfDestinationHex: randomHex32(),
   };
+  private serviceStatus: ServiceStatus = {
+    state: "Created",
+    running: false,
+    foreground: false,
+    droppedEvents: 0,
+    updatedAtMs: Date.now(),
+  };
   private readonly connected = new Set<string>();
 
+  private setServiceState(
+    state: ServiceLifecycleState,
+    patch: Partial<ServiceStatus> = {},
+  ): void {
+    this.serviceStatus = {
+      ...this.serviceStatus,
+      ...patch,
+      state,
+      updatedAtMs: Date.now(),
+    };
+    this.emitter.emit("serviceStateChanged", {
+      service: { ...this.serviceStatus },
+    });
+  }
+
   async start(config: NodeConfig): Promise<void> {
+    this.setServiceState("Foreground", {
+      running: false,
+      foreground: true,
+      lastErrorCode: undefined,
+      lastErrorMessage: undefined,
+    });
     this.status = {
       ...this.status,
       running: true,
       name: config.name,
     };
+    this.setServiceState("Running", {
+      running: true,
+      foreground: true,
+    });
     this.emitter.emit("statusChanged", { status: { ...this.status } });
     this.emitter.emit("log", {
       level: "Info",
@@ -591,6 +692,10 @@ class WebReticulumNodeClient implements ReticulumNodeClient {
   }
 
   async stop(): Promise<void> {
+    this.setServiceState("Stopping", {
+      running: this.status.running,
+      foreground: true,
+    });
     for (const destinationHex of this.connected) {
       this.emitter.emit("peerChanged", {
         change: {
@@ -604,6 +709,10 @@ class WebReticulumNodeClient implements ReticulumNodeClient {
       ...this.status,
       running: false,
     };
+    this.setServiceState("Stopped", {
+      running: false,
+      foreground: false,
+    });
     this.emitter.emit("statusChanged", { status: { ...this.status } });
   }
 
@@ -613,6 +722,10 @@ class WebReticulumNodeClient implements ReticulumNodeClient {
 
   async getStatus(): Promise<NodeStatus> {
     return { ...this.status };
+  }
+
+  async getServiceStatus(): Promise<ServiceStatus> {
+    return { ...this.serviceStatus };
   }
 
   async connectPeer(destinationHex: string): Promise<void> {
@@ -719,6 +832,10 @@ class WebReticulumNodeClient implements ReticulumNodeClient {
   }
 
   async dispose(): Promise<void> {
+    this.setServiceState("Stopped", {
+      running: false,
+      foreground: false,
+    });
     this.emitter.clear();
   }
 }
@@ -755,9 +872,31 @@ class MockReticulumNodeClient implements ReticulumNodeClient {
     appDestinationHex: randomHex32(),
     lxmfDestinationHex: randomHex32(),
   };
+  private serviceStatus: ServiceStatus = {
+    state: "Created",
+    running: false,
+    foreground: false,
+    droppedEvents: 0,
+    updatedAtMs: Date.now(),
+  };
   private capabilities = DEFAULT_NODE_CONFIG.announceCapabilities;
   private announceTimer: number | null = null;
   private readonly connected = new Set<string>();
+
+  private setServiceState(
+    state: ServiceLifecycleState,
+    patch: Partial<ServiceStatus> = {},
+  ): void {
+    this.serviceStatus = {
+      ...this.serviceStatus,
+      ...patch,
+      state,
+      updatedAtMs: Date.now(),
+    };
+    this.emitter.emit("serviceStateChanged", {
+      service: { ...this.serviceStatus },
+    });
+  }
 
   private emitAnnounce(destinationHex: string, appData: string): void {
     this.emitter.emit("announceReceived", {
@@ -795,6 +934,12 @@ class MockReticulumNodeClient implements ReticulumNodeClient {
   }
 
   async start(config: NodeConfig): Promise<void> {
+    this.setServiceState("Foreground", {
+      running: false,
+      foreground: true,
+      lastErrorCode: undefined,
+      lastErrorMessage: undefined,
+    });
     this.status = {
       ...this.status,
       running: true,
@@ -806,16 +951,28 @@ class MockReticulumNodeClient implements ReticulumNodeClient {
       level: "Info",
       message: "Mock node started",
     });
+    this.setServiceState("Running", {
+      running: true,
+      foreground: true,
+    });
     this.startMockAnnounces();
   }
 
   async stop(): Promise<void> {
+    this.setServiceState("Stopping", {
+      running: this.status.running,
+      foreground: true,
+    });
     this.status = {
       ...this.status,
       running: false,
     };
     this.connected.clear();
     this.stopMockAnnounces();
+    this.setServiceState("Stopped", {
+      running: false,
+      foreground: false,
+    });
     this.emitter.emit("statusChanged", { status: { ...this.status } });
   }
 
@@ -826,6 +983,10 @@ class MockReticulumNodeClient implements ReticulumNodeClient {
 
   async getStatus(): Promise<NodeStatus> {
     return { ...this.status };
+  }
+
+  async getServiceStatus(): Promise<ServiceStatus> {
+    return { ...this.serviceStatus };
   }
 
   async connectPeer(destinationHex: string): Promise<void> {

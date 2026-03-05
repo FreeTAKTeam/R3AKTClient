@@ -1,278 +1,134 @@
-# Reticulum Mobile (Rust) -- CODEX Implementation Prompt
+# R3AKTClient CODEX Implementation Prompt (Android-First Infrastructure Track)
 
-**Generated:** 2026-02-26T16:45:53.065210 UTC
+## Normative Sources
+This prompt is subordinate to and must remain aligned with:
 
-This is the baseline prompt for the original local-node scaffold.
-It remains useful as the foundation for the Rust runtime and native bridge that
-already exist in this repository, but it is not the primary source for the
-current product target.
+1. `docs/R3AKTClient/r3aktClient_implementationPlan.md`
+2. `docs/R3AKTClient/R3AKT_client_CODEX_Implementation_plan.md`
+3. `docs/R3AKTClient/APIANnalysis_clientImplementationSet.md`
 
-For the current target, use:
-- `docs/R3AKTClient/r3aktClient_implementationPlan.md`
-- `docs/R3AKTClient/R3AKT_client_CODEX_Implementation_plan.md`
+If this file conflicts with those documents, the three files above are authoritative.
 
-------------------------------------------------------------------------
+## Product Objective
+Deliver a production-grade Android-first mobile client in `R3AKTClient` that:
 
-# ROLE
+- runs a local Reticulum node lifecycle through a foreground service,
+- uses typed message-envelope operations (no feature REST dependency),
+- implements only allowlisted `client` operations (104),
+- preserves existing JS API compatibility by additive changes where possible,
+- keeps iOS build-compatible while Android is operational priority.
 
-You are implementing a production-grade mobile Reticulum node using:
+## Scope
+In scope:
 
--   Rust (Reticulum-rs embedded)
--   UniFFI (Rust -> Kotlin/Swift bindings)
--   Capacitor (Vue + TypeScript frontend)
--   Android (primary) + iOS (supported)
+- local node runtime and lifecycle ownership on device,
+- Rust -> native bridge -> Capacitor plugin -> `@reticulum/node-client` integration,
+- typed envelope command/query execution and typed domain events,
+- mobile UI/store wiring that depends on typed envelope flows,
+- CI allowlist enforcement for `client` operations only.
 
-The phone MUST run Reticulum locally.
+Out of scope:
 
-Your task is to implement the Rust core API, generate bindings,
-integrate native layers, and expose a stable Capacitor plugin API for
-Vue.
+- hub-server replacement behavior,
+- `server-only` or `unknown` operations,
+- feature work that depends on REST feature APIs.
 
-------------------------------------------------------------------------
+## Architecture Requirements
+Use this runtime ownership model:
 
-# REPOSITORY STRUCTURE (MANDATORY)
+1. `ForegroundService` owns node runtime lifecycle (`start`, `stop`, `restart`).
+2. Capacitor plugin is a thin IPC/binder bridge to service APIs.
+3. Event polling/dispatch lives in service-owned manager with bounded queues and replay-on-rebind behavior.
+4. `handleOnDestroy` unbinds listeners only; it must not implicitly stop the node.
 
-The repo now uses this layout:
+Android platform constraints:
 
-- `apps/mobile` -> Vue + Capacitor app
-- `packages/node-client` -> TypeScript wrapper around the Capacitor plugin
-- `crates/reticulum_mobile` -> Rust UniFFI wrapper crate
-- `tools/codegen` -> UniFFI generation scripts
+- target SDK 35 compliance,
+- foreground service declaration and permissions,
+- foreground notification channel and ongoing notification while runtime is active,
+- operational actions in notification for stop/restart,
+- foreground startup performed within Android timeout expectations.
 
-Reticulum-rs should be included as a git dependency inside
-`reticulum_mobile`.
+## Public Contract Requirements
+Keep existing plugin and TypeScript APIs stable:
 
-------------------------------------------------------------------------
+- `startNode`, `stopNode`, `restartNode`, `getStatus`, `executeEnvelope`, packet transport methods.
 
-# PHASE 1 -- RUST CORE (reticulum_mobile)
+Additive lifecycle contract:
 
-## 1. Create crate
+- `getServiceStatus()` method,
+- `serviceStateChanged` event with states:
+  `Created`, `Foreground`, `Running`, `Stopping`, `Stopped`, `Error`.
 
--   Type: cdylib
--   Tokio runtime internally managed
--   Wrap Reticulum-rs runtime as a library (NOT daemon process)
+Error policy:
 
-## 2. Core Object
+- map service/runtime failures to structured error codes,
+- preserve current success/failure behavior of existing methods.
 
-Implement:
+Transport policy:
 
-struct Node - internal runtime - command channel - event broadcast
-channel - state tracking
+- Base64 binary transport remains at JS boundary,
+- raw packet APIs are transport/debug only,
+- feature-state orchestration uses typed envelope APIs in `@reticulum/node-client`.
 
-Public API:
+## Delivery Sequence (Strict)
+Stage A (first): Android infrastructure hardening
 
--   new() -\> Node
--   start(config: NodeConfig)
--   stop()
--   restart(config: NodeConfig)
--   get_status() -\> NodeStatus
--   send(destination, data, options) -\> SendReceipt
--   broadcast(data, options) -\> SendReceipt
--   set_log_level(level)
--   subscribe_events() -\> EventSubscription
+1. Add service-owned runtime + binder manager.
+2. Move event poll/dispatch to service manager with bounded queues.
+3. Add notification channel/policy and Android 14+ foreground service compliance.
+4. Add service lifecycle API/event (`getServiceStatus`, `serviceStateChanged`).
 
-## 3. Event System
+Stage B: Runtime/bridge resilience adjustments
 
-NodeEvent union:
+1. Preserve envelope behavior and correlation timeout semantics externally.
+2. Ensure reconnect-safe subscriptions and replay after plugin rebind.
+3. Preserve compatibility of existing methods/events.
 
--   StatusChanged
--   PeerChanged
--   PacketReceived
--   PacketSent
--   Log
--   Error
+Stage C: Client feature families in allowlist order
 
-EventSubscription:
+1. discovery/session
+2. telemetry
+3. messaging/chat
+4. topics
+5. files/media
+6. map/markers/zones
+7. mission core
+8. teams/skills
+9. assets/assignments
+10. checklists
 
--   next(timeout_ms) -\> NodeEvent?
--   close()
+## CI and Acceptance Gates
+Android/service validation:
 
-Ensure: - Thread safe - No panics across FFI boundary - Structured error
-types
+- service start/stop/restart path coverage,
+- foreground notification present while runtime active,
+- rebind receives current status/events without node restart.
 
-## 4. Error Types
+Runtime validation:
 
-NodeError enum:
+- deterministic envelope behavior across reconnect,
+- bounded queue behavior (no unbounded memory growth),
+- domain event decode/state transition integrity.
 
--   InvalidConfig
--   IoError
--   NetworkError
--   ReticulumError
--   AlreadyRunning
--   NotRunning
--   Timeout
--   InternalError
+TypeScript/Vue validation:
 
-Never expose backtraces over FFI.
+- `@reticulum/node-client` tests for additive lifecycle API/event and compatibility,
+- mobile store reconnect-safe behavior tests,
+- route/deep-link parity tests remain passing.
 
-------------------------------------------------------------------------
+Build gates:
 
-# PHASE 2 -- UNIFFI INTEGRATION
+1. `cargo check -p reticulum_mobile`
+2. `cargo test -p reticulum_mobile`
+3. `npm --workspace packages/node-client run build`
+4. `npm --workspace apps/mobile run typecheck`
+5. `npm --workspace apps/mobile run build`
+6. node-client and mobile test suites
 
-Use UniFFI IDL or proc macros to define public interface.
+## Execution Rules
 
-Generate bindings for: - Kotlin - Swift
-
-Use the repository scripts:
-
-- `tools/codegen/generate-uniffi-bindings.sh`
-- `tools/codegen/generate-uniffi-bindings.ps1`
-
-Script must: - build Rust targets - run uniffi-bindgen - copy generated
-sources into: - android project - ios project
-
-Supported targets:
-
-Android: - aarch64-linux-android - armv7-linux-androideabi -
-x86_64-linux-android
-
-iOS: - aarch64-apple-ios - aarch64-apple-ios-sim - x86_64-apple-ios-sim
-
-------------------------------------------------------------------------
-
-# PHASE 3 -- ANDROID IMPLEMENTATION
-
-## Requirements
-
--   Foreground Service (required)
--   Persistent notification
--   Node lifecycle tied to service
-
-Implement:
-
-NodeManager (singleton) - Owns UniFFI Node - Coroutine polling
-EventSubscription - Emits events to JS
-
-Capacitor Plugin: ReticulumNode
-
-JS Methods:
-
--   startNode(config)
--   stopNode()
--   restartNode(config)
--   getStatus()
--   send()
--   broadcast()
--   setLogLevel()
-
-JS Events:
-
--   statusChanged
--   peerChanged
--   packetReceived
--   packetSent
--   log
--   error
-
-Binary payloads must be Base64 encoded in JS.
-
-Android 14+ Foreground Service compliance required.
-
-------------------------------------------------------------------------
-
-# PHASE 4 -- iOS IMPLEMENTATION
-
-## Requirements
-
--   Foreground-first reliability
--   Clean suspend/resume handling
--   No assumption of infinite background runtime
-
-Implement:
-
-NodeManager (Swift) - Owns UniFFI Node - Polls EventSubscription on
-background thread - Emits events to Capacitor bridge
-
-Handle: - App entering background -> persist state - App entering
-foreground -> resume node
-
-Optional: integrate BackgroundTasks for deferred work.
-
-------------------------------------------------------------------------
-
-# PHASE 5 -- TYPESCRIPT WRAPPER
-
-Create package:
-
-packages/node-client
-
-Implement class:
-
-class ReticulumNodeClient
-
-Features: - Typed methods - Event emitter abstraction - Auto base64
-encode/decode - start() - stop() - on(event, callback) - sendBytes() -
-sendString() - dispose()
-
-Provide browser mock implementation for dev mode.
-
-------------------------------------------------------------------------
-
-# PHASE 6 -- TESTING
-
-## Rust
-
--   start/stop idempotency
--   event channel does not deadlock
--   send emits PacketSent
-
-## Android
-
--   Service starts
--   Node status transitions correctly
-
-## iOS
-
--   Node start/stop works on simulator
-
-## JS
-
--   Mock plugin allows Vue dev without device
-
-------------------------------------------------------------------------
-
-# SECURITY REQUIREMENTS
-
--   Never log secrets
--   No unvalidated file paths
--   Explicit opt-in for packet capture
--   No unwrap() across FFI boundary
-
-------------------------------------------------------------------------
-
-# SUCCESS CRITERIA
-
-Implementation is complete when:
-
-1.  Android device can:
-    -   Start node
-    -   Send packet
-    -   Receive packet
-    -   Remain running in foreground service
-2.  iOS device can:
-    -   Start node
-    -   Send/receive while foregrounded
-    -   Resume cleanly after suspension
-3.  Vue app:
-    -   Displays status
-    -   Streams logs
-    -   Sends test message
-
-------------------------------------------------------------------------
-
-# IMPLEMENTATION ORDER (STRICT)
-
-1.  Build Rust core without UniFFI
-2.  Add UniFFI bindings
-3.  Verify Android static call works
-4.  Add Foreground Service
-5.  Add iOS binding
-6.  Add Capacitor bridge
-7.  Add TS wrapper
-8.  Add tests
-
-Do not skip order.
-
-------------------------------------------------------------------------
-
-END OF PROMPT
+- Do not add out-of-scope operations.
+- Fail CI if allowlisted coverage drops below 104 operations or out-of-scope operations appear.
+- Keep API changes additive and non-breaking unless explicitly approved.
+- Maintain Android-first runtime reliability without regressing iOS build compatibility.
