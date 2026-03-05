@@ -22,7 +22,7 @@ use reticulum::transport::{SendPacketOutcome as RnsSendOutcome, Transport, Trans
 use tokio::sync::{mpsc, Mutex as TokioMutex};
 
 use crate::event_bus::EventBus;
-use crate::generated::client_operations::CLIENT_OPERATION_KEYS;
+use crate::generated::client_operations::{group_for_operation, CLIENT_OPERATION_KEYS};
 use crate::sdk_backend::InProcessSdkBackend;
 use crate::types::{
     EnvelopeKind, HubMode, MessageEnvelope, NodeConfig, NodeError, NodeEvent, NodeStatus,
@@ -126,6 +126,17 @@ fn build_mission_sync_command(envelope: &MessageEnvelope, source_identity: &str)
         return Err(NodeError::InvalidConfig {});
     }
 
+    let expected_kind = if envelope.r#type.starts_with("GET ") {
+        EnvelopeKind::Query
+    } else {
+        EnvelopeKind::Command
+    };
+    if envelope.kind != expected_kind {
+        return Err(NodeError::InvalidConfig {});
+    }
+
+    let feature_group = group_for_operation(&envelope.r#type).ok_or(NodeError::InvalidConfig {})?;
+
     let command_type = envelope
         .r#type
         .trim()
@@ -150,6 +161,7 @@ fn build_mission_sync_command(envelope: &MessageEnvelope, source_identity: &str)
             "args": args,
             "correlation_id": envelope.correlation_id,
             "topics": [],
+            "feature_group": feature_group,
         }
     ]);
 

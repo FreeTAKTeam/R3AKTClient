@@ -141,6 +141,7 @@ export interface ReticulumNodeClient {
   executeEnvelope<TPayload = unknown, TResult = unknown>(
     envelope: RchEnvelope<TPayload>,
   ): Promise<RchEnvelopeResponse<TResult>>;
+  getClientOperationCatalog(): Promise<readonly ClientOperationEntry[]>;
   on<K extends keyof NodeClientEvents>(
     event: K,
     handler: (payload: NodeClientEvents[K]) => void,
@@ -215,6 +216,7 @@ interface ReticulumNodePlugin {
   setLogLevel(options: { level: LogLevel }): Promise<void>;
   refreshHubDirectory(): Promise<void>;
   executeEnvelope(options: { envelopeJson: string }): Promise<Record<string, unknown>>;
+  getClientOperationCatalog(): Promise<Record<string, unknown>>;
   addListener(
     eventName: string,
     listener: (event: unknown) => void,
@@ -537,6 +539,16 @@ class CapacitorReticulumNodeClient implements ReticulumNodeClient {
     return JSON.parse(responseJson) as RchEnvelopeResponse<TResult>;
   }
 
+  async getClientOperationCatalog(): Promise<readonly ClientOperationEntry[]> {
+    await this.ready();
+    const response = await this.plugin.getClientOperationCatalog();
+    const catalogJson = String(response.catalogJson ?? response.catalog_json ?? "");
+    if (!catalogJson) {
+      throw new Error("Native getClientOperationCatalog returned empty response.");
+    }
+    return JSON.parse(catalogJson) as ClientOperationEntry[];
+  }
+
   on<K extends keyof NodeClientEvents>(
     event: K,
     handler: (payload: NodeClientEvents[K]) => void,
@@ -693,6 +705,10 @@ class WebReticulumNodeClient implements ReticulumNodeClient {
       message: `Web runtime synthetic executeEnvelope for ${envelope.type}.`,
     });
     return result;
+  }
+
+  async getClientOperationCatalog(): Promise<readonly ClientOperationEntry[]> {
+    return CLIENT_OPERATION_CATALOG;
   }
 
   on<K extends keyof NodeClientEvents>(
@@ -901,6 +917,10 @@ class MockReticulumNodeClient implements ReticulumNodeClient {
       correlationId,
     });
     return result;
+  }
+
+  async getClientOperationCatalog(): Promise<readonly ClientOperationEntry[]> {
+    return CLIENT_OPERATION_CATALOG;
   }
 
   on<K extends keyof NodeClientEvents>(

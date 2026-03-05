@@ -140,5 +140,9 @@ interface Node {
   // Returns the serialized response envelope JSON.
   [Throws=NodeError]
   string execute_envelope(string envelope_json);
+
+  // Return the generated client operation catalog as JSON.
+  [Throws=NodeError]
+  string get_client_operation_catalog_json();
 };
 

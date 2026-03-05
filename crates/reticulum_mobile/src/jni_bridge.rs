@@ -711,6 +711,35 @@ pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_executeE
     }
 }
 #[no_mangle]
+pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_getClientOperationCatalogJson(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    let guard = match bridge_state().lock() {
+        Ok(v) => v,
+        Err(_) => {
+            set_last_error("InternalError", "bridge lock poisoned");
+            return ptr::null_mut();
+        }
+    };
+    let node = match guard.node.as_ref() {
+        Some(v) => v,
+        None => {
+            set_last_error("NotRunning", "node not initialized");
+            return ptr::null_mut();
+        }
+    };
+
+    match node.get_client_operation_catalog_json() {
+        Ok(response) => make_jstring_or_null(&mut env, response),
+        Err(err) => {
+            set_last_node_error(err);
+            ptr::null_mut()
+        }
+    }
+}
+
+#[no_mangle]
 pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_nextEventJson(
     mut env: JNIEnv,
     _class: JClass,
