@@ -9,6 +9,7 @@ use jni::JNIEnv;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
+use crate::generated::client_operations::CLIENT_OPERATION_CATALOG;
 use crate::node::{EventSubscription, Node};
 use crate::types::{
     HubMode, LogLevel, NodeConfig, NodeError, NodeEvent, NodeStatus, PeerState, SendOutcome,
@@ -710,6 +711,20 @@ pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_executeE
         }
     }
 }
+#[no_mangle]
+pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_getClientOperationCatalogJson(
+    mut env: JNIEnv,
+    _class: JClass,
+) -> jstring {
+    match serde_json::to_string(CLIENT_OPERATION_CATALOG) {
+        Ok(response) => make_jstring_or_null(&mut env, response),
+        Err(_) => {
+            set_last_error("InternalError", "failed to serialize client operation catalog");
+            ptr::null_mut()
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_nextEventJson(
     mut env: JNIEnv,

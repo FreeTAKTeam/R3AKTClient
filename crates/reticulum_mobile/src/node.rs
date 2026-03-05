@@ -8,6 +8,7 @@ use tokio::runtime::Runtime;
 use tokio::sync::mpsc;
 
 use crate::event_bus::EventBus;
+use crate::generated::client_operations::CLIENT_OPERATION_CATALOG;
 use crate::logger::NodeLogger;
 use crate::runtime::{load_or_create_identity, run_node, Command};
 use crate::types::{LogLevel, NodeConfig, NodeError, NodeEvent, NodeStatus};
@@ -257,6 +258,10 @@ impl Node {
                 let _ = tx.send(Command::SetLogLevel { level });
             }
         }
+    }
+
+    pub fn get_client_operation_catalog_json(&self) -> Result<String, NodeError> {
+        serde_json::to_string(CLIENT_OPERATION_CATALOG).map_err(|_| NodeError::InternalError {})
     }
 
     pub fn subscribe_events(&self) -> Arc<EventSubscription> {

@@ -224,6 +224,19 @@ public class ReticulumNodePlugin extends Plugin {
         }
     }
     @PluginMethod
+    public void getClientOperationCatalog(PluginCall call) {
+        String catalogJson = ReticulumBridge.getClientOperationCatalogJson();
+        if (catalogJson == null || catalogJson.isEmpty()) {
+            rejectFromNative(call, "Failed to load client operation catalog.");
+            return;
+        }
+
+        JSObject payload = new JSObject();
+        payload.put("catalogJson", catalogJson);
+        call.resolve(payload);
+    }
+
+    @PluginMethod
     public void removeAllListeners(PluginCall call) {
         call.resolve();
     }
