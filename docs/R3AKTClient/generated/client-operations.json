@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-03-06T19:38:41.761Z",
+  "generated_at": "2026-03-06T19:51:33.562Z",
   "source": "docs/R3AKTClient/APIANnalysis_clientImplementationSet.md",
-  "operation_count": 123,
+  "operation_count": 125,
   "groups": [
     {
       "name": "Core Discovery and Session",
@@ -23,11 +23,19 @@
           "description": "Return the list of supported commands."
         },
         {
-          "operation": "mission.join",
+          "operation": "POST /RCH",
+          "description": "Join an RCH instance as the supplied identity."
+        },
+        {
+          "operation": "PUT /RCH",
+          "description": "Leave an RCH instance as the supplied identity."
+        },
+        {
+          "operation": "POST /RTH",
           "description": "Legacy compatibility alias for join."
         },
         {
-          "operation": "mission.leave",
+          "operation": "PUT /RTH",
           "description": "Legacy compatibility alias for leave."
         },
         {
@@ -888,16 +896,6 @@
       "group": "Topics and Distribution"
     },
     {
-      "operation": "mission.join",
-      "description": "Legacy compatibility alias for join.",
-      "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "mission.leave",
-      "description": "Legacy compatibility alias for leave.",
-      "group": "Core Discovery and Session"
-    },
-    {
       "operation": "mission.message.send",
       "description": "Send a message into the hub.",
       "group": "Messaging and Chat"
@@ -1093,6 +1091,16 @@
       "group": "Hub Admin and Legacy Command Parity"
     },
     {
+      "operation": "POST /RCH",
+      "description": "Join an RCH instance as the supplied identity.",
+      "group": "Core Discovery and Session"
+    },
+    {
+      "operation": "POST /RTH",
+      "description": "Legacy compatibility alias for join.",
+      "group": "Core Discovery and Session"
+    },
+    {
       "operation": "POST /Subscriber",
       "description": "Creates a new Subscriber record.",
       "group": "Hub Admin and Legacy Command Parity"
@@ -1156,6 +1164,16 @@
       "operation": "PUT /Config",
       "description": "Apply a new config.ini payload.",
       "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "PUT /RCH",
+      "description": "Leave an RCH instance as the supplied identity.",
+      "group": "Core Discovery and Session"
+    },
+    {
+      "operation": "PUT /RTH",
+      "description": "Legacy compatibility alias for leave.",
+      "group": "Core Discovery and Session"
     },
     {
       "operation": "topic.list",
