@@ -5,11 +5,6 @@ const repoRoot = process.cwd();
 const sourcePath = path.join(repoRoot, "docs", "R3AKTClient", "APIANnalysis_clientImplementationSet.md");
 const content = fs.readFileSync(sourcePath, "utf8");
 
-const CANONICAL_OPERATION_ALIASES = new Map([
-  ["GET /Topic", "topic.list"],
-  ["POST /Topic/Subscribe", "topic.subscribe"],
-]);
-
 const lines = content.split(/\r?\n/);
 
 const groups = [];
@@ -27,12 +22,11 @@ for (const line of lines) {
     continue;
   }
 
-  const sourceOperation = opMatch[1].trim();
+  const operation = opMatch[1].trim();
   const description = opMatch[2].trim();
-  if (!/^(GET|POST|PUT|PATCH|DELETE)\s+\//.test(sourceOperation)) {
+  if (!/^(GET|POST|PUT|PATCH|DELETE)\s+\//.test(operation)) {
     continue;
   }
-  const operation = CANONICAL_OPERATION_ALIASES.get(sourceOperation) ?? sourceOperation;
 
   let group = groups.find((entry) => entry.name === currentGroup);
   if (!group) {
@@ -40,14 +34,6 @@ for (const line of lines) {
     groups.push(group);
   }
   group.operations.push({ operation, description });
-}
-
-for (const group of groups) {
-  const uniqueGroupOperations = new Map();
-  for (const operation of group.operations) {
-    uniqueGroupOperations.set(operation.operation, operation);
-  }
-  group.operations = [...uniqueGroupOperations.values()];
 }
 
 const operations = groups.flatMap((group) =>

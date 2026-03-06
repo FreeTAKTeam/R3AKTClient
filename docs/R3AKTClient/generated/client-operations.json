@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-06T19:54:18.252Z",
+  "generated_at": "2026-03-06T15:38:53.530Z",
   "source": "docs/R3AKTClient/APIANnalysis_clientImplementationSet.md",
   "operation_count": 125,
   "groups": [
@@ -82,11 +82,11 @@
       "name": "Topics and Distribution",
       "operations": [
         {
-          "operation": "topic.list",
+          "operation": "GET /Topic",
           "description": "Retrieves a list of all Topic"
         },
         {
-          "operation": "topic.subscribe",
+          "operation": "POST /Topic/Subscribe",
           "description": "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted)."
         },
         {
@@ -891,6 +891,11 @@
       "group": "Telemetry and Live Status"
     },
     {
+      "operation": "GET /Topic",
+      "description": "Retrieves a list of all Topic",
+      "group": "Topics and Distribution"
+    },
+    {
       "operation": "GET /Topic/{id}",
       "description": "retrieve an existing Topic record based on the provided ID.",
       "group": "Topics and Distribution"
@@ -1121,6 +1126,11 @@
       "group": "Hub Admin and Legacy Command Parity"
     },
     {
+      "operation": "POST /Topic/Subscribe",
+      "description": "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted).",
+      "group": "Topics and Distribution"
+    },
+    {
       "operation": "PUT /api/r3akt/assignments/{assignment_uid}/assets",
       "description": "Replace assignment asset links.",
       "group": "R3AKT Assets and Assignments"
@@ -1174,16 +1184,6 @@
       "operation": "PUT /RTH",
       "description": "Legacy compatibility alias for leave.",
       "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "topic.list",
-      "description": "Retrieves a list of all Topic",
-      "group": "Topics and Distribution"
-    },
-    {
-      "operation": "topic.subscribe",
-      "description": "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted).",
-      "group": "Topics and Distribution"
     }
   ]
 }

@@ -10,11 +10,12 @@ use rand_core::OsRng;
 use regex::Regex;
 use reticulum::delivery::{send_via_link, strip_destination_prefix};
 use reticulum::destination::link::LinkEvent;
-use reticulum::destination::{DestinationDesc, DestinationName};
+use reticulum::destination::{DestinationDesc, DestinationName, SingleOutputDestination};
 use reticulum::hash::AddressHash;
 use reticulum::identity::PrivateIdentity;
 use reticulum::iface::tcp_client::TcpClient;
 use reticulum::packet::{Packet, PacketDataBuffer, PropagationType};
+use reticulum::resource::ResourceEventKind;
 use reticulum::transport::{
     ReceivedData, ReceivedPayloadMode, SendPacketOutcome as RnsSendOutcome, Transport,
     TransportConfig,
@@ -50,6 +51,15 @@ fn hub_announce_wait_timeout() -> Duration {
         .map(Duration::from_secs)
         .filter(|value| !value.is_zero())
         .unwrap_or(Duration::from_secs(300))
+}
+
+fn lxmf_link_send_timeout() -> Duration {
+    std::env::var("RCH_LXMF_LINK_SEND_TIMEOUT_SECONDS")
+        .ok()
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .map(Duration::from_secs)
+        .filter(|value| !value.is_zero())
+        .unwrap_or(Duration::from_secs(20))
 }
 
 #[derive(Debug, Clone)]
@@ -1478,7 +1488,7 @@ async fn send_lxmf_request_message(
         state.transport.as_ref(),
         hub,
         &wire,
-        Duration::from_secs(20),
+        lxmf_link_send_timeout(),
     )
     .await
     {
@@ -1524,68 +1534,122 @@ async fn await_lxmf_execution_result(
     timeout: Duration,
 ) -> Result<Option<LxmfExecutionResult>, NodeError> {
     let mut rx = state.transport.received_data_events();
+    let mut resource_rx = state.transport.resource_events();
     let deadline = tokio::time::Instant::now() + timeout;
 
     loop {
         if tokio::time::Instant::now() >= deadline {
             return Ok(None);
         }
+        tokio::select! {
+            result = rx.recv() => {
+                let received = match result {
+                    Ok(event) => event,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        return Err(NodeError::InternalError {})
+                    }
+                };
 
-        let received = match tokio::time::timeout(Duration::from_millis(500), rx.recv()).await {
-            Ok(Ok(event)) => event,
-            Ok(Err(tokio::sync::broadcast::error::RecvError::Lagged(_))) => continue,
-            Ok(Err(tokio::sync::broadcast::error::RecvError::Closed)) => {
-                return Err(NodeError::InternalError {})
+                let Some((reply, wire)) = decode_received_lxmf_message(&received) else {
+                    if lxmf_debug_enabled() {
+                        eprintln!(
+                            "[lxmf-debug] {}",
+                            serde_json::json!({
+                                "direction": "inbound",
+                                "note": "non-lxmf-or-undecodable",
+                                "packet_destination": address_hash_to_hex(&received.destination),
+                                "payload_mode": match received.payload_mode {
+                                    ReceivedPayloadMode::FullWire => "full_wire",
+                                    ReceivedPayloadMode::DestinationStripped => "destination_stripped",
+                                },
+                                "byte_len": received.data.len(),
+                                "byte_preview_hex": hex::encode(
+                                    received.data.as_slice().iter().copied().take(96).collect::<Vec<_>>()
+                                ),
+                            })
+                        );
+                    }
+                    continue;
+                };
+                if lxmf_debug_enabled() {
+                    eprintln!(
+                        "[lxmf-wire] {}",
+                        serde_json::json!({
+                            "direction": "inbound",
+                            "note": envelope.r#type,
+                            "packet_destination": address_hash_to_hex(&received.destination),
+                            "payload_mode": match received.payload_mode {
+                                ReceivedPayloadMode::FullWire => "full_wire",
+                                ReceivedPayloadMode::DestinationStripped => "destination_stripped",
+                            },
+                            "wire_len": wire.len(),
+                            "wire_hex": hex::encode(&wire),
+                        })
+                    );
+                }
+                debug_dump_lxmf_message("inbound", &envelope.r#type, &reply);
+
+                if let Some(result) = decode_correlated_reply(envelope, &reply, correlation_id)? {
+                    return Ok(Some(result));
+                }
+
+                if matches!(encoding, LxmfEnvelopeEncoding::Legacy) {
+                    if let Some(result) = decode_legacy_reply(envelope, &reply, correlation_id) {
+                        return Ok(Some(result));
+                    }
+                }
             }
-            Err(_) => continue,
-        };
+            result = resource_rx.recv() => {
+                let event = match result {
+                    Ok(event) => event,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => continue,
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => {
+                        return Err(NodeError::InternalError {})
+                    }
+                };
+                let ResourceEventKind::Complete(complete) = event.kind else {
+                    continue;
+                };
+                let wire = complete.data;
+                let Ok(reply) = LxmfMessage::from_wire(&wire) else {
+                    if lxmf_debug_enabled() {
+                        eprintln!(
+                            "[lxmf-debug] {}",
+                            serde_json::json!({
+                                "direction": "inbound",
+                                "note": "resource-complete-non-lxmf",
+                                "link_id": address_hash_to_hex(&event.link_id),
+                                "wire_len": wire.len(),
+                                "wire_hex": hex::encode(&wire),
+                            })
+                        );
+                    }
+                    continue;
+                };
+                if lxmf_debug_enabled() {
+                    eprintln!(
+                        "[lxmf-wire] {}",
+                        serde_json::json!({
+                            "direction": "inbound",
+                            "note": format!("{}:resource", envelope.r#type),
+                            "link_id": address_hash_to_hex(&event.link_id),
+                            "wire_len": wire.len(),
+                            "wire_hex": hex::encode(&wire),
+                        })
+                    );
+                }
+                debug_dump_lxmf_message("inbound", &envelope.r#type, &reply);
 
-        let Some((reply, wire)) = decode_received_lxmf_message(&received) else {
-            if lxmf_debug_enabled() {
-                eprintln!(
-                    "[lxmf-debug] {}",
-                    serde_json::json!({
-                        "direction": "inbound",
-                        "note": "non-lxmf-or-undecodable",
-                        "packet_destination": address_hash_to_hex(&received.destination),
-                        "payload_mode": match received.payload_mode {
-                            ReceivedPayloadMode::FullWire => "full_wire",
-                            ReceivedPayloadMode::DestinationStripped => "destination_stripped",
-                        },
-                        "byte_len": received.data.len(),
-                        "byte_preview_hex": hex::encode(
-                            received.data.as_slice().iter().copied().take(96).collect::<Vec<_>>()
-                        ),
-                    })
-                );
-            }
-            continue;
-        };
-        if lxmf_debug_enabled() {
-            eprintln!(
-                "[lxmf-wire] {}",
-                serde_json::json!({
-                    "direction": "inbound",
-                    "note": envelope.r#type,
-                    "packet_destination": address_hash_to_hex(&received.destination),
-                    "payload_mode": match received.payload_mode {
-                        ReceivedPayloadMode::FullWire => "full_wire",
-                        ReceivedPayloadMode::DestinationStripped => "destination_stripped",
-                    },
-                    "wire_len": wire.len(),
-                    "wire_hex": hex::encode(&wire),
-                })
-            );
-        }
-        debug_dump_lxmf_message("inbound", &envelope.r#type, &reply);
+                if let Some(result) = decode_correlated_reply(envelope, &reply, correlation_id)? {
+                    return Ok(Some(result));
+                }
 
-        if let Some(result) = decode_correlated_reply(envelope, &reply, correlation_id)? {
-            return Ok(Some(result));
-        }
-
-        if matches!(encoding, LxmfEnvelopeEncoding::Legacy) {
-            if let Some(result) = decode_legacy_reply(envelope, &reply, correlation_id) {
-                return Ok(Some(result));
+                if matches!(encoding, LxmfEnvelopeEncoding::Legacy) {
+                    if let Some(result) = decode_legacy_reply(envelope, &reply, correlation_id) {
+                        return Ok(Some(result));
+                    }
+                }
             }
         }
     }
@@ -1924,12 +1988,37 @@ struct NodeRuntimeState {
     hub_reply_identity_announced: Arc<TokioMutex<bool>>,
 }
 
+fn destination_desc_for_expected_name(
+    desc: DestinationDesc,
+    expected_name: Option<DestinationName>,
+) -> DestinationDesc {
+    let Some(expected_name) = expected_name else {
+        return desc;
+    };
+
+    let derived = SingleOutputDestination::new(desc.identity, expected_name).desc;
+    if derived.address_hash == desc.address_hash {
+        desc
+    } else {
+        derived
+    }
+}
+
 async fn ensure_destination_desc(
     state: &NodeRuntimeState,
     dest: AddressHash,
     expected_name: Option<DestinationName>,
 ) -> Result<DestinationDesc, NodeError> {
     if let Some(desc) = state.known_destinations.lock().await.get(&dest).copied() {
+        let resolved = destination_desc_for_expected_name(desc, expected_name);
+        if resolved.address_hash != desc.address_hash {
+            state
+                .known_destinations
+                .lock()
+                .await
+                .insert(resolved.address_hash, resolved);
+            return Ok(resolved);
+        }
         return Ok(desc);
     }
 
@@ -1945,11 +2034,13 @@ async fn ensure_destination_desc(
             let name = expected_name.unwrap_or_else(|| {
                 DestinationName::new(APP_DESTINATION_NAME.0, APP_DESTINATION_NAME.1)
             });
-            return Ok(DestinationDesc {
-                identity,
-                address_hash: dest,
-                name,
-            });
+            let desc = SingleOutputDestination::new(identity, name).desc;
+            state
+                .known_destinations
+                .lock()
+                .await
+                .insert(desc.address_hash, desc);
+            return Ok(desc);
         }
 
         if tokio::time::Instant::now() >= deadline {
@@ -1962,6 +2053,13 @@ async fn ensure_destination_desc(
 async fn ensure_hub_can_reply(state: &NodeRuntimeState, hub: AddressHash) -> Result<(), NodeError> {
     let mut announced = state.hub_reply_identity_announced.lock().await;
     if *announced {
+        return Ok(());
+    }
+
+    if state.seen_announces.lock().await.contains(&hub)
+        || state.transport.destination_identity(&hub).await.is_some()
+    {
+        *announced = true;
         return Ok(());
     }
 
@@ -3232,6 +3330,32 @@ mod tests {
         assert_eq!(decoded.destination_hash, Some(destination));
         assert_eq!(decoded.source_hash, Some(source));
         assert_eq!(decoded.title_as_string().as_deref(), Some("join"));
+    }
+
+    #[test]
+    fn destination_desc_for_expected_name_derives_lxmf_delivery_from_app_announce() {
+        let identity = PrivateIdentity::new_from_name("runtime-known-destination");
+        let app_desc = SingleOutputDestination::new(
+            *identity.as_identity(),
+            DestinationName::new(APP_DESTINATION_NAME.0, APP_DESTINATION_NAME.1),
+        )
+        .desc;
+
+        let resolved = destination_desc_for_expected_name(
+            app_desc,
+            Some(DestinationName::new(
+                LXMF_DELIVERY_NAME.0,
+                LXMF_DELIVERY_NAME.1,
+            )),
+        );
+
+        assert_eq!(resolved.identity.to_hex_string(), app_desc.identity.to_hex_string());
+        assert_eq!(
+            resolved.name.as_name_hash_slice(),
+            DestinationName::new(LXMF_DELIVERY_NAME.0, LXMF_DELIVERY_NAME.1)
+                .as_name_hash_slice()
+        );
+        assert_ne!(resolved.address_hash, app_desc.address_hash);
     }
 
     #[test]

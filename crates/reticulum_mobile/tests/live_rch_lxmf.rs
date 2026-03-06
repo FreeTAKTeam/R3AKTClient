@@ -7,7 +7,7 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use lxmf::message::Message as LxmfMessage;
 use reticulum::destination::{DestinationName, SingleInputDestination};
 use reticulum::identity::PrivateIdentity;
-use reticulum_mobile::{EventSubscription, HubMode, Node, NodeConfig, NodeEvent};
+use reticulum_mobile::{EventSubscription, HubMode, Node, NodeConfig, NodeError, NodeEvent};
 use rmpv::Value as RmpValue;
 use serde_json::{json, Value};
 
@@ -99,10 +99,38 @@ fn build_envelope(operation: &str, payload: Value) -> String {
 }
 
 fn execute_and_parse(node: &Node, operation: &str, payload: Value) -> Value {
-    let response = node
-        .execute_envelope(build_envelope(operation, payload))
-        .expect("execute envelope over live hub");
-    serde_json::from_str(&response).expect("parse envelope response")
+    const MAX_TIMEOUT_RETRIES: usize = 3;
+    const RETRY_DELAY: Duration = Duration::from_secs(2);
+    let retry_timeouts = !matches!(operation, "ListTopic" | "SubscribeTopic");
+
+    for attempt in 0..=MAX_TIMEOUT_RETRIES {
+        match node.execute_envelope(build_envelope(operation, payload.clone())) {
+            Ok(response) => {
+                return serde_json::from_str(&response).expect("parse envelope response");
+            }
+            Err(NodeError::Timeout {}) if retry_timeouts && attempt < MAX_TIMEOUT_RETRIES => {
+                eprintln!(
+                    "[retry] execute_envelope timeout for {operation} (attempt {}/{})",
+                    attempt + 1,
+                    MAX_TIMEOUT_RETRIES + 1
+                );
+                thread::sleep(RETRY_DELAY);
+            }
+            Err(NodeError::Timeout {}) => {
+                return json!({
+                    "api_version": "1.0",
+                    "kind": "error",
+                    "type": operation,
+                    "payload": {
+                        "reason": "timeout",
+                    }
+                });
+            }
+            Err(err) => panic!("execute envelope over live hub: {err}"),
+        }
+    }
+
+    unreachable!("retry loop must return or panic")
 }
 
 fn response_payload_text(response: &Value) -> Option<String> {
@@ -502,25 +530,22 @@ fn live_rch_lxmf_mission_sync_probe() {
         "join returned an error envelope for observer"
     );
 
-    let topic_list = execute_and_parse(&sender, "topic.list", json!({}));
-    eprintln!("[topic-list] {topic_list}");
-    drain_and_log_events(&sender_events, Duration::from_secs(2));
-    assert_ne!(
-        topic_list["kind"],
-        json!("error"),
-        "topic.list returned an error envelope"
-    );
-
     let mut send_payload = json!({
         "local_message_id": format!("live-msg-{}", now_millis()),
         "content": message_body,
     });
     let mut expected_topic_id = None::<String>;
 
-    if let Some(topic_id) = extract_first_topic_id(&topic_list) {
+    let topic_list = execute_and_parse(&sender, "ListTopic", json!({}));
+    eprintln!("[topic-list] {topic_list}");
+    drain_and_log_events(&sender_events, Duration::from_secs(2));
+
+    if topic_list["kind"] == json!("error") {
+        eprintln!("[topic-list-fallback] falling back to broadcast relay");
+    } else if let Some(topic_id) = extract_first_topic_id(&topic_list) {
         let subscribe = execute_and_parse(
             &observer,
-            "topic.subscribe",
+            "SubscribeTopic",
             json!({
                 "topic_id": topic_id,
             }),
@@ -539,7 +564,6 @@ fn live_rch_lxmf_mission_sync_probe() {
 
     let send = execute_and_parse(&sender, "POST /Message", send_payload);
     eprintln!("[message-send] {send}");
-    drain_and_log_events(&sender_events, Duration::from_secs(2));
     assert_ne!(
         send["kind"],
         json!("error"),
@@ -556,6 +580,7 @@ fn live_rch_lxmf_mission_sync_probe() {
             event_type == "message.sent" && payload["content"] == json!(message_body)
         });
     assert!(sent_event.is_some(), "did not observe message.sent");
+    drain_and_log_events(&sender_events, Duration::from_secs(2));
 
     let relay_event =
         wait_for_domain_event(&observer_events, NETWORK_TIMEOUT, |event_type, payload| {

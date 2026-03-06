@@ -1742,8 +1742,8 @@ export const ASSETS_ASSIGNMENTS_OPERATIONS = operationsByGroup(
 export const CHECKLISTS_OPERATIONS = operationsByGroup("Checklists");
 export const CHAT_MESSAGE_SEND_OPERATION: MessagingOperation = "POST /Message";
 export const CHAT_MESSAGE_STREAM_OPERATION: MessagingOperation = "GET /messages/stream";
-export const CHAT_TOPIC_LIST_OPERATION: TopicsOperation = "topic.list";
-export const CHAT_TOPIC_SUBSCRIBE_OPERATION: TopicsOperation = "topic.subscribe";
+export const CHAT_TOPIC_LIST_OPERATION: TopicsOperation = "GET /Topic";
+export const CHAT_TOPIC_SUBSCRIBE_OPERATION: TopicsOperation = "POST /Topic/Subscribe";
 const FEATURE_OPERATION_SETS: {
   [K in RchFeatureKey]: ReadonlySet<RchFeatureOperationMap[K]>;
 } = {
@@ -2138,3 +2138,4 @@ class RchClientImpl implements RchClient {
 export function createRchClient(nodeClient: ReticulumNodeClient): RchClient {
   return new RchClientImpl(nodeClient);
 }
+

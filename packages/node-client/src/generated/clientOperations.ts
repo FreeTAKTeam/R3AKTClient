@@ -81,6 +81,7 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "GET /Subscriber/{id}", group: "Hub Admin and Legacy Command Parity", description: "retrieve an existing Subscriber record based on the provided ID." },
   { operation: "GET /Telemetry", group: "Telemetry and Live Status", description: "Retrieve telemetry snapshots since a timestamp." },
   { operation: "GET /telemetry/stream", group: "Telemetry and Live Status", description: "WebSocket stream for live telemetry." },
+  { operation: "GET /Topic", group: "Topics and Distribution", description: "Retrieves a list of all Topic" },
   { operation: "GET /Topic/{id}", group: "Topics and Distribution", description: "retrieve an existing Topic record based on the provided ID." },
   { operation: "PATCH /api/markers/{object_destination_hash}/position", group: "Map, Markers, and Zones", description: "Update marker coordinates." },
   { operation: "PATCH /api/r3akt/missions/{mission_uid}", group: "R3AKT Mission Core", description: "Patch mission fields." },
@@ -127,6 +128,7 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "POST /Subscriber/Add", group: "Hub Admin and Legacy Command Parity", description: "Add a destination/topic subscriber mapping (admin)." },
   { operation: "POST /Topic", group: "Hub Admin and Legacy Command Parity", description: "Creates a new Topic record." },
   { operation: "POST /Topic/Associate", group: "Hub Admin and Legacy Command Parity", description: "Associate an attachment upload with a TopicID." },
+  { operation: "POST /Topic/Subscribe", group: "Topics and Distribution", description: "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted)." },
   { operation: "PUT /api/r3akt/assignments/{assignment_uid}/assets", group: "R3AKT Assets and Assignments", description: "Replace assignment asset links." },
   { operation: "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}", group: "R3AKT Assets and Assignments", description: "Link assignment to asset." },
   { operation: "PUT /api/r3akt/capabilities/{identity}/{capability}", group: "R3AKT Mission Core", description: "Grant capability to identity." },
@@ -138,8 +140,6 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "PUT /Config", group: "Hub Admin and Legacy Command Parity", description: "Apply a new config.ini payload." },
   { operation: "PUT /RCH", group: "Core Discovery and Session", description: "Leave an RCH instance as the supplied identity." },
   { operation: "PUT /RTH", group: "Core Discovery and Session", description: "Legacy compatibility alias for leave." },
-  { operation: "topic.list", group: "Topics and Distribution", description: "Retrieves a list of all Topic" },
-  { operation: "topic.subscribe", group: "Topics and Distribution", description: "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted)." },
 ] as const;
 
 export type ClientOperation = (typeof CLIENT_OPERATION_CATALOG)[number]["operation"]; 
