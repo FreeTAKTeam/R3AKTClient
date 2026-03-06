@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-03-06T15:38:53.530Z",
+  "generated_at": "2026-03-06T19:38:41.761Z",
   "source": "docs/R3AKTClient/APIANnalysis_clientImplementationSet.md",
-  "operation_count": 125,
+  "operation_count": 123,
   "groups": [
     {
       "name": "Core Discovery and Session",
@@ -23,19 +23,11 @@
           "description": "Return the list of supported commands."
         },
         {
-          "operation": "POST /RCH",
-          "description": "Join an RCH instance as the supplied identity."
-        },
-        {
-          "operation": "PUT /RCH",
-          "description": "Leave an RCH instance as the supplied identity."
-        },
-        {
-          "operation": "POST /RTH",
+          "operation": "mission.join",
           "description": "Legacy compatibility alias for join."
         },
         {
-          "operation": "PUT /RTH",
+          "operation": "mission.leave",
           "description": "Legacy compatibility alias for leave."
         },
         {
@@ -69,7 +61,7 @@
       "name": "Messaging and Chat",
       "operations": [
         {
-          "operation": "POST /Message",
+          "operation": "mission.message.send",
           "description": "Send a message into the hub."
         },
         {
@@ -82,11 +74,11 @@
       "name": "Topics and Distribution",
       "operations": [
         {
-          "operation": "GET /Topic",
+          "operation": "topic.list",
           "description": "Retrieves a list of all Topic"
         },
         {
-          "operation": "POST /Topic/Subscribe",
+          "operation": "topic.subscribe",
           "description": "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted)."
         },
         {
@@ -891,14 +883,24 @@
       "group": "Telemetry and Live Status"
     },
     {
-      "operation": "GET /Topic",
-      "description": "Retrieves a list of all Topic",
-      "group": "Topics and Distribution"
-    },
-    {
       "operation": "GET /Topic/{id}",
       "description": "retrieve an existing Topic record based on the provided ID.",
       "group": "Topics and Distribution"
+    },
+    {
+      "operation": "mission.join",
+      "description": "Legacy compatibility alias for join.",
+      "group": "Core Discovery and Session"
+    },
+    {
+      "operation": "mission.leave",
+      "description": "Legacy compatibility alias for leave.",
+      "group": "Core Discovery and Session"
+    },
+    {
+      "operation": "mission.message.send",
+      "description": "Send a message into the hub.",
+      "group": "Messaging and Chat"
     },
     {
       "operation": "PATCH /api/markers/{object_destination_hash}/position",
@@ -1091,21 +1093,6 @@
       "group": "Hub Admin and Legacy Command Parity"
     },
     {
-      "operation": "POST /Message",
-      "description": "Send a message into the hub.",
-      "group": "Messaging and Chat"
-    },
-    {
-      "operation": "POST /RCH",
-      "description": "Join an RCH instance as the supplied identity.",
-      "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "POST /RTH",
-      "description": "Legacy compatibility alias for join.",
-      "group": "Core Discovery and Session"
-    },
-    {
       "operation": "POST /Subscriber",
       "description": "Creates a new Subscriber record.",
       "group": "Hub Admin and Legacy Command Parity"
@@ -1124,11 +1111,6 @@
       "operation": "POST /Topic/Associate",
       "description": "Associate an attachment upload with a TopicID.",
       "group": "Hub Admin and Legacy Command Parity"
-    },
-    {
-      "operation": "POST /Topic/Subscribe",
-      "description": "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted).",
-      "group": "Topics and Distribution"
     },
     {
       "operation": "PUT /api/r3akt/assignments/{assignment_uid}/assets",
@@ -1176,14 +1158,14 @@
       "group": "Hub Admin and Legacy Command Parity"
     },
     {
-      "operation": "PUT /RCH",
-      "description": "Leave an RCH instance as the supplied identity.",
-      "group": "Core Discovery and Session"
+      "operation": "topic.list",
+      "description": "Retrieves a list of all Topic",
+      "group": "Topics and Distribution"
     },
     {
-      "operation": "PUT /RTH",
-      "description": "Legacy compatibility alias for leave.",
-      "group": "Core Discovery and Session"
+      "operation": "topic.subscribe",
+      "description": "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted).",
+      "group": "Topics and Distribution"
     }
   ]
 }
