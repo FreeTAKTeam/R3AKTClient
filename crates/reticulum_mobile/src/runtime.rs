@@ -183,8 +183,8 @@ fn is_allowed_operation(operation: &str) -> bool {
 
 fn mission_command_type_for_operation(operation: &str) -> Option<&'static str> {
     match operation {
-        "mission.join" => Some("mission.join"),
-        "mission.leave" => Some("mission.leave"),
+        "mission.join" | "POST /RCH" | "POST /RTH" => Some("mission.join"),
+        "mission.leave" | "PUT /RCH" | "PUT /RTH" => Some("mission.leave"),
         "mission.events.list" | "GET /api/r3akt/events" => Some("mission.events.list"),
         "mission.message.send" | "POST /Message" => Some("mission.message.send"),
         "topic.list" | "GET /Topic" => Some("topic.list"),
@@ -487,11 +487,11 @@ fn lxmf_encoding_for_envelope(envelope: &MessageEnvelope) -> Option<LxmfEnvelope
     }
 
     let operation = envelope.r#type.as_str();
-    if legacy_command_name_for_operation(operation).is_some() {
-        return Some(LxmfEnvelopeEncoding::Legacy);
-    }
     if mission_command_type_for_operation(operation).is_some() {
         return Some(LxmfEnvelopeEncoding::MissionSync);
+    }
+    if legacy_command_name_for_operation(operation).is_some() {
+        return Some(LxmfEnvelopeEncoding::Legacy);
     }
     None
 }
@@ -2905,6 +2905,59 @@ mod tests {
                 "command mapping missing: {operation}"
             );
         }
+    }
+
+    #[test]
+    fn session_http_aliases_use_mission_sync_command_mapping() {
+        assert_eq!(
+            mission_command_type_for_operation("POST /RCH"),
+            Some("mission.join")
+        );
+        assert_eq!(
+            mission_command_type_for_operation("POST /RTH"),
+            Some("mission.join")
+        );
+        assert_eq!(
+            mission_command_type_for_operation("PUT /RCH"),
+            Some("mission.leave")
+        );
+        assert_eq!(
+            mission_command_type_for_operation("PUT /RTH"),
+            Some("mission.leave")
+        );
+    }
+
+    #[test]
+    fn mission_sync_encoding_takes_priority_over_legacy_for_join_and_topic_subscribe() {
+        let join = MessageEnvelope {
+            api_version: "1.0".to_string(),
+            message_id: "msg-join-http".to_string(),
+            correlation_id: Some("corr-join-http".to_string()),
+            kind: EnvelopeKind::Command,
+            r#type: "POST /RCH".to_string(),
+            issuer: "ui".to_string(),
+            issued_at: "2026-01-01T00:00:00Z".to_string(),
+            payload: serde_json::json!({ "identity": "abcd" }),
+        };
+        assert_eq!(
+            lxmf_encoding_for_envelope(&join),
+            Some(LxmfEnvelopeEncoding::MissionSync)
+        );
+
+        let subscribe = MessageEnvelope {
+            api_version: "1.0".to_string(),
+            message_id: "msg-topic-subscribe".to_string(),
+            correlation_id: Some("corr-topic-subscribe".to_string()),
+            kind: EnvelopeKind::Command,
+            r#type: "POST /Topic/Subscribe".to_string(),
+            issuer: "ui".to_string(),
+            issued_at: "2026-01-01T00:00:00Z".to_string(),
+            payload: serde_json::json!({ "topic_id": "ops.alpha" }),
+        };
+        assert_eq!(
+            lxmf_encoding_for_envelope(&subscribe),
+            Some(LxmfEnvelopeEncoding::MissionSync)
+        );
     }
 
     #[test]
