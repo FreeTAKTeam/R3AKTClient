@@ -537,13 +537,13 @@ fn live_rch_lxmf_mission_sync_probe() {
         eprintln!("[topic-list] no topic IDs found; falling back to broadcast relay");
     }
 
-    let send = execute_and_parse(&sender, "mission.message.send", send_payload);
+    let send = execute_and_parse(&sender, "POST /Message", send_payload);
     eprintln!("[message-send] {send}");
     drain_and_log_events(&sender_events, Duration::from_secs(2));
     assert_ne!(
         send["kind"],
         json!("error"),
-        "mission.message.send returned an error envelope"
+        "POST /Message returned an error envelope"
     );
     assert_eq!(
         send["payload"]["sent"],

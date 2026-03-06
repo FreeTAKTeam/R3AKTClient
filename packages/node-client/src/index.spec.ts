@@ -288,7 +288,7 @@ describe("RchClient grouped feature API", () => {
     });
 
     expect(fake.allEnvelopes.length).toBe(1);
-    expect(fake.allEnvelopes[0]?.type).toBe("mission.message.send");
+    expect(fake.allEnvelopes[0]?.type).toBe("POST /Message");
     expect(fake.allEnvelopes[0]?.payload).toMatchObject({
       content: "hello",
       destination: "aa11bb22cc33dd44ee55ff66aa77bb88",

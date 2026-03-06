@@ -6,7 +6,6 @@ const sourcePath = path.join(repoRoot, "docs", "R3AKTClient", "APIANnalysis_clie
 const content = fs.readFileSync(sourcePath, "utf8");
 
 const CANONICAL_OPERATION_ALIASES = new Map([
-  ["POST /Message", "mission.message.send"],
   ["GET /Topic", "topic.list"],
   ["POST /Topic/Subscribe", "topic.subscribe"],
 ]);

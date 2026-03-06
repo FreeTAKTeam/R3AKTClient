@@ -1740,7 +1740,7 @@ export const ASSETS_ASSIGNMENTS_OPERATIONS = operationsByGroup(
   "R3AKT Assets and Assignments",
 );
 export const CHECKLISTS_OPERATIONS = operationsByGroup("Checklists");
-export const CHAT_MESSAGE_SEND_OPERATION: MessagingOperation = "mission.message.send";
+export const CHAT_MESSAGE_SEND_OPERATION: MessagingOperation = "POST /Message";
 export const CHAT_MESSAGE_STREAM_OPERATION: MessagingOperation = "GET /messages/stream";
 export const CHAT_TOPIC_LIST_OPERATION: TopicsOperation = "topic.list";
 export const CHAT_TOPIC_SUBSCRIBE_OPERATION: TopicsOperation = "topic.subscribe";

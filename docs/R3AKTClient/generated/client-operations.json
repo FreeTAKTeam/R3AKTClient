@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-06T19:51:33.562Z",
+  "generated_at": "2026-03-06T19:54:18.252Z",
   "source": "docs/R3AKTClient/APIANnalysis_clientImplementationSet.md",
   "operation_count": 125,
   "groups": [
@@ -69,7 +69,7 @@
       "name": "Messaging and Chat",
       "operations": [
         {
-          "operation": "mission.message.send",
+          "operation": "POST /Message",
           "description": "Send a message into the hub."
         },
         {
@@ -896,11 +896,6 @@
       "group": "Topics and Distribution"
     },
     {
-      "operation": "mission.message.send",
-      "description": "Send a message into the hub.",
-      "group": "Messaging and Chat"
-    },
-    {
       "operation": "PATCH /api/markers/{object_destination_hash}/position",
       "description": "Update marker coordinates.",
       "group": "Map, Markers, and Zones"
@@ -1089,6 +1084,11 @@
       "operation": "POST /Config/Validate",
       "description": "Validate a config.ini payload without applying.",
       "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Message",
+      "description": "Send a message into the hub.",
+      "group": "Messaging and Chat"
     },
     {
       "operation": "POST /RCH",
