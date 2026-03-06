@@ -193,8 +193,8 @@ fn is_allowed_operation(operation: &str) -> bool {
 
 fn mission_command_type_for_operation(operation: &str) -> Option<&'static str> {
     match operation {
-        "mission.join" | "POST /RCH" | "POST /RTH" => Some("mission.join"),
-        "mission.leave" | "PUT /RCH" | "PUT /RTH" => Some("mission.leave"),
+        "mission.join" => Some("mission.join"),
+        "mission.leave" => Some("mission.leave"),
         "mission.events.list" | "GET /api/r3akt/events" => Some("mission.events.list"),
         "mission.message.send" | "POST /Message" => Some("mission.message.send"),
         "topic.list" | "GET /Topic" => Some("topic.list"),
@@ -3007,32 +3007,21 @@ mod tests {
 
     #[test]
     fn session_http_aliases_use_mission_sync_command_mapping() {
+        assert_eq!(mission_command_type_for_operation("mission.join"), Some("mission.join"));
         assert_eq!(
-            mission_command_type_for_operation("POST /RCH"),
-            Some("mission.join")
-        );
-        assert_eq!(
-            mission_command_type_for_operation("POST /RTH"),
-            Some("mission.join")
-        );
-        assert_eq!(
-            mission_command_type_for_operation("PUT /RCH"),
-            Some("mission.leave")
-        );
-        assert_eq!(
-            mission_command_type_for_operation("PUT /RTH"),
+            mission_command_type_for_operation("mission.leave"),
             Some("mission.leave")
         );
     }
 
     #[test]
-    fn mission_sync_encoding_takes_priority_over_legacy_for_join_and_topic_subscribe() {
+    fn canonical_join_and_legacy_join_alias_use_expected_encodings() {
         let join = MessageEnvelope {
             api_version: "1.0".to_string(),
-            message_id: "msg-join-http".to_string(),
-            correlation_id: Some("corr-join-http".to_string()),
+            message_id: "msg-join-mission-sync".to_string(),
+            correlation_id: Some("corr-join-mission-sync".to_string()),
             kind: EnvelopeKind::Command,
-            r#type: "POST /RCH".to_string(),
+            r#type: "mission.join".to_string(),
             issuer: "ui".to_string(),
             issued_at: "2026-01-01T00:00:00Z".to_string(),
             payload: serde_json::json!({ "identity": "abcd" }),
@@ -3040,6 +3029,21 @@ mod tests {
         assert_eq!(
             lxmf_encoding_for_envelope(&join),
             Some(LxmfEnvelopeEncoding::MissionSync)
+        );
+
+        let legacy_join_alias = MessageEnvelope {
+            api_version: "1.0".to_string(),
+            message_id: "msg-join-legacy".to_string(),
+            correlation_id: Some("corr-join-legacy".to_string()),
+            kind: EnvelopeKind::Command,
+            r#type: "POST /RCH".to_string(),
+            issuer: "ui".to_string(),
+            issued_at: "2026-01-01T00:00:00Z".to_string(),
+            payload: serde_json::json!({ "identity": "abcd" }),
+        };
+        assert_eq!(
+            lxmf_encoding_for_envelope(&legacy_join_alias),
+            Some(LxmfEnvelopeEncoding::Legacy)
         );
 
         let subscribe = MessageEnvelope {
