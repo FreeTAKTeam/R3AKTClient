@@ -183,11 +183,219 @@ fn is_allowed_operation(operation: &str) -> bool {
 
 fn mission_command_type_for_operation(operation: &str) -> Option<&'static str> {
     match operation {
+        "mission.join" => Some("mission.join"),
+        "mission.leave" => Some("mission.leave"),
+        "mission.events.list" | "GET /api/r3akt/events" => Some("mission.events.list"),
         "mission.message.send" | "POST /Message" => Some("mission.message.send"),
         "topic.list" | "GET /Topic" => Some("topic.list"),
+        "topic.create" | "POST /Topic" => Some("topic.create"),
+        "topic.patch" | "PATCH /Topic" => Some("topic.patch"),
+        "topic.delete" | "DELETE /Topic" => Some("topic.delete"),
         "topic.subscribe" | "POST /Topic/Subscribe" => Some("topic.subscribe"),
+        "mission.marker.list" | "GET /api/markers" => Some("mission.marker.list"),
+        "mission.marker.create" | "POST /api/markers" => Some("mission.marker.create"),
+        "mission.marker.position.patch" | "PATCH /api/markers/{object_destination_hash}/position" => {
+            Some("mission.marker.position.patch")
+        }
+        "mission.zone.list" | "GET /api/zones" => Some("mission.zone.list"),
+        "mission.zone.create" | "POST /api/zones" => Some("mission.zone.create"),
+        "mission.zone.patch" | "PATCH /api/zones/{zone_id}" => Some("mission.zone.patch"),
+        "mission.zone.delete" | "DELETE /api/zones/{zone_id}" => Some("mission.zone.delete"),
+        "mission.registry.mission.upsert" | "POST /api/r3akt/missions" => {
+            Some("mission.registry.mission.upsert")
+        }
+        "mission.registry.mission.get" | "GET /api/r3akt/missions/{mission_uid}" => {
+            Some("mission.registry.mission.get")
+        }
+        "mission.registry.mission.list" | "GET /api/r3akt/missions" => {
+            Some("mission.registry.mission.list")
+        }
+        "mission.registry.mission.patch" | "PATCH /api/r3akt/missions/{mission_uid}" => {
+            Some("mission.registry.mission.patch")
+        }
+        "mission.registry.mission.delete" | "DELETE /api/r3akt/missions/{mission_uid}" => {
+            Some("mission.registry.mission.delete")
+        }
+        "mission.registry.mission.parent.set" | "PUT /api/r3akt/missions/{mission_uid}/parent" => {
+            Some("mission.registry.mission.parent.set")
+        }
+        "mission.registry.mission.rde.set" | "PUT /api/r3akt/missions/{mission_uid}/rde" => {
+            Some("mission.registry.mission.rde.set")
+        }
+        "mission.registry.mission_change.upsert" | "POST /api/r3akt/mission-changes" => {
+            Some("mission.registry.mission_change.upsert")
+        }
+        "mission.registry.mission_change.list" | "GET /api/r3akt/mission-changes" => {
+            Some("mission.registry.mission_change.list")
+        }
+        "mission.registry.log_entry.upsert" | "POST /api/r3akt/log-entries" => {
+            Some("mission.registry.log_entry.upsert")
+        }
+        "mission.registry.log_entry.list" | "GET /api/r3akt/log-entries" => {
+            Some("mission.registry.log_entry.list")
+        }
+        "mission.registry.team.upsert" | "POST /api/r3akt/teams" => {
+            Some("mission.registry.team.upsert")
+        }
+        "mission.registry.team.get" | "GET /api/r3akt/teams/{team_uid}" => {
+            Some("mission.registry.team.get")
+        }
+        "mission.registry.team.list" | "GET /api/r3akt/teams" => {
+            Some("mission.registry.team.list")
+        }
+        "mission.registry.team.delete" | "DELETE /api/r3akt/teams/{team_uid}" => {
+            Some("mission.registry.team.delete")
+        }
+        "mission.registry.team.mission.link" | "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}" => {
+            Some("mission.registry.team.mission.link")
+        }
+        "mission.registry.team.mission.unlink" | "DELETE /api/r3akt/teams/{team_uid}/missions/{mission_uid}" => {
+            Some("mission.registry.team.mission.unlink")
+        }
+        "mission.registry.mission.zone.link" | "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}" => {
+            Some("mission.registry.mission.zone.link")
+        }
+        "mission.registry.mission.zone.unlink" | "DELETE /api/r3akt/missions/{mission_uid}/zones/{zone_id}" => {
+            Some("mission.registry.mission.zone.unlink")
+        }
+        "mission.registry.team_member.upsert" | "POST /api/r3akt/team-members" => {
+            Some("mission.registry.team_member.upsert")
+        }
+        "mission.registry.team_member.get" | "GET /api/r3akt/team-members/{team_member_uid}" => {
+            Some("mission.registry.team_member.get")
+        }
+        "mission.registry.team_member.list" | "GET /api/r3akt/team-members" => {
+            Some("mission.registry.team_member.list")
+        }
+        "mission.registry.team_member.delete" | "DELETE /api/r3akt/team-members/{team_member_uid}" => {
+            Some("mission.registry.team_member.delete")
+        }
+        "mission.registry.team_member.client.link" | "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}" => {
+            Some("mission.registry.team_member.client.link")
+        }
+        "mission.registry.team_member.client.unlink" | "DELETE /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}" => {
+            Some("mission.registry.team_member.client.unlink")
+        }
+        "mission.registry.asset.upsert" | "POST /api/r3akt/assets" => {
+            Some("mission.registry.asset.upsert")
+        }
+        "mission.registry.asset.get" | "GET /api/r3akt/assets/{asset_uid}" => {
+            Some("mission.registry.asset.get")
+        }
+        "mission.registry.asset.list" | "GET /api/r3akt/assets" => {
+            Some("mission.registry.asset.list")
+        }
+        "mission.registry.asset.delete" | "DELETE /api/r3akt/assets/{asset_uid}" => {
+            Some("mission.registry.asset.delete")
+        }
+        "mission.registry.skill.upsert" | "POST /api/r3akt/skills" => {
+            Some("mission.registry.skill.upsert")
+        }
+        "mission.registry.skill.list" | "GET /api/r3akt/skills" => {
+            Some("mission.registry.skill.list")
+        }
+        "mission.registry.team_member_skill.upsert" | "POST /api/r3akt/team-member-skills" => {
+            Some("mission.registry.team_member_skill.upsert")
+        }
+        "mission.registry.team_member_skill.list" | "GET /api/r3akt/team-member-skills" => {
+            Some("mission.registry.team_member_skill.list")
+        }
+        "mission.registry.task_skill_requirement.upsert" | "POST /api/r3akt/task-skill-requirements" => {
+            Some("mission.registry.task_skill_requirement.upsert")
+        }
+        "mission.registry.task_skill_requirement.list" | "GET /api/r3akt/task-skill-requirements" => {
+            Some("mission.registry.task_skill_requirement.list")
+        }
+        "mission.registry.assignment.upsert" | "POST /api/r3akt/assignments" => {
+            Some("mission.registry.assignment.upsert")
+        }
+        "mission.registry.assignment.list" | "GET /api/r3akt/assignments" => {
+            Some("mission.registry.assignment.list")
+        }
+        "mission.registry.assignment.asset.set" | "PUT /api/r3akt/assignments/{assignment_uid}/assets" => {
+            Some("mission.registry.assignment.asset.set")
+        }
+        "mission.registry.assignment.asset.link" | "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}" => {
+            Some("mission.registry.assignment.asset.link")
+        }
+        "mission.registry.assignment.asset.unlink" | "DELETE /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}" => {
+            Some("mission.registry.assignment.asset.unlink")
+        }
+        "checklist.template.list" | "GET /checklists/templates" => Some("checklist.template.list"),
+        "checklist.template.get" | "GET /checklists/templates/{template_id}" => {
+            Some("checklist.template.get")
+        }
+        "checklist.template.create" | "POST /checklists/templates" => {
+            Some("checklist.template.create")
+        }
+        "checklist.template.update" | "PATCH /checklists/templates/{template_id}" => {
+            Some("checklist.template.update")
+        }
+        "checklist.template.clone" | "POST /checklists/templates/{template_id}/clone" => {
+            Some("checklist.template.clone")
+        }
+        "checklist.template.delete" | "DELETE /checklists/templates/{template_id}" => {
+            Some("checklist.template.delete")
+        }
+        "checklist.list.active" | "GET /checklists" => Some("checklist.list.active"),
+        "checklist.create.online" | "POST /checklists" => Some("checklist.create.online"),
+        "checklist.create.offline" | "POST /checklists/offline" => {
+            Some("checklist.create.offline")
+        }
+        "checklist.update" | "PATCH /checklists/{checklist_id}" => Some("checklist.update"),
+        "checklist.delete" | "DELETE /checklists/{checklist_id}" => Some("checklist.delete"),
+        "checklist.import.csv" | "POST /checklists/import/csv" => Some("checklist.import.csv"),
+        "checklist.join" | "POST /checklists/{checklist_id}/join" => Some("checklist.join"),
+        "checklist.get" | "GET /checklists/{checklist_id}" => Some("checklist.get"),
+        "checklist.upload" | "POST /checklists/{checklist_id}/upload" => Some("checklist.upload"),
+        "checklist.feed.publish" | "POST /checklists/{checklist_id}/feeds/{feed_id}" => {
+            Some("checklist.feed.publish")
+        }
+        "checklist.task.status.set" | "POST /checklists/{checklist_id}/tasks/{task_id}/status" => {
+            Some("checklist.task.status.set")
+        }
+        "checklist.task.row.add" | "POST /checklists/{checklist_id}/tasks" => {
+            Some("checklist.task.row.add")
+        }
+        "checklist.task.row.delete" | "DELETE /checklists/{checklist_id}/tasks/{task_id}" => {
+            Some("checklist.task.row.delete")
+        }
+        "checklist.task.row.style.set" | "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style" => {
+            Some("checklist.task.row.style.set")
+        }
+        "checklist.task.cell.set" | "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}" => {
+            Some("checklist.task.cell.set")
+        }
         _ => None,
     }
+}
+
+fn mission_command_type_is_query(command_type: &str) -> bool {
+    matches!(
+        command_type,
+        "mission.events.list"
+            | "topic.list"
+            | "mission.marker.list"
+            | "mission.zone.list"
+            | "mission.registry.mission.get"
+            | "mission.registry.mission.list"
+            | "mission.registry.mission_change.list"
+            | "mission.registry.log_entry.list"
+            | "mission.registry.team.get"
+            | "mission.registry.team.list"
+            | "mission.registry.team_member.get"
+            | "mission.registry.team_member.list"
+            | "mission.registry.asset.get"
+            | "mission.registry.asset.list"
+            | "mission.registry.skill.list"
+            | "mission.registry.team_member_skill.list"
+            | "mission.registry.task_skill_requirement.list"
+            | "mission.registry.assignment.list"
+            | "checklist.template.list"
+            | "checklist.template.get"
+            | "checklist.list.active"
+            | "checklist.get"
+    )
 }
 
 fn legacy_command_name_for_operation(operation: &str) -> Option<&'static str> {
@@ -236,9 +444,10 @@ fn legacy_command_name_for_operation(operation: &str) -> Option<&'static str> {
 
 fn expected_kind_for_operation(operation: &str) -> Option<EnvelopeKind> {
     if let Some(command_type) = mission_command_type_for_operation(operation) {
-        return Some(match command_type {
-            "topic.list" => EnvelopeKind::Query,
-            _ => EnvelopeKind::Command,
+        return Some(if mission_command_type_is_query(command_type) {
+            EnvelopeKind::Query
+        } else {
+            EnvelopeKind::Command
         });
     }
 
@@ -748,23 +957,23 @@ fn build_legacy_command_payload(
         }
         "CreateSubscriber" | "AddSubscriber" => {
             payload.insert(
-                "Destination".to_string(),
+                "TopicID".to_string(),
                 serde_json::Value::String(require_payload_string(
                     &envelope.payload,
                     &[
-                        "Destination",
-                        "destination",
-                        "destinationHex",
-                        "destination_hex",
+                        "TopicID", "topic_id", "topicId", "topic", "Topic", "id", "ID",
                     ],
                 )?),
             );
             insert_payload_alias(
                 &mut payload,
                 &envelope.payload,
-                "TopicID",
+                "Destination",
                 &[
-                    "TopicID", "topic_id", "topicId", "topic", "Topic", "id", "ID",
+                    "Destination",
+                    "destination",
+                    "destinationHex",
+                    "destination_hex",
                 ],
             );
             insert_payload_alias(
@@ -834,6 +1043,14 @@ fn build_legacy_command_payload(
                     &envelope.payload,
                     &["ConfigText", "config_text", "configText", "content", "text"],
                 )?),
+            );
+        }
+        "RollbackConfig" => {
+            insert_payload_alias(
+                &mut payload,
+                &envelope.payload,
+                "BackupPath",
+                &["BackupPath", "backup_path", "backupPath", "path", "Path"],
             );
         }
         "TelemetryRequest" => {
@@ -1700,6 +1917,7 @@ pub enum Command {
 struct NodeRuntimeState {
     identity: PrivateIdentity,
     transport: Arc<Transport>,
+    app_destination: Arc<TokioMutex<reticulum::destination::SingleInputDestination>>,
     lxmf_destination: Arc<TokioMutex<reticulum::destination::SingleInputDestination>>,
     known_destinations: Arc<TokioMutex<HashMap<AddressHash, DestinationDesc>>>,
     seen_announces: Arc<TokioMutex<HashSet<AddressHash>>>,
@@ -1748,19 +1966,14 @@ async fn ensure_hub_can_reply(state: &NodeRuntimeState, hub: AddressHash) -> Res
     }
 
     let mut rx = state.transport.recv_announces().await;
+    state.transport.send_announce(&state.app_destination, None).await;
     state
         .transport
         .send_announce(&state.lxmf_destination, None)
         .await;
 
-    if state.seen_announces.lock().await.contains(&hub) {
-        *announced = true;
-        drop(announced);
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        return Ok(());
-    }
-
     let deadline = tokio::time::Instant::now() + hub_announce_wait_timeout();
+    let mut last_reannounce = tokio::time::Instant::now();
     loop {
         let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
         if remaining.is_zero() {
@@ -1768,22 +1981,36 @@ async fn ensure_hub_can_reply(state: &NodeRuntimeState, hub: AddressHash) -> Res
         }
 
         let wait_slice = remaining.min(Duration::from_millis(500));
+        let mut saw_hub_announce = false;
         match tokio::time::timeout(wait_slice, rx.recv()).await {
             Ok(Ok(event)) => {
                 let desc = event.destination.lock().await.desc;
                 if desc.address_hash == hub {
-                    state.seen_announces.lock().await.insert(hub);
-                    *announced = true;
-                    drop(announced);
-                    tokio::time::sleep(Duration::from_secs(1)).await;
-                    return Ok(());
+                    saw_hub_announce = true;
                 }
             }
-            Ok(Err(tokio::sync::broadcast::error::RecvError::Lagged(_))) => continue,
+            Ok(Err(tokio::sync::broadcast::error::RecvError::Lagged(_))) => {}
             Ok(Err(tokio::sync::broadcast::error::RecvError::Closed)) => {
                 return Err(NodeError::InternalError {})
             }
-            Err(_) => continue,
+            Err(_) => {}
+        }
+
+        if saw_hub_announce {
+            state.seen_announces.lock().await.insert(hub);
+            *announced = true;
+            drop(announced);
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            return Ok(());
+        }
+
+        if last_reannounce.elapsed() >= Duration::from_secs(5) {
+            state.transport.send_announce(&state.app_destination, None).await;
+            state
+                .transport
+                .send_announce(&state.lxmf_destination, None)
+                .await;
+            last_reannounce = tokio::time::Instant::now();
         }
     }
 }
@@ -1977,6 +2204,7 @@ pub async fn run_node(
     let state = NodeRuntimeState {
         identity: identity.clone(),
         transport: transport.clone(),
+        app_destination: app_destination.clone(),
         lxmf_destination: lxmf_destination.clone(),
         known_destinations: known_destinations.clone(),
         seen_announces: seen_announces.clone(),
@@ -2433,6 +2661,139 @@ mod tests {
             .unwrap_or_else(|| "GET /Status".to_string())
     }
 
+    const DOCUMENTED_LEGACY_QUERY_COMMANDS: &[&str] = &[
+        "Help",
+        "Examples",
+        "ListClients",
+        "getAppInfo",
+        "ListFiles",
+        "ListImages",
+        "ListTopic",
+        "RetrieveTopic",
+        "RetrieveFile",
+        "RetrieveImage",
+        "ListSubscriber",
+        "RetrieveSubscriber",
+        "GetStatus",
+        "ListEvents",
+        "ListIdentities",
+        "GetConfig",
+        "DumpRouting",
+        "TelemetryRequest",
+    ];
+
+    const DOCUMENTED_LEGACY_COMMANDS: &[&str] = &[
+        "join",
+        "leave",
+        "CreateTopic",
+        "PatchTopic",
+        "DeleteTopic",
+        "SubscribeTopic",
+        "AssociateTopicID",
+        "CreateSubscriber",
+        "AddSubscriber",
+        "DeleteSubscriber",
+        "RemoveSubscriber",
+        "PatchSubscriber",
+        "BanIdentity",
+        "UnbanIdentity",
+        "BlackholeIdentity",
+        "ValidateConfig",
+        "ApplyConfig",
+        "RollbackConfig",
+        "FlushTelemetry",
+        "ReloadConfig",
+    ];
+
+    const DOCUMENTED_MISSION_QUERY_COMMANDS: &[&str] = &[
+        "mission.events.list",
+        "topic.list",
+        "mission.marker.list",
+        "mission.zone.list",
+        "mission.registry.mission.get",
+        "mission.registry.mission.list",
+        "mission.registry.mission_change.list",
+        "mission.registry.log_entry.list",
+        "mission.registry.team.get",
+        "mission.registry.team.list",
+        "mission.registry.team_member.get",
+        "mission.registry.team_member.list",
+        "mission.registry.asset.get",
+        "mission.registry.asset.list",
+        "mission.registry.skill.list",
+        "mission.registry.team_member_skill.list",
+        "mission.registry.task_skill_requirement.list",
+        "mission.registry.assignment.list",
+    ];
+
+    const DOCUMENTED_MISSION_COMMANDS: &[&str] = &[
+        "mission.join",
+        "mission.leave",
+        "mission.message.send",
+        "topic.create",
+        "topic.patch",
+        "topic.delete",
+        "topic.subscribe",
+        "mission.marker.create",
+        "mission.marker.position.patch",
+        "mission.zone.create",
+        "mission.zone.patch",
+        "mission.zone.delete",
+        "mission.registry.mission.upsert",
+        "mission.registry.mission.patch",
+        "mission.registry.mission.delete",
+        "mission.registry.mission.parent.set",
+        "mission.registry.mission.rde.set",
+        "mission.registry.mission_change.upsert",
+        "mission.registry.log_entry.upsert",
+        "mission.registry.team.upsert",
+        "mission.registry.team.delete",
+        "mission.registry.team.mission.link",
+        "mission.registry.team.mission.unlink",
+        "mission.registry.mission.zone.link",
+        "mission.registry.mission.zone.unlink",
+        "mission.registry.team_member.upsert",
+        "mission.registry.team_member.delete",
+        "mission.registry.team_member.client.link",
+        "mission.registry.team_member.client.unlink",
+        "mission.registry.asset.upsert",
+        "mission.registry.asset.delete",
+        "mission.registry.skill.upsert",
+        "mission.registry.team_member_skill.upsert",
+        "mission.registry.task_skill_requirement.upsert",
+        "mission.registry.assignment.upsert",
+        "mission.registry.assignment.asset.set",
+        "mission.registry.assignment.asset.link",
+        "mission.registry.assignment.asset.unlink",
+    ];
+
+    const DOCUMENTED_CHECKLIST_QUERY_COMMANDS: &[&str] = &[
+        "checklist.template.list",
+        "checklist.template.get",
+        "checklist.list.active",
+        "checklist.get",
+    ];
+
+    const DOCUMENTED_CHECKLIST_COMMANDS: &[&str] = &[
+        "checklist.template.create",
+        "checklist.template.update",
+        "checklist.template.clone",
+        "checklist.template.delete",
+        "checklist.create.online",
+        "checklist.create.offline",
+        "checklist.update",
+        "checklist.delete",
+        "checklist.import.csv",
+        "checklist.join",
+        "checklist.upload",
+        "checklist.feed.publish",
+        "checklist.task.status.set",
+        "checklist.task.row.add",
+        "checklist.task.row.delete",
+        "checklist.task.row.style.set",
+        "checklist.task.cell.set",
+    ];
+
     #[test]
     fn validate_envelope_sets_defaults_for_blank_optional_fields() {
         let envelope = MessageEnvelope {
@@ -2487,6 +2848,66 @@ mod tests {
     }
 
     #[test]
+    fn documented_legacy_commands_have_operation_coverage() {
+        for operation in DOCUMENTED_LEGACY_QUERY_COMMANDS {
+            assert_eq!(
+                expected_kind_for_operation(operation),
+                Some(EnvelopeKind::Query),
+                "legacy query should be supported: {operation}"
+            );
+            assert!(
+                legacy_command_name_for_operation(operation).is_some(),
+                "legacy query mapping missing: {operation}"
+            );
+        }
+
+        for operation in DOCUMENTED_LEGACY_COMMANDS {
+            assert_eq!(
+                expected_kind_for_operation(operation),
+                Some(EnvelopeKind::Command),
+                "legacy command should be supported: {operation}"
+            );
+            assert!(
+                legacy_command_name_for_operation(operation).is_some(),
+                "legacy command mapping missing: {operation}"
+            );
+        }
+    }
+
+    #[test]
+    fn documented_mission_and_checklist_commands_have_operation_coverage() {
+        for operation in DOCUMENTED_MISSION_QUERY_COMMANDS
+            .iter()
+            .chain(DOCUMENTED_CHECKLIST_QUERY_COMMANDS.iter())
+        {
+            assert_eq!(
+                expected_kind_for_operation(operation),
+                Some(EnvelopeKind::Query),
+                "query command should be supported: {operation}"
+            );
+            assert!(
+                mission_command_type_for_operation(operation).is_some(),
+                "query command mapping missing: {operation}"
+            );
+        }
+
+        for operation in DOCUMENTED_MISSION_COMMANDS
+            .iter()
+            .chain(DOCUMENTED_CHECKLIST_COMMANDS.iter())
+        {
+            assert_eq!(
+                expected_kind_for_operation(operation),
+                Some(EnvelopeKind::Command),
+                "command should be supported: {operation}"
+            );
+            assert!(
+                mission_command_type_for_operation(operation).is_some(),
+                "command mapping missing: {operation}"
+            );
+        }
+    }
+
+    #[test]
     fn build_mission_sync_command_fields_use_explicit_operation_map() {
         let envelope = MessageEnvelope {
             api_version: "1.0".to_string(),
@@ -2519,6 +2940,38 @@ mod tests {
         assert_eq!(
             command.pointer("/source/rns_identity"),
             Some(&serde_json::json!("source-identity"))
+        );
+    }
+
+    #[test]
+    fn build_mission_sync_query_fields_support_documented_query_commands() {
+        let envelope = MessageEnvelope {
+            api_version: "1.0".to_string(),
+            message_id: "msg-query-1".to_string(),
+            correlation_id: Some("corr-query-1".to_string()),
+            kind: EnvelopeKind::Query,
+            r#type: "checklist.template.list".to_string(),
+            issuer: "ui".to_string(),
+            issued_at: "2026-01-01T00:00:00Z".to_string(),
+            payload: serde_json::json!({ "search": "field" }),
+        };
+
+        let fields = build_mission_sync_command_fields(&envelope, "source-identity")
+            .expect("mission sync query fields should build");
+        let commands = field_json_from_rmpv(&fields, LXMF_FIELD_COMMANDS).expect("commands field");
+        let command = commands
+            .as_array()
+            .and_then(|items| items.first())
+            .cloned()
+            .expect("command entry");
+
+        assert_eq!(
+            command.get("command_type"),
+            Some(&serde_json::json!("checklist.template.list"))
+        );
+        assert_eq!(
+            command.get("args"),
+            Some(&serde_json::json!({ "search": "field" }))
         );
     }
 
@@ -2625,6 +3078,56 @@ mod tests {
         assert_eq!(
             command.get("TopicID"),
             Some(&serde_json::json!("ops.alpha"))
+        );
+    }
+
+    #[test]
+    fn build_legacy_command_payload_allows_create_subscriber_without_destination() {
+        let envelope = MessageEnvelope {
+            api_version: "1.0".to_string(),
+            message_id: "msg-subscriber-1".to_string(),
+            correlation_id: Some("corr-subscriber-1".to_string()),
+            kind: EnvelopeKind::Command,
+            r#type: "CreateSubscriber".to_string(),
+            issuer: "ui".to_string(),
+            issued_at: "2026-03-06T00:00:00Z".to_string(),
+            payload: serde_json::json!({
+                "topic_id": "ops.alpha",
+                "metadata": { "tag": "field-station" },
+            }),
+        };
+
+        let command = build_legacy_command_payload(&envelope).expect("legacy command");
+        assert_eq!(
+            command.get("TopicID"),
+            Some(&serde_json::json!("ops.alpha"))
+        );
+        assert_eq!(command.get("Destination"), None);
+        assert_eq!(
+            command.get("Metadata"),
+            Some(&serde_json::json!({ "tag": "field-station" }))
+        );
+    }
+
+    #[test]
+    fn build_legacy_command_payload_preserves_optional_backup_path_for_rollback() {
+        let envelope = MessageEnvelope {
+            api_version: "1.0".to_string(),
+            message_id: "msg-config-rollback-1".to_string(),
+            correlation_id: Some("corr-config-rollback-1".to_string()),
+            kind: EnvelopeKind::Command,
+            r#type: "RollbackConfig".to_string(),
+            issuer: "ui".to_string(),
+            issued_at: "2026-03-06T00:00:00Z".to_string(),
+            payload: serde_json::json!({
+                "backup_path": "/var/backups/rch/config.ini.bak",
+            }),
+        };
+
+        let command = build_legacy_command_payload(&envelope).expect("legacy command");
+        assert_eq!(
+            command.get("BackupPath"),
+            Some(&serde_json::json!("/var/backups/rch/config.ini.bak"))
         );
     }
 

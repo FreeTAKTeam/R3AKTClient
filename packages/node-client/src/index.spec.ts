@@ -189,6 +189,30 @@ describe("RchClient grouped feature API", () => {
     expect(fake.lastEnvelope?.type).toBe(operation);
   });
 
+  it("accepts documented direct southbound command operations", async () => {
+    const fake = new FakeNodeClient();
+    const client = createRchClient(fake);
+
+    await client.execute("mission.join", { identity: "abcd" });
+
+    expect(fake.lastEnvelope).not.toBeNull();
+    expect(fake.lastEnvelope?.kind).toBe("command");
+    expect(fake.lastEnvelope?.type).toBe("mission.join");
+    expect(fake.lastEnvelope?.payload).toEqual({ identity: "abcd" });
+  });
+
+  it("classifies documented direct southbound query operations correctly", async () => {
+    const fake = new FakeNodeClient();
+    const client = createRchClient(fake);
+
+    await client.execute("checklist.template.list", { search: "alpha" });
+
+    expect(fake.lastEnvelope).not.toBeNull();
+    expect(fake.lastEnvelope?.kind).toBe("query");
+    expect(fake.lastEnvelope?.type).toBe("checklist.template.list");
+    expect(fake.lastEnvelope?.payload).toEqual({ search: "alpha" });
+  });
+
   it("forwards domain events through grouped client emitter", async () => {
     const fake = new FakeNodeClient();
     const client = createRchClient(fake);

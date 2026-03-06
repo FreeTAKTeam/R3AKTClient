@@ -8,6 +8,140 @@ import {
   type ClientOperationEntry,
 } from "./generated/clientOperations";
 
+export const SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS = [
+  "Help",
+  "Examples",
+  "ListClients",
+  "getAppInfo",
+  "ListFiles",
+  "ListImages",
+  "ListTopic",
+  "RetrieveTopic",
+  "RetrieveFile",
+  "RetrieveImage",
+  "ListSubscriber",
+  "RetrieveSubscriber",
+  "GetStatus",
+  "ListEvents",
+  "ListIdentities",
+  "GetConfig",
+  "DumpRouting",
+  "TelemetryRequest",
+  "mission.events.list",
+  "topic.list",
+  "mission.marker.list",
+  "mission.zone.list",
+  "mission.registry.mission.get",
+  "mission.registry.mission.list",
+  "mission.registry.mission_change.list",
+  "mission.registry.log_entry.list",
+  "mission.registry.team.get",
+  "mission.registry.team.list",
+  "mission.registry.team_member.get",
+  "mission.registry.team_member.list",
+  "mission.registry.asset.get",
+  "mission.registry.asset.list",
+  "mission.registry.skill.list",
+  "mission.registry.team_member_skill.list",
+  "mission.registry.task_skill_requirement.list",
+  "mission.registry.assignment.list",
+  "checklist.template.list",
+  "checklist.template.get",
+  "checklist.list.active",
+  "checklist.get",
+] as const;
+
+export const SUPPORTED_SOUTHBOUND_COMMAND_OPERATIONS = [
+  "join",
+  "leave",
+  "CreateTopic",
+  "PatchTopic",
+  "DeleteTopic",
+  "SubscribeTopic",
+  "AssociateTopicID",
+  "CreateSubscriber",
+  "AddSubscriber",
+  "DeleteSubscriber",
+  "RemoveSubscriber",
+  "PatchSubscriber",
+  "BanIdentity",
+  "UnbanIdentity",
+  "BlackholeIdentity",
+  "ValidateConfig",
+  "ApplyConfig",
+  "RollbackConfig",
+  "FlushTelemetry",
+  "ReloadConfig",
+  "mission.join",
+  "mission.leave",
+  "mission.message.send",
+  "topic.create",
+  "topic.patch",
+  "topic.delete",
+  "topic.subscribe",
+  "mission.marker.create",
+  "mission.marker.position.patch",
+  "mission.zone.create",
+  "mission.zone.patch",
+  "mission.zone.delete",
+  "mission.registry.mission.upsert",
+  "mission.registry.mission.patch",
+  "mission.registry.mission.delete",
+  "mission.registry.mission.parent.set",
+  "mission.registry.mission.rde.set",
+  "mission.registry.mission_change.upsert",
+  "mission.registry.log_entry.upsert",
+  "mission.registry.team.upsert",
+  "mission.registry.team.delete",
+  "mission.registry.team.mission.link",
+  "mission.registry.team.mission.unlink",
+  "mission.registry.mission.zone.link",
+  "mission.registry.mission.zone.unlink",
+  "mission.registry.team_member.upsert",
+  "mission.registry.team_member.delete",
+  "mission.registry.team_member.client.link",
+  "mission.registry.team_member.client.unlink",
+  "mission.registry.asset.upsert",
+  "mission.registry.asset.delete",
+  "mission.registry.skill.upsert",
+  "mission.registry.team_member_skill.upsert",
+  "mission.registry.task_skill_requirement.upsert",
+  "mission.registry.assignment.upsert",
+  "mission.registry.assignment.asset.set",
+  "mission.registry.assignment.asset.link",
+  "mission.registry.assignment.asset.unlink",
+  "checklist.template.create",
+  "checklist.template.update",
+  "checklist.template.clone",
+  "checklist.template.delete",
+  "checklist.create.online",
+  "checklist.create.offline",
+  "checklist.update",
+  "checklist.delete",
+  "checklist.import.csv",
+  "checklist.join",
+  "checklist.upload",
+  "checklist.feed.publish",
+  "checklist.task.status.set",
+  "checklist.task.row.add",
+  "checklist.task.row.delete",
+  "checklist.task.row.style.set",
+  "checklist.task.cell.set",
+] as const;
+
+export const SUPPORTED_SOUTHBOUND_OPERATIONS = [
+  ...SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS,
+  ...SUPPORTED_SOUTHBOUND_COMMAND_OPERATIONS,
+] as const;
+
+export type SupportedSouthboundQueryOperation =
+  typeof SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS[number];
+export type SupportedSouthboundCommandOperation =
+  typeof SUPPORTED_SOUTHBOUND_COMMAND_OPERATIONS[number];
+export type SupportedSouthboundOperation =
+  typeof SUPPORTED_SOUTHBOUND_OPERATIONS[number];
+export type KnownOperation = ClientOperation | SupportedSouthboundOperation;
+
 export type LogLevel = "Trace" | "Debug" | "Info" | "Warn" | "Error";
 export type HubMode = "Disabled" | "RchLxmf" | "RchHttp";
 export type PeerState = "Connecting" | "Connected" | "Disconnected";
@@ -25,7 +159,7 @@ export interface RchEnvelope<TPayload = unknown> {
   message_id: string;
   correlation_id?: string;
   kind: EnvelopeKind;
-  type: ClientOperation;
+  type: KnownOperation;
   issuer: "ui" | "mobile-runtime" | "reticulum" | "rch" | "peer" | "internal" | string;
   issued_at: string;
   payload: TPayload;
@@ -1560,7 +1694,7 @@ export interface RchClient {
   readonly checklists: RchFeatureExecutor<"checklists">;
   readonly chat: ChatClient;
   execute<TPayload = unknown, TResult = unknown>(
-    operation: ClientOperation,
+    operation: KnownOperation,
     payload?: TPayload,
     options?: ExecuteEnvelopeOptions,
   ): Promise<RchEnvelopeResponse<TResult>>;
@@ -1572,6 +1706,10 @@ export interface RchClient {
 }
 
 const CLIENT_OPERATION_SET = new Set<string>(CLIENT_OPERATION_KEYS);
+const SOUTHBOUND_OPERATION_SET = new Set<string>(SUPPORTED_SOUTHBOUND_OPERATIONS);
+const SOUTHBOUND_QUERY_OPERATION_SET = new Set<string>(
+  SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS,
+);
 
 function operationsByGroup<G extends ClientFeatureGroup>(
   group: G,
@@ -1645,13 +1783,17 @@ function createMessageId(): string {
   ).toString(36)}`;
 }
 
-function inferEnvelopeKind(operation: ClientOperation): EnvelopeKind {
-  const method = operation.split(" ", 1)[0];
-  return method === "GET" ? "query" : "command";
+function inferEnvelopeKind(operation: KnownOperation): EnvelopeKind {
+  if (CLIENT_OPERATION_SET.has(operation)) {
+    const method = operation.split(" ", 1)[0];
+    return method === "GET" ? "query" : "command";
+  }
+
+  return SOUTHBOUND_QUERY_OPERATION_SET.has(operation) ? "query" : "command";
 }
 
 function buildEnvelope<TPayload>(
-  operation: ClientOperation,
+  operation: KnownOperation,
   payload: TPayload,
   options: ExecuteEnvelopeOptions = {},
 ): RchEnvelope<TPayload> {
@@ -1668,8 +1810,8 @@ function buildEnvelope<TPayload>(
   };
 }
 
-function assertKnownOperation(operation: string): asserts operation is ClientOperation {
-  if (!CLIENT_OPERATION_SET.has(operation)) {
+function assertKnownOperation(operation: string): asserts operation is KnownOperation {
+  if (!CLIENT_OPERATION_SET.has(operation) && !SOUTHBOUND_OPERATION_SET.has(operation)) {
     throw new Error(`Operation is not in the client allowlist: ${operation}`);
   }
 }
@@ -1967,7 +2109,7 @@ class RchClientImpl implements RchClient {
   }
 
   async execute<TPayload = unknown, TResult = unknown>(
-    operation: ClientOperation,
+    operation: KnownOperation,
     payload?: TPayload,
     options?: ExecuteEnvelopeOptions,
   ): Promise<RchEnvelopeResponse<TResult>> {

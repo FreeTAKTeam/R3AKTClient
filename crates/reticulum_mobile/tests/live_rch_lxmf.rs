@@ -5,6 +5,8 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use lxmf::message::Message as LxmfMessage;
+use reticulum::destination::{DestinationName, SingleInputDestination};
+use reticulum::identity::PrivateIdentity;
 use reticulum_mobile::{EventSubscription, HubMode, Node, NodeConfig, NodeEvent};
 use rmpv::Value as RmpValue;
 use serde_json::{json, Value};
@@ -54,6 +56,17 @@ fn probe_storage_dir(label: &str) -> PathBuf {
     let path = base.join(label);
     fs::create_dir_all(&path).expect("create probe storage dir");
     path
+}
+
+fn probe_delivery_destination_hash(label: &str) -> String {
+    let identity_hex = fs::read_to_string(probe_storage_dir(label).join("identity.hex"))
+        .expect("read probe identity")
+        .trim()
+        .to_string();
+    let identity = PrivateIdentity::new_from_hex_string(&identity_hex).expect("valid probe identity");
+    let destination =
+        SingleInputDestination::new(identity, DestinationName::new("lxmf", "delivery"));
+    destination.desc.address_hash.to_hex_string()
 }
 
 fn operation_kind(operation: &str) -> &'static str {
@@ -218,6 +231,42 @@ where
     }
 
     None
+}
+
+fn wait_for_announce(events: &Arc<EventSubscription>, destination_hex: &str, timeout: Duration) -> bool {
+    let deadline = Instant::now() + timeout;
+    while Instant::now() < deadline {
+        let Some(event) = events.next(250) else {
+            continue;
+        };
+
+        match event {
+            NodeEvent::AnnounceReceived {
+                destination_hex: observed,
+                app_data,
+                hops,
+                interface_hex,
+                received_at_ms,
+            } => {
+                eprintln!(
+                    "[announce] dst={} hops={} iface={} received_at_ms={} app_data={}",
+                    observed,
+                    hops,
+                    interface_hex,
+                    received_at_ms,
+                    app_data,
+                );
+                if observed.eq_ignore_ascii_case(destination_hex) {
+                    return true;
+                }
+            }
+            NodeEvent::Log { level: _, message } => eprintln!("[node-log] {message}"),
+            NodeEvent::Error { code, message } => eprintln!("[node-error] {code}: {message}"),
+            _ => {}
+        }
+    }
+
+    false
 }
 
 fn field_name(field_id: i64) -> &'static str {
@@ -410,6 +459,18 @@ fn live_rch_lxmf_mission_sync_probe() {
     let _sender_guard = NodeStopGuard { node: &sender };
     let (observer, observer_events) = start_probe_node("observer", &hub_identity_hash, &tcp_client);
     let _observer_guard = NodeStopGuard { node: &observer };
+    let sender_delivery_hash = probe_delivery_destination_hash("sender");
+    let observer_delivery_hash = probe_delivery_destination_hash("observer");
+
+    eprintln!(
+        "[probe-destinations] sender_lxmf={} observer_lxmf={}",
+        sender_delivery_hash, observer_delivery_hash
+    );
+    assert!(
+        wait_for_announce(&observer_events, &sender_delivery_hash, Duration::from_secs(20)),
+        "observer never saw sender lxmf.delivery announce {}",
+        sender_delivery_hash
+    );
 
     let sender_join = execute_and_parse(&sender, "join", json!({}));
     eprintln!("[sender-join] {sender_join}");
