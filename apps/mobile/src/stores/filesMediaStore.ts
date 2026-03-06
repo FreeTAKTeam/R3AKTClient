@@ -14,7 +14,7 @@ type FilesMediaOperation = (typeof FILES_MEDIA_OPERATIONS)[number];
 
 interface FileTransferRecord {
   id: string;
-  conversationId: string;
+  channelKey: string;
   messageLocalId?: string;
   name: string;
   mimeType?: string;
@@ -94,7 +94,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
   }
 
   function beginTransfer(input: {
-    conversationId: string;
+    channelKey: string;
     messageLocalId?: string;
     name: string;
     mimeType?: string;
@@ -104,7 +104,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     const id = createTransferId();
     transfersById[id] = {
       id,
-      conversationId: input.conversationId,
+      channelKey: input.channelKey,
       messageLocalId: input.messageLocalId,
       name: input.name.trim() || "attachment",
       mimeType: input.mimeType?.trim() || undefined,

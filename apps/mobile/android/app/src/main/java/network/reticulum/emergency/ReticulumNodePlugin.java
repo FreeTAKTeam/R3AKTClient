@@ -348,7 +348,22 @@ public class ReticulumNodePlugin extends Plugin {
             return;
         }
 
-        String responseJson = service.executeEnvelope(envelopeJson);
+        String responseJson;
+        try {
+            responseJson = service.executeEnvelope(envelopeJson);
+        } catch (UnsatisfiedLinkError linkError) {
+            Logger.error(TAG, "Native runtime linkage failed while executing envelope.", linkError);
+            rejectWithCode(
+                    call,
+                    "NativeRuntimeUnavailable",
+                    "Native runtime linkage failed while executing envelope."
+            );
+            return;
+        } catch (Throwable throwable) {
+            Logger.error(TAG, "Unexpected native execution failure.", throwable);
+            rejectWithCode(call, "EnvelopeExecutionFailed", "Failed to execute message envelope.");
+            return;
+        }
         if (responseJson == null || responseJson.isEmpty()) {
             rejectFromService(
                     call,
@@ -368,7 +383,7 @@ public class ReticulumNodePlugin extends Plugin {
     public void getClientOperationCatalog(PluginCall call) {
         String catalogJson = ReticulumBridge.getClientOperationCatalogJson();
         if (catalogJson == null || catalogJson.isEmpty()) {
-            rejectFromNative(call, "Failed to load client operation catalog.");
+            rejectWithCode(call, "CatalogUnavailable", "Failed to load client operation catalog.");
             return;
         }
 

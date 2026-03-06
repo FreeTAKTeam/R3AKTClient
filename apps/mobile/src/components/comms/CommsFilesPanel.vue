@@ -20,7 +20,7 @@ function stageTransfer(): void {
   }
 
   const transferId = filesStore.beginTransfer({
-    conversationId: messagingStore.activeConversationId,
+    channelKey: messagingStore.activeChannelKey,
     name: trimmedName,
     mimeType: fileMimeType.value.trim() || undefined,
     sizeBytes: Number(fileSize.value) || undefined,

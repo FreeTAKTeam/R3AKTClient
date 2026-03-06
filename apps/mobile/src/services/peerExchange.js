@@ -1,0 +1,34 @@
+import { Capacitor } from "@capacitor/core";
+import { Clipboard } from "@capacitor/clipboard";
+import { Share } from "@capacitor/share";
+export async function copyToClipboard(text) {
+    if (Capacitor.isNativePlatform()) {
+        await Clipboard.write({ string: text });
+        return;
+    }
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(text);
+        return;
+    }
+    throw new Error("Clipboard API is not available on this platform.");
+}
+export async function shareText(title, text) {
+    if (Capacitor.isNativePlatform()) {
+        await Share.share({
+            title,
+            text,
+            dialogTitle: title,
+        });
+        return;
+    }
+    downloadTextFile(`${title.replace(/\s+/g, "_")}.json`, text, "application/json");
+}
+export function downloadTextFile(fileName, text, mimeType) {
+    const blob = new Blob([text], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    anchor.click();
+    URL.revokeObjectURL(url);
+}

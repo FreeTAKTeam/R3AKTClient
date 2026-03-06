@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-03-04T23:42:43.278Z",
+  "generated_at": "2026-03-06T15:38:53.530Z",
   "source": "docs/R3AKTClient/APIANnalysis_clientImplementationSet.md",
-  "operation_count": 104,
+  "operation_count": 125,
   "groups": [
     {
       "name": "Core Discovery and Session",
@@ -468,6 +468,95 @@
           "description": "Upload checklist and mark synced."
         }
       ]
+    },
+    {
+      "name": "Hub Admin and Legacy Command Parity",
+      "operations": [
+        {
+          "operation": "POST /Topic",
+          "description": "Creates a new Topic record."
+        },
+        {
+          "operation": "DELETE /Topic",
+          "description": "Deletes an existing Topic record based on the provided ID."
+        },
+        {
+          "operation": "PATCH /Topic",
+          "description": "Updates an existing Topic record."
+        },
+        {
+          "operation": "POST /Topic/Associate",
+          "description": "Associate an attachment upload with a TopicID."
+        },
+        {
+          "operation": "GET /Subscriber",
+          "description": "Retrieves a list of all Subscriber"
+        },
+        {
+          "operation": "POST /Subscriber",
+          "description": "Creates a new Subscriber record."
+        },
+        {
+          "operation": "DELETE /Subscriber",
+          "description": "Deletes an existing Subscriber record based on the provided ID."
+        },
+        {
+          "operation": "PATCH /Subscriber",
+          "description": "Updates an existing Subscriber record."
+        },
+        {
+          "operation": "GET /Subscriber/{id}",
+          "description": "retrieve an existing Subscriber record based on the provided ID."
+        },
+        {
+          "operation": "POST /Subscriber/Add",
+          "description": "Add a destination/topic subscriber mapping (admin)."
+        },
+        {
+          "operation": "GET /Identities",
+          "description": "List identity moderation status entries."
+        },
+        {
+          "operation": "POST /Client/{id}/Ban",
+          "description": "Ban an identity."
+        },
+        {
+          "operation": "POST /Client/{id}/Unban",
+          "description": "Remove ban/blackhole for an identity."
+        },
+        {
+          "operation": "POST /Client/{id}/Blackhole",
+          "description": "Blackhole an identity."
+        },
+        {
+          "operation": "GET /Config",
+          "description": "Return the raw config.ini content."
+        },
+        {
+          "operation": "PUT /Config",
+          "description": "Apply a new config.ini payload."
+        },
+        {
+          "operation": "POST /Config/Validate",
+          "description": "Validate a config.ini payload without applying."
+        },
+        {
+          "operation": "POST /Config/Rollback",
+          "description": "Roll back config.ini using a backup."
+        },
+        {
+          "operation": "POST /Command/FlushTelemetry",
+          "description": "Delete stored telemetry snapshots."
+        },
+        {
+          "operation": "POST /Command/ReloadConfig",
+          "description": "Reload config.ini from disk."
+        },
+        {
+          "operation": "GET /Command/DumpRouting",
+          "description": "Return connected destination hashes."
+        }
+      ]
     }
   ],
   "operations": [
@@ -545,6 +634,16 @@
       "operation": "DELETE /Image/{id}",
       "description": "Delete a stored image by its ID.",
       "group": "Files and Media"
+    },
+    {
+      "operation": "DELETE /Subscriber",
+      "description": "Deletes an existing Subscriber record based on the provided ID.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "DELETE /Topic",
+      "description": "Deletes an existing Topic record based on the provided ID.",
+      "group": "Hub Admin and Legacy Command Parity"
     },
     {
       "operation": "GET /api/markers",
@@ -697,6 +796,16 @@
       "group": "Core Discovery and Session"
     },
     {
+      "operation": "GET /Command/DumpRouting",
+      "description": "Return connected destination hashes.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "GET /Config",
+      "description": "Return the raw config.ini content.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
       "operation": "GET /Events",
       "description": "Return recent hub events.",
       "group": "Core Discovery and Session"
@@ -732,6 +841,11 @@
       "group": "Core Discovery and Session"
     },
     {
+      "operation": "GET /Identities",
+      "description": "List identity moderation status entries.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
       "operation": "GET /Image",
       "description": "List stored images.",
       "group": "Files and Media"
@@ -755,6 +869,16 @@
       "operation": "GET /Status",
       "description": "Return dashboard status metrics.",
       "group": "Core Discovery and Session"
+    },
+    {
+      "operation": "GET /Subscriber",
+      "description": "Retrieves a list of all Subscriber",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "GET /Subscriber/{id}",
+      "description": "retrieve an existing Subscriber record based on the provided ID.",
+      "group": "Hub Admin and Legacy Command Parity"
     },
     {
       "operation": "GET /Telemetry",
@@ -810,6 +934,16 @@
       "operation": "PATCH /checklists/templates/{template_id}",
       "description": "Update checklist template.",
       "group": "Checklists"
+    },
+    {
+      "operation": "PATCH /Subscriber",
+      "description": "Updates an existing Subscriber record.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "PATCH /Topic",
+      "description": "Updates an existing Topic record.",
+      "group": "Hub Admin and Legacy Command Parity"
     },
     {
       "operation": "POST /api/markers",
@@ -922,6 +1056,41 @@
       "group": "Checklists"
     },
     {
+      "operation": "POST /Client/{id}/Ban",
+      "description": "Ban an identity.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Client/{id}/Blackhole",
+      "description": "Blackhole an identity.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Client/{id}/Unban",
+      "description": "Remove ban/blackhole for an identity.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Command/FlushTelemetry",
+      "description": "Delete stored telemetry snapshots.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Command/ReloadConfig",
+      "description": "Reload config.ini from disk.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Config/Rollback",
+      "description": "Roll back config.ini using a backup.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Config/Validate",
+      "description": "Validate a config.ini payload without applying.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
       "operation": "POST /Message",
       "description": "Send a message into the hub.",
       "group": "Messaging and Chat"
@@ -935,6 +1104,26 @@
       "operation": "POST /RTH",
       "description": "Legacy compatibility alias for join.",
       "group": "Core Discovery and Session"
+    },
+    {
+      "operation": "POST /Subscriber",
+      "description": "Creates a new Subscriber record.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Subscriber/Add",
+      "description": "Add a destination/topic subscriber mapping (admin).",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Topic",
+      "description": "Creates a new Topic record.",
+      "group": "Hub Admin and Legacy Command Parity"
+    },
+    {
+      "operation": "POST /Topic/Associate",
+      "description": "Associate an attachment upload with a TopicID.",
+      "group": "Hub Admin and Legacy Command Parity"
     },
     {
       "operation": "POST /Topic/Subscribe",
@@ -980,6 +1169,11 @@
       "operation": "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
       "description": "Link a team to a mission.",
       "group": "R3AKT Teams, People, and Skills"
+    },
+    {
+      "operation": "PUT /Config",
+      "description": "Apply a new config.ini payload.",
+      "group": "Hub Admin and Legacy Command Parity"
     },
     {
       "operation": "PUT /RCH",

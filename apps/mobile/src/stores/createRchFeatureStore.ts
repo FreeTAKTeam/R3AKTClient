@@ -83,8 +83,8 @@ export function createRchFeatureStore<K extends RchFeatureKey>(
       if (wired.value || operations.length === 0) {
         return;
       }
-      wired.value = true;
       await execute(operations[0]);
+      wired.value = true;
     }
 
     const lastResponseJson = computed(() =>

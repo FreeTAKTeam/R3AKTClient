@@ -4,7 +4,6 @@ mod jni_bridge;
 mod logger;
 mod node;
 mod runtime;
-mod sdk_backend;
 mod types;
 
 pub use node::{EventSubscription, Node};
@@ -19,5 +18,3 @@ pub fn healthcheck() -> String {
 
 // Include UniFFI-generated scaffolding (built from `reticulum_mobile.udl`).
 uniffi::include_scaffolding!("reticulum_mobile");
-
-

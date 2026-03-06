@@ -8,18 +8,19 @@ import {
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { useMessagingStore } from "./messagingStore";
 import { useRchClientStore } from "./rchClientStore";
 
 type TopicsOperation = (typeof TOPICS_OPERATIONS)[number];
 
-interface TopicRecord {
+export interface TopicRecord {
   topicId: string;
   topicName?: string;
   topicPath?: string;
   topicDescription?: string;
 }
 
-interface TopicSubscriptionRecord {
+export interface TopicSubscriptionRecord {
   topicId: string;
   destination?: string;
   status: "subscribed" | "failed";
@@ -65,7 +66,16 @@ function normalizeTopicRecord(raw: unknown): TopicRecord | null {
   };
 }
 
+function defaultTopicName(topicId: string): string {
+  return topicId
+    .split(/[./:_-]+/g)
+    .filter((segment) => segment.length > 0)
+    .map((segment) => segment[0].toUpperCase() + segment.slice(1))
+    .join(" ");
+}
+
 export const useTopicsStore = defineStore("rch-topics", () => {
+  const messagingStore = useMessagingStore();
   const rchClientStore = useRchClientStore();
 
   const operations = TOPICS_OPERATIONS;
@@ -77,6 +87,26 @@ export const useTopicsStore = defineStore("rch-topics", () => {
 
   const topicsById = reactive<Record<string, TopicRecord>>({});
   const subscriptionsByTopicId = reactive<Record<string, TopicSubscriptionRecord>>({});
+
+  let unsubscribeChatEvents: (() => void) | null = null;
+
+  function rememberSubscription(
+    topicId: string,
+    patch: Partial<Omit<TopicSubscriptionRecord, "topicId" | "subscribedAt">> = {},
+  ): void {
+    const normalizedTopicId = topicId.trim();
+    if (!normalizedTopicId) {
+      return;
+    }
+
+    subscriptionsByTopicId[normalizedTopicId] = {
+      topicId: normalizedTopicId,
+      destination: patch.destination?.trim() || subscriptionsByTopicId[normalizedTopicId]?.destination,
+      status: patch.status ?? subscriptionsByTopicId[normalizedTopicId]?.status ?? "subscribed",
+      subscribedAt: Date.now(),
+      error: patch.error,
+    };
+  }
 
   async function execute(
     operation: TopicsOperation,
@@ -111,8 +141,12 @@ export const useTopicsStore = defineStore("rch-topics", () => {
   }
 
   async function listTopics(): Promise<void> {
+    await messagingStore.wire();
     const client = await rchClientStore.requireClient();
     const response = await client.chat.listTopics({});
+    lastOperation.value = CHAT_TOPIC_LIST_OPERATION;
+    lastResponse.value = response;
+
     const payload = asRecord(response.payload);
     const incoming = Array.isArray(payload.topics) ? payload.topics : [];
     for (const entry of incoming) {
@@ -125,6 +159,7 @@ export const useTopicsStore = defineStore("rch-topics", () => {
   }
 
   async function subscribeTopic(topicId: string, destination?: string): Promise<void> {
+    await messagingStore.wire();
     const client = await rchClientStore.requireClient();
     const normalizedTopicId = topicId.trim();
     if (!normalizedTopicId) {
@@ -132,24 +167,24 @@ export const useTopicsStore = defineStore("rch-topics", () => {
     }
 
     try {
-      await client.chat.subscribeTopic({
+      const response = await client.chat.subscribeTopic({
         topicId: normalizedTopicId,
         destination: destination?.trim() || undefined,
       });
-      subscriptionsByTopicId[normalizedTopicId] = {
-        topicId: normalizedTopicId,
-        destination: destination?.trim() || undefined,
+      lastOperation.value = CHAT_TOPIC_SUBSCRIBE_OPERATION;
+      lastResponse.value = response;
+      rememberSubscription(normalizedTopicId, {
+        destination,
         status: "subscribed",
-        subscribedAt: Date.now(),
-      };
+        error: undefined,
+      });
     } catch (error: unknown) {
-      subscriptionsByTopicId[normalizedTopicId] = {
-        topicId: normalizedTopicId,
-        destination: destination?.trim() || undefined,
+      rememberSubscription(normalizedTopicId, {
+        destination,
         status: "failed",
-        subscribedAt: Date.now(),
         error: toErrorMessage(error),
-      };
+      });
+      lastError.value = toErrorMessage(error);
       throw error;
     }
   }
@@ -158,9 +193,22 @@ export const useTopicsStore = defineStore("rch-topics", () => {
     if (wired.value) {
       return;
     }
+
+    await messagingStore.wire();
+    const client = await rchClientStore.requireClient();
+    unsubscribeChatEvents?.();
+    unsubscribeChatEvents = client.chat.onEvent((event) => {
+      if (event.type !== "topic.subscribed" || !event.topicId) {
+        return;
+      }
+      rememberSubscription(event.topicId, {
+        destination: event.destination,
+        status: "subscribed",
+        error: undefined,
+      });
+    });
+    await listTopics();
     wired.value = true;
-    await execute(CHAT_TOPIC_LIST_OPERATION, {}).catch(() => undefined);
-    await listTopics().catch(() => undefined);
   }
 
   const topics = computed(() =>
@@ -174,6 +222,35 @@ export const useTopicsStore = defineStore("rch-topics", () => {
   const lastResponseJson = computed(() =>
     lastResponse.value ? JSON.stringify(lastResponse.value, null, 2) : "",
   );
+
+  function rememberTopic(
+    topicId: string,
+    patch: Partial<Omit<TopicRecord, "topicId">> = {},
+  ): void {
+    const normalizedTopicId = topicId.trim();
+    if (!normalizedTopicId) {
+      return;
+    }
+
+    topicsById[normalizedTopicId] = {
+      topicId: normalizedTopicId,
+      topicName:
+        patch.topicName?.trim()
+        || topicsById[normalizedTopicId]?.topicName
+        || defaultTopicName(normalizedTopicId),
+      topicPath: patch.topicPath?.trim() || topicsById[normalizedTopicId]?.topicPath,
+      topicDescription:
+        patch.topicDescription?.trim() || topicsById[normalizedTopicId]?.topicDescription,
+    };
+  }
+
+  function clearSubscription(topicId: string): void {
+    const normalizedTopicId = topicId.trim();
+    if (!normalizedTopicId) {
+      return;
+    }
+    delete subscriptionsByTopicId[normalizedTopicId];
+  }
 
   return {
     operations,
@@ -192,6 +269,9 @@ export const useTopicsStore = defineStore("rch-topics", () => {
     wire,
     listTopics,
     subscribeTopic,
+    rememberTopic,
+    rememberSubscription,
+    clearSubscription,
     topicListOperation: CHAT_TOPIC_LIST_OPERATION,
     topicSubscribeOperation: CHAT_TOPIC_SUBSCRIBE_OPERATION,
   };

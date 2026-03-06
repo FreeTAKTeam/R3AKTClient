@@ -78,6 +78,9 @@ export const useFeatureBootstrapStore = defineStore("feature-bootstrap", () => {
 
     lastError.value = "";
     for (const entry of orderedWires) {
+      if (stepStatus[entry.step] === "wired") {
+        continue;
+      }
       try {
         await entry.wire();
         stepStatus[entry.step] = "wired";
@@ -87,7 +90,7 @@ export const useFeatureBootstrapStore = defineStore("feature-bootstrap", () => {
       }
     }
 
-    initialized.value = true;
+    initialized.value = FEATURE_WIRE_ORDER.every((step) => stepStatus[step] === "wired");
   }
 
   return {

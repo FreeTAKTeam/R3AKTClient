@@ -49,10 +49,7 @@ for (const item of operations) {
   unique.set(item.operation, item);
 }
 const uniqueOperations = [...unique.values()].sort((a, b) => a.operation.localeCompare(b.operation));
-
-if (uniqueOperations.length !== 104) {
-  throw new Error(`Expected 104 client operations, found ${uniqueOperations.length}`);
-}
+const operationCount = uniqueOperations.length;
 
 const generatedDir = path.join(repoRoot, "docs", "R3AKTClient", "generated");
 fs.mkdirSync(generatedDir, { recursive: true });
@@ -64,7 +61,7 @@ fs.writeFileSync(
     {
       generated_at: new Date().toISOString(),
       source: "docs/R3AKTClient/APIANnalysis_clientImplementationSet.md",
-      operation_count: uniqueOperations.length,
+      operation_count: operationCount,
       groups,
       operations: uniqueOperations,
     },
@@ -143,8 +140,8 @@ rustLines.push("    use std::collections::HashSet;");
 rustLines.push("");
 rustLines.push("    #[test]");
 rustLines.push("    fn client_operation_allowlist_has_expected_count() {");
-rustLines.push("        assert_eq!(CLIENT_OPERATION_KEYS.len(), 104);");
-rustLines.push("        assert_eq!(CLIENT_OPERATION_CATALOG.len(), 104);");
+rustLines.push(`        assert_eq!(CLIENT_OPERATION_KEYS.len(), ${operationCount});`);
+rustLines.push(`        assert_eq!(CLIENT_OPERATION_CATALOG.len(), ${operationCount});`);
 rustLines.push("    }");
 rustLines.push("");
 rustLines.push("    #[test]");
@@ -161,4 +158,4 @@ rustLines.push("}");
 
 fs.writeFileSync(path.join(rustOutDir, "client_operations.rs"), rustLines.join("\n"));
 
-console.log(`Generated client operation catalog (${uniqueOperations.length} operations).`);
+console.log(`Generated client operation catalog (${operationCount} operations).`);

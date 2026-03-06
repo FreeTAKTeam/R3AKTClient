@@ -1,36 +1,32 @@
 <script setup lang="ts">
-import type { SendMethod } from "@reticulum/node-client";
 import { computed, onMounted, ref } from "vue";
 
-import { useMessagingStore } from "../../stores/messagingStore";
+import { buildChannelKey, useMessagingStore } from "../../stores/messagingStore";
 
 const messaging = useMessagingStore();
 
 const destinationInput = ref("");
 const topicInput = ref("");
-const sendMethod = ref<SendMethod>("opportunistic");
 
 const draftModel = computed({
   get: () => messaging.activeDraft,
   set: (value: string) => messaging.setDraft(value),
 });
 
-const derivedConversationId = computed(() => {
+const derivedChannelKey = computed(() => {
   const topicId = topicInput.value.trim();
-  if (topicId) {
-    return `topic:${topicId}`;
-  }
   const destination = destinationInput.value.trim().toLowerCase();
-  if (destination) {
-    return `dm:${destination}`;
+  if (topicId || destination) {
+    return buildChannelKey({
+      topicId: topicId || undefined,
+      destination: destination || undefined,
+    });
   }
-  return messaging.activeConversationId;
+  return messaging.activeChannelKey;
 });
 
 onMounted(() => {
-  if (messaging.chatV2Enabled) {
-    messaging.wire().catch(() => undefined);
-  }
+  messaging.wire().catch(() => undefined);
 });
 
 function formatTimestamp(value: string): string {
@@ -44,44 +40,22 @@ function formatTimestamp(value: string): string {
   });
 }
 
-function chooseConversation(conversationId: string): void {
-  messaging.setActiveConversation(conversationId);
+function chooseChannel(channelKey: string): void {
+  messaging.setActiveChannel(channelKey);
   destinationInput.value = "";
   topicInput.value = "";
 }
 
-function openDerivedConversation(): void {
-  messaging.setActiveConversation(derivedConversationId.value);
+function openDerivedChannel(): void {
+  messaging.setActiveChannel(derivedChannelKey.value);
 }
 
 async function sendCurrentDraft(): Promise<void> {
   await messaging.sendDraft({
-    conversationId: derivedConversationId.value,
+    channelKey: derivedChannelKey.value,
     destination: destinationInput.value.trim() || undefined,
     topicId: topicInput.value.trim() || undefined,
-    sendMethod: sendMethod.value,
-    tryPropagationOnFail: true,
   });
-}
-
-async function retryMessage(localMessageId: string): Promise<void> {
-  await messaging.retryMessage(localMessageId, sendMethod.value);
-}
-
-async function syncMessages(): Promise<void> {
-  await messaging.syncMessages({ replayLimit: 200 });
-}
-
-async function react(localMessageId: string, key: string): Promise<void> {
-  await messaging.sendReaction(localMessageId, key).catch(() => undefined);
-}
-
-function toggleChatV2(): void {
-  const next = !messaging.chatV2Enabled;
-  messaging.setChatV2Enabled(next);
-  if (next) {
-    messaging.wire().catch(() => undefined);
-  }
 }
 </script>
 
@@ -90,29 +64,29 @@ function toggleChatV2(): void {
     <header class="panel-header">
       <div class="title-wrap">
         <h2 class="panel-title">Comms Chat</h2>
-        <p class="panel-subtitle">Queued send + runtime delivery reconciliation.</p>
+        <p class="panel-subtitle">Mission-sync LXMF channels with local queued/failed state only.</p>
       </div>
-      <button class="toggle-button" type="button" @click="toggleChatV2">
-        {{ messaging.chatV2Enabled ? "Disable chat_v2" : "Enable chat_v2" }}
-      </button>
+      <div class="status-pills">
+        <span class="status-pill" :class="{ ready: messaging.capabilities.messageSend }">send</span>
+        <span class="status-pill" :class="{ ready: messaging.capabilities.topicList }">list</span>
+        <span class="status-pill" :class="{ ready: messaging.capabilities.topicSubscribe }">subscribe</span>
+      </div>
     </header>
 
-    <section v-if="!messaging.chatV2Enabled" class="disabled-state">
-      <p>chat_v2 is disabled. Enable it to use Columba-equivalent chat behavior.</p>
-    </section>
+    <p v-if="messaging.lastError" class="error-banner">{{ messaging.lastError }}</p>
 
-    <section v-else class="chat-grid">
-      <aside class="conversations">
-        <h3 class="section-title">Conversations</h3>
+    <section class="chat-grid">
+      <aside class="channels">
+        <h3 class="section-title">Channels</h3>
         <button
-          v-for="conversation in messaging.conversations"
-          :key="conversation.id"
-          class="conversation-button"
-          :class="{ active: conversation.id === messaging.activeConversationId }"
+          v-for="channel in messaging.channels"
+          :key="channel.channelKey"
+          class="channel-button"
+          :class="{ active: channel.channelKey === messaging.activeChannelKey }"
           type="button"
-          @click="chooseConversation(conversation.id)"
+          @click="chooseChannel(channel.channelKey)"
         >
-          <span>{{ conversation.title }}</span>
+          <span>{{ channel.title }}</span>
         </button>
       </aside>
 
@@ -121,12 +95,8 @@ function toggleChatV2(): void {
           <div class="status-row">
             <span>Queued: {{ messaging.queuedCount }}</span>
             <span>Failed: {{ messaging.failedCount }}</span>
-            <span>Reconnects: {{ messaging.telemetry.reconnectCount }}</span>
-            <span>Dedupe: {{ messaging.telemetry.duplicateSuppressed }}</span>
+            <span>Ready: {{ messaging.ready ? "yes" : "no" }}</span>
           </div>
-          <button class="sync-button" type="button" @click="syncMessages">
-            Sync
-          </button>
         </header>
 
         <div class="timeline">
@@ -138,21 +108,14 @@ function toggleChatV2(): void {
           >
             <header class="message-meta">
               <span>{{ formatTimestamp(message.issuedAt) }}</span>
-              <span>{{ message.sendMethod }}</span>
+              <span>{{ message.direction }}</span>
               <span>{{ message.deliveryState }}</span>
             </header>
             <p class="message-content">{{ message.content || "(empty message)" }}</p>
-            <footer class="message-actions">
-              <button type="button" @click="react(message.localMessageId, '👍')">👍</button>
-              <button type="button" @click="react(message.localMessageId, '✅')">✅</button>
-              <button
-                v-if="message.deliveryState === 'failed'"
-                type="button"
-                @click="retryMessage(message.localMessageId)"
-              >
-                Retry
-              </button>
-            </footer>
+            <p v-if="message.topicId || message.destination" class="message-route">
+              {{ message.topicId ? `topic:${message.topicId}` : `dm:${message.destination}` }}
+            </p>
+            <p v-if="message.error" class="message-error">{{ message.error }}</p>
           </article>
         </div>
 
@@ -165,7 +128,7 @@ function toggleChatV2(): void {
                 class="text-input"
                 type="text"
                 placeholder="destination hex"
-                @blur="openDerivedConversation"
+                @blur="openDerivedChannel"
               />
             </label>
             <label class="input-label">
@@ -175,17 +138,12 @@ function toggleChatV2(): void {
                 class="text-input"
                 type="text"
                 placeholder="topic id"
-                @blur="openDerivedConversation"
+                @blur="openDerivedChannel"
               />
             </label>
-            <label class="input-label">
-              Method
-              <select v-model="sendMethod" class="text-input">
-                <option value="direct">direct</option>
-                <option value="opportunistic">opportunistic</option>
-                <option value="propagated">propagated</option>
-              </select>
-            </label>
+            <button class="open-button" type="button" @click="openDerivedChannel">
+              Open Channel
+            </button>
           </div>
           <textarea
             v-model="draftModel"
@@ -194,7 +152,7 @@ function toggleChatV2(): void {
             placeholder="Type message..."
           />
           <div class="composer-actions">
-            <button class="send-button" type="button" @click="sendCurrentDraft">
+            <button class="send-button" type="button" :disabled="!messaging.ready" @click="sendCurrentDraft">
               Send
             </button>
           </div>
@@ -235,8 +193,13 @@ function toggleChatV2(): void {
   margin: 0;
 }
 
-.toggle-button,
-.sync-button,
+.status-pills {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.status-pill,
+.open-button,
 .send-button {
   background: rgb(10 28 55 / 92%);
   border: 1px solid rgb(106 177 238 / 44%);
@@ -247,12 +210,23 @@ function toggleChatV2(): void {
   padding: 0.45rem 0.8rem;
 }
 
-.disabled-state {
-  background: rgb(8 22 45 / 74%);
-  border: 1px solid rgb(92 130 178 / 35%);
+.status-pill {
+  cursor: default;
+  opacity: 0.45;
+  text-transform: uppercase;
+}
+
+.status-pill.ready {
+  opacity: 1;
+}
+
+.error-banner {
+  background: rgb(64 15 22 / 72%);
+  border: 1px solid rgb(230 110 126 / 35%);
   border-radius: 12px;
-  color: #97b7dd;
+  color: #ffd7df;
   font-family: var(--font-body);
+  margin: 0;
   padding: 0.8rem;
 }
 
@@ -262,45 +236,48 @@ function toggleChatV2(): void {
   grid-template-columns: 220px minmax(0, 1fr);
 }
 
-.conversations,
-.timeline-wrap {
-  background: rgb(7 20 43 / 72%);
-  border: 1px solid rgb(83 125 185 / 32%);
-  border-radius: 12px;
+.channels {
+  background: rgb(7 20 43 / 74%);
+  border: 1px solid rgb(88 128 179 / 34%);
+  border-radius: 14px;
+  display: grid;
+  gap: 0.5rem;
   padding: 0.7rem;
 }
 
 .section-title {
-  color: #d8ecff;
+  color: #d6ecff;
   font-family: var(--font-ui);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   letter-spacing: 0.08em;
-  margin: 0 0 0.5rem;
+  margin: 0;
   text-transform: uppercase;
 }
 
-.conversation-button {
-  background: transparent;
-  border: 1px solid rgb(88 129 182 / 28%);
+.channel-button {
+  background: rgb(3 12 29 / 84%);
+  border: 1px solid rgb(82 126 181 / 28%);
   border-radius: 10px;
-  color: #b2d4f5;
+  color: #c7e1fa;
   cursor: pointer;
-  display: block;
   font-family: var(--font-body);
-  margin-bottom: 0.4rem;
-  padding: 0.45rem 0.5rem;
+  padding: 0.6rem;
   text-align: left;
-  width: 100%;
 }
 
-.conversation-button.active {
-  border-color: rgb(105 191 245 / 72%);
-  color: #ebf8ff;
+.channel-button.active {
+  background: linear-gradient(135deg, rgb(22 55 99 / 96%), rgb(11 27 55 / 94%));
+  border-color: rgb(112 181 239 / 58%);
+  color: #eff8ff;
 }
 
 .timeline-wrap {
+  background: rgb(7 20 43 / 74%);
+  border: 1px solid rgb(88 128 179 / 34%);
+  border-radius: 14px;
   display: grid;
   gap: 0.7rem;
+  padding: 0.8rem;
 }
 
 .timeline-header {
@@ -310,87 +287,89 @@ function toggleChatV2(): void {
 }
 
 .status-row {
-  color: #9dbede;
+  color: #9bc0e6;
   display: flex;
   flex-wrap: wrap;
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  gap: 0.7rem;
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  gap: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 
 .timeline {
   display: grid;
-  gap: 0.5rem;
-  max-height: 320px;
+  gap: 0.55rem;
+  max-height: 420px;
   overflow: auto;
 }
 
 .message-card {
-  border: 1px solid rgb(84 124 179 / 24%);
-  border-radius: 10px;
+  background: rgb(4 14 31 / 84%);
+  border: 1px solid rgb(78 118 171 / 28%);
+  border-radius: 12px;
   display: grid;
-  gap: 0.45rem;
-  padding: 0.55rem;
+  gap: 0.25rem;
+  padding: 0.65rem;
 }
 
 .message-card.direction-outbound {
-  background: rgb(10 31 59 / 70%);
-}
-
-.message-card.direction-inbound {
-  background: rgb(16 29 45 / 72%);
+  border-color: rgb(101 170 232 / 36%);
 }
 
 .message-card.state-failed {
-  border-color: rgb(224 106 106 / 60%);
+  border-color: rgb(229 116 132 / 44%);
+}
+
+.message-card.state-queued {
+  border-color: rgb(224 195 102 / 42%);
 }
 
 .message-meta {
-  color: #95b4d8;
+  color: #8eb4da;
   display: flex;
   font-family: var(--font-ui);
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   gap: 0.6rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .message-content {
-  color: #e6f3ff;
+  color: #eff8ff;
   font-family: var(--font-body);
   margin: 0;
-  white-space: pre-wrap;
 }
 
-.message-actions {
-  display: flex;
-  gap: 0.4rem;
+.message-route,
+.message-error {
+  font-family: var(--font-body);
+  margin: 0;
 }
 
-.message-actions button {
-  background: rgb(14 34 61 / 85%);
-  border: 1px solid rgb(97 147 201 / 38%);
-  border-radius: 8px;
-  color: #cbe7ff;
-  cursor: pointer;
-  font-family: var(--font-ui);
-  font-size: 0.73rem;
-  padding: 0.25rem 0.5rem;
+.message-route {
+  color: #9ac1e8;
+  font-size: 0.8rem;
+}
+
+.message-error {
+  color: #ffb8c4;
+  font-size: 0.8rem;
 }
 
 .composer {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
 .routing-grid {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.5rem;
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .input-label {
-  color: #97b9de;
+  color: #9bbde2;
   display: grid;
   font-family: var(--font-ui);
   font-size: 0.7rem;
@@ -401,12 +380,16 @@ function toggleChatV2(): void {
 
 .text-input,
 .composer-input {
-  background: rgb(2 11 27 / 90%);
-  border: 1px solid rgb(81 131 187 / 30%);
+  background: rgb(3 12 28 / 90%);
+  border: 1px solid rgb(84 130 185 / 35%);
   border-radius: 9px;
-  color: #d9efff;
+  color: #d9ecff;
   font-family: var(--font-body);
   padding: 0.45rem 0.5rem;
+}
+
+.composer-input {
+  resize: vertical;
 }
 
 .composer-actions {
@@ -414,9 +397,26 @@ function toggleChatV2(): void {
   justify-content: flex-end;
 }
 
+.send-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 @media (max-width: 900px) {
-  .chat-grid {
+  .panel-header,
+  .timeline-header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .chat-grid,
+  .routing-grid {
     grid-template-columns: 1fr;
+  }
+
+  .status-pills,
+  .status-row {
+    flex-wrap: wrap;
   }
 }
 </style>

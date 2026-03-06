@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-03-04T23:42:57.370Z",
-  "expected_operation_count": 104,
-  "ts_operation_count": 104,
-  "rust_operation_count": 104,
+  "generated_at": "2026-03-06T15:38:53.624Z",
+  "expected_operation_count": 125,
+  "ts_operation_count": 125,
+  "rust_operation_count": 125,
   "passed": true,
   "missing_in_ts": [],
   "missing_in_rust": [],

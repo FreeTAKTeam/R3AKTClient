@@ -1,0 +1,31 @@
+﻿{
+  "screenshot": {
+    "name": "projects/4350946208414714711/files/8887b4b150ee4419989d20be73495016",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AOfcidUfuqQR5sI1ke1jCtsPNdwKnrnRbjIoS-JCmQ_wS3kJwVwN_R3Tq-Q7di1z7wSUxKYnfo2f5cuE0Jo0BVYS30X2_SK3jlXbmiSEG5Q85giBQXCpVmqqb0_PCUoE6C5F2b5wyW6wolO6dClZx65zXmQ1gEgh21HTUdfOhZ363eWWYv2_Oa786P4ZyLJJRQTxOyU7FOGwGTXSpR-nFTs0sgACYJ71r_X1ez1Sgtkx7qbZwY8tOgkMg8Bcww"
+  },
+  "htmlCode": {
+    "name": "projects/4350946208414714711/files/f29b32f967b54728ae7bbfe75d01a31c",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzZiYWUyYTAwMDBiYzRhOWI4YzkzZDYzZDg5ZjU4YzMwEgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "0d6df06555a24c089123b1af5d5d5f77",
+  "generatedBy": "HatterAgent",
+  "width": "780",
+  "height": "1768",
+  "title": "Task Detail - Clean Header",
+  "prompt": "Update the header: keep the hamburger menu on the far left, center the page title 'EQUIPMENT CHECK', and show only the 'LIVE' indicator badge on the far right. Remove any other buttons from the header.",
+  "name": "projects/4350946208414714711/screens/0d6df06555a24c089123b1af5d5d5f77",
+  "theme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#25d1f4",
+    "saturation": 3
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "HATTER_AGENT",
+    "status": "COMPLETE"
+  }
+}

@@ -161,7 +161,9 @@ pub struct PeerChange {
 
 #[derive(Debug, Clone)]
 pub enum NodeEvent {
-    StatusChanged { status: NodeStatus },
+    StatusChanged {
+        status: NodeStatus,
+    },
     AnnounceReceived {
         destination_hex: String,
         app_data: String,
@@ -169,8 +171,13 @@ pub enum NodeEvent {
         interface_hex: String,
         received_at_ms: u64,
     },
-    PeerChanged { change: PeerChange },
-    PacketReceived { destination_hex: String, bytes: Vec<u8> },
+    PeerChanged {
+        change: PeerChange,
+    },
+    PacketReceived {
+        destination_hex: String,
+        bytes: Vec<u8>,
+    },
     PacketSent {
         destination_hex: String,
         bytes: Vec<u8>,
@@ -185,7 +192,12 @@ pub enum NodeEvent {
         payload_json: String,
         correlation_id: Option<String>,
     },
-    Log { level: LogLevel, message: String },
-    Error { code: String, message: String },
+    Log {
+        level: LogLevel,
+        message: String,
+    },
+    Error {
+        code: String,
+        message: String,
+    },
 }
-

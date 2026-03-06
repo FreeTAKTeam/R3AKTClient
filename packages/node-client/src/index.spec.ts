@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CHAT_MESSAGE_SEND_OPERATION,
+  CHAT_TOPIC_LIST_OPERATION,
+  CHAT_TOPIC_SUBSCRIBE_OPERATION,
   MESSAGES_OPERATIONS,
   SESSION_OPERATIONS,
   type ChatEvent,
@@ -72,6 +75,52 @@ class FakeNodeClient implements ReticulumNodeClient {
       this.failExecuteCount -= 1;
       throw new Error("simulated execute failure");
     }
+
+    const payload = envelope.payload as Record<string, unknown>;
+    if (envelope.type === CHAT_MESSAGE_SEND_OPERATION) {
+      return {
+        ...envelope,
+        kind: "result",
+        issuer: "mobile-runtime",
+        payload: {
+          local_message_id:
+            payload.local_message_id ?? envelope.correlation_id ?? envelope.message_id,
+          sent: true,
+          content: payload.content ?? "",
+          destination: payload.destination,
+          topic_id: payload.topic_id,
+        } as TResult,
+      };
+    }
+
+    if (envelope.type === CHAT_TOPIC_SUBSCRIBE_OPERATION) {
+      return {
+        ...envelope,
+        kind: "result",
+        issuer: "mobile-runtime",
+        payload: {
+          topic_id: payload.topic_id,
+          destination: payload.destination,
+        } as TResult,
+      };
+    }
+
+    if (envelope.type === CHAT_TOPIC_LIST_OPERATION) {
+      return {
+        ...envelope,
+        kind: "result",
+        issuer: "mobile-runtime",
+        payload: {
+          topics: [
+            {
+              topic_id: "ops.alerts",
+              topic_name: "OPS ALERTS",
+            },
+          ],
+        } as TResult,
+      };
+    }
+
     return {
       ...envelope,
       kind: "result",
@@ -204,24 +253,24 @@ describe("RchClient grouped feature API", () => {
     unsubscribe();
   });
 
-  it("uses chat send fallback policy opportunistic -> propagated", async () => {
+  it("sends backend-shaped mission-sync chat payloads", async () => {
     const fake = new FakeNodeClient();
-    fake.failExecuteCount = 1;
     const client = createRchClient(fake);
 
     const response = await client.chat.sendMessage({
       content: "hello",
       destination: "aa11bb22cc33dd44ee55ff66aa77bb88",
-      sendMethod: "opportunistic",
-      tryPropagationOnFail: true,
+      topicId: "ops.alerts",
     });
 
-    expect(fake.allEnvelopes.length).toBe(2);
+    expect(fake.allEnvelopes.length).toBe(1);
     expect(fake.allEnvelopes[0]?.type).toBe("POST /Message");
-    expect((fake.allEnvelopes[1]?.payload as Record<string, unknown>).method).toBe(
-      "propagated",
-    );
-    expect(response.payload.sendMethod).toBe("propagated");
+    expect(fake.allEnvelopes[0]?.payload).toMatchObject({
+      content: "hello",
+      destination: "aa11bb22cc33dd44ee55ff66aa77bb88",
+      topic_id: "ops.alerts",
+    });
+    expect(response.payload.sent).toBe(true);
   });
 
   it("emits ordered, de-duped chat events from domain events", async () => {
@@ -233,28 +282,28 @@ describe("RchClient grouped feature API", () => {
     });
 
     fake.emitDomainEvent({
-      eventType: "message.receive",
+      eventType: "rch.message.relay",
       payloadJson:
-        "{\"networkMessageId\":\"net-1\",\"localMessageId\":\"loc-1\",\"content\":\"incoming\",\"source\":\"abcd\"}",
+        "{\"event_id\":\"evt-1\",\"localMessageId\":\"loc-1\",\"content\":\"incoming\",\"source\":\"abcd\",\"source_hash\":\"abcd\",\"topic_id\":\"ops.alerts\",\"issued_at\":\"2026-03-06T12:00:00Z\"}",
       correlationId: "corr-1",
     });
     fake.emitDomainEvent({
-      eventType: "message.receive",
+      eventType: "rch.message.relay",
       payloadJson:
-        "{\"networkMessageId\":\"net-1\",\"localMessageId\":\"loc-1\",\"content\":\"incoming duplicate\"}",
+        "{\"event_id\":\"evt-1\",\"localMessageId\":\"loc-2\",\"content\":\"incoming duplicate\",\"source\":\"abcd\",\"source_hash\":\"abcd\",\"topic_id\":\"ops.alerts\",\"issued_at\":\"2026-03-06T12:00:00Z\"}",
       correlationId: "corr-1",
     });
     fake.emitDomainEvent({
-      eventType: "message.delivery",
+      eventType: "mission.message.sent",
       payloadJson:
-        "{\"localMessageId\":\"loc-1\",\"networkMessageId\":\"net-1\",\"state\":\"delivered\"}",
+        "{\"local_message_id\":\"loc-3\",\"content\":\"outbound\",\"destination\":\"aa11bb22cc33dd44ee55ff66aa77bb88\",\"sent\":true}",
       correlationId: "corr-1",
     });
 
     expect(observed.length).toBe(2);
     expect(observed[0]?.type).toBe("message.receive");
     expect(observed[0]?.meta.sequence).toBe(1);
-    expect(observed[1]?.type).toBe("message.delivery");
+    expect(observed[1]?.type).toBe("message.sent");
     expect(observed[1]?.meta.sequence).toBe(2);
 
     unsubscribe();

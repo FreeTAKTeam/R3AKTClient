@@ -1,0 +1,31 @@
+﻿{
+  "screenshot": {
+    "name": "projects/4350946208414714711/files/59bd07293c98403aaa21ce9c01d9082b",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AOfcidU8hnK-MWDbqoFL4qPXSFEvm-dDyJ63CSkEQFYhFFmti5EJJFDB6ZDz8Wlyjj06efKsTG2ooi5CSc7YeuixoMHozwIGrvkhOKYymxK1wBCKHFel9XnwIPqwL_j8nnKljUTaJb6A5LnjL8cSSowWWaIa54Il_XX2JTaeloIor0BX6RrB1aEI8CgO2qwMF_oDiHZhbBtRC8_wVqJPAiJ1PtPElvH2WZG3y1dSrwToT24TEZ85ac0JOO1TWA"
+  },
+  "htmlCode": {
+    "name": "projects/4350946208414714711/files/882ee8589dab449f845cd908f274a592",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzEzNWEwZDY2N2QzYjQ0Zjc4MDNhM2M5N2Q4OTY1ZTIyEgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "e62cce5130224b6a9dbd0625dce7c764",
+  "generatedBy": "HatterAgent",
+  "width": "780",
+  "height": "1894",
+  "title": "Dashboard - Clean Header",
+  "prompt": "Update the header: keep the hamburger menu on the far left, center the page title 'DASHBOARD', and show only the 'LIVE' indicator badge on the far right. Remove any other buttons (like the refresh icon) from the header.",
+  "name": "projects/4350946208414714711/screens/e62cce5130224b6a9dbd0625dce7c764",
+  "theme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#25d1f4",
+    "saturation": 3
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "HATTER_AGENT",
+    "status": "COMPLETE"
+  }
+}

@@ -2,13 +2,14 @@
 
 This document is the reduced client-only implementation subset derived from
 `docs/R3AKTClient/APIANnalysis.md`.
-Only operations classified as `client` are included here. Grouping order is the recommended development sequence.
+Only operations classified as `client` are included here, plus the explicitly widened
+legacy/admin LXMF command surface required for full hub command parity. Grouping order is the recommended development sequence.
 This is the allowed feature surface for the Android-first RCH client running a
 local Rust Reticulum + LXMF stack.
 Reticulum LXMF payload reference for R3AKT mission traffic: [R3AKT_ReticulumPayload.md](R3AKT_ReticulumPayload.md)
 Client documentation index: [README.md](README.md)
 
-Total client operations: **104**
+Total client operations: **125**
 
 ## Sequencing Rules
 - Implement groups top to bottom unless a specific dependency changes.
@@ -198,3 +199,33 @@ Operation count: **21**
 | `PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style` | Set checklist task row style. |
 | `POST /checklists/{checklist_id}/tasks/{task_id}/status` | Set checklist task status. |
 | `POST /checklists/{checklist_id}/upload` | Upload checklist and mark synced. |
+
+## 11. Hub Admin and Legacy Command Parity
+This group widens the original client-only scope so the mobile runtime can execute the full
+documented RCH command set over LXMF without routing these operations through bootstrap stores.
+
+Operation count: **21**
+
+| Function | Description |
+|---|---|
+| `POST /Topic` | Creates a new Topic record. |
+| `DELETE /Topic` | Deletes an existing Topic record based on the provided ID. |
+| `PATCH /Topic` | Updates an existing Topic record. |
+| `POST /Topic/Associate` | Associate an attachment upload with a TopicID. |
+| `GET /Subscriber` | Retrieves a list of all Subscriber |
+| `POST /Subscriber` | Creates a new Subscriber record. |
+| `DELETE /Subscriber` | Deletes an existing Subscriber record based on the provided ID. |
+| `PATCH /Subscriber` | Updates an existing Subscriber record. |
+| `GET /Subscriber/{id}` | retrieve an existing Subscriber record based on the provided ID. |
+| `POST /Subscriber/Add` | Add a destination/topic subscriber mapping (admin). |
+| `GET /Identities` | List identity moderation status entries. |
+| `POST /Client/{id}/Ban` | Ban an identity. |
+| `POST /Client/{id}/Unban` | Remove ban/blackhole for an identity. |
+| `POST /Client/{id}/Blackhole` | Blackhole an identity. |
+| `GET /Config` | Return the raw config.ini content. |
+| `PUT /Config` | Apply a new config.ini payload. |
+| `POST /Config/Validate` | Validate a config.ini payload without applying. |
+| `POST /Config/Rollback` | Roll back config.ini using a backup. |
+| `POST /Command/FlushTelemetry` | Delete stored telemetry snapshots. |
+| `POST /Command/ReloadConfig` | Reload config.ini from disk. |
+| `GET /Command/DumpRouting` | Return connected destination hashes. |

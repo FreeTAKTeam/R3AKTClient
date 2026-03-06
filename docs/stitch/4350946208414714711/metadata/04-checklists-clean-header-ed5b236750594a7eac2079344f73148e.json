@@ -1,0 +1,31 @@
+﻿{
+  "screenshot": {
+    "name": "projects/4350946208414714711/files/3e823be03ed4450a87e1968cfa0d2402",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AOfcidVi8nud0o4gsH9-Q3V-oCS3gp6RuILIrdJVUfnZZus8aDlhkuJc4q7L9pQg5F9-PdRjwDPLummIPMNaYYWu_rk4xRSAawfRBoP6lbbnxtTJaYrRA494VAa0J6pzVuonUAXnycjcuGUYqsWJCK7RBCup2iATB4u8x5QpQPnqljmCm2IWOI6HBTft005WH9pgUpjcdYWZI9huJuv1IEIA-lUqwjH65bsQnagPWn8PfQsAolpZTTD1KJ1dxw"
+  },
+  "htmlCode": {
+    "name": "projects/4350946208414714711/files/426b09c57f754789bf8a7d1c0f78c40a",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzQ0MGM3ZjIwZTkwMTQ5N2ZiOWMxODE3ZmY5ZDAxMzc1EgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "ed5b236750594a7eac2079344f73148e",
+  "generatedBy": "HatterAgent",
+  "width": "780",
+  "height": "1768",
+  "title": "Checklists - Clean Header",
+  "prompt": "Update the header: keep the hamburger menu on the left, center the page title \"CHECKLISTS\", and on the right, show only the \"LIVE\" indicator (remove the \"ONLINE\" pill or any other buttons). Use the existing \"LIVE\" badge style.",
+  "name": "projects/4350946208414714711/screens/ed5b236750594a7eac2079344f73148e",
+  "theme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#25d1f4",
+    "saturation": 3
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "HATTER_AGENT",
+    "status": "COMPLETE"
+  }
+}

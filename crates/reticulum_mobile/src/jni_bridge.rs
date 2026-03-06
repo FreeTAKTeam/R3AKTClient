@@ -112,7 +112,12 @@ fn make_jstring_or_null(env: &mut JNIEnv, value: String) -> jstring {
 }
 
 fn parse_hub_mode(value: Option<&str>) -> HubMode {
-    match value.unwrap_or("Disabled").trim().to_ascii_lowercase().as_str() {
+    match value
+        .unwrap_or("Disabled")
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
         "rchlxmf" | "rch_lxmf" => HubMode::RchLxmf {},
         "rchhttp" | "rch_http" => HubMode::RchHttp {},
         _ => HubMode::Disabled {},
@@ -719,7 +724,10 @@ pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_getClien
     match serde_json::to_string(CLIENT_OPERATION_CATALOG) {
         Ok(response) => make_jstring_or_null(&mut env, response),
         Err(_) => {
-            set_last_error("InternalError", "failed to serialize client operation catalog");
+            set_last_error(
+                "InternalError",
+                "failed to serialize client operation catalog",
+            );
             ptr::null_mut()
         }
     }
@@ -776,5 +784,3 @@ pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_takeLast
         Err(_) => ptr::null_mut(),
     }
 }
-
-

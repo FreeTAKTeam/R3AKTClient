@@ -11,7 +11,8 @@ export type ClientFeatureGroup =
   | "R3AKT Mission Core"
   | "R3AKT Teams, People, and Skills"
   | "R3AKT Assets and Assignments"
-  | "Checklists";
+  | "Checklists"
+  | "Hub Admin and Legacy Command Parity";
 
 export const CLIENT_OPERATION_CATALOG = [
   { operation: "DELETE /api/r3akt/assets/{asset_uid}", group: "R3AKT Assets and Assignments", description: "Delete an asset." },
@@ -29,6 +30,8 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "DELETE /checklists/templates/{template_id}", group: "Checklists", description: "Delete checklist template." },
   { operation: "DELETE /File/{id}", group: "Files and Media", description: "Delete a stored file by its ID." },
   { operation: "DELETE /Image/{id}", group: "Files and Media", description: "Delete a stored image by its ID." },
+  { operation: "DELETE /Subscriber", group: "Hub Admin and Legacy Command Parity", description: "Deletes an existing Subscriber record based on the provided ID." },
+  { operation: "DELETE /Topic", group: "Hub Admin and Legacy Command Parity", description: "Deletes an existing Topic record based on the provided ID." },
   { operation: "GET /api/markers", group: "Map, Markers, and Zones", description: "List stored operator markers." },
   { operation: "GET /api/markers/symbols", group: "Map, Markers, and Zones", description: "List available marker symbols." },
   { operation: "GET /api/r3akt/assets", group: "R3AKT Assets and Assignments", description: "List assets." },
@@ -59,6 +62,8 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "GET /checklists/templates", group: "Checklists", description: "List checklist templates." },
   { operation: "GET /checklists/templates/{template_id}", group: "Checklists", description: "Get checklist template details." },
   { operation: "GET /Client", group: "Core Discovery and Session", description: "Lists all clients currently connected to the Hub, including their Reticulum identities and connection metadata" },
+  { operation: "GET /Command/DumpRouting", group: "Hub Admin and Legacy Command Parity", description: "Return connected destination hashes." },
+  { operation: "GET /Config", group: "Hub Admin and Legacy Command Parity", description: "Return the raw config.ini content." },
   { operation: "GET /Events", group: "Core Discovery and Session", description: "Return recent hub events." },
   { operation: "GET /events/system", group: "Telemetry and Live Status", description: "WebSocket stream for system status + events." },
   { operation: "GET /Examples", group: "Core Discovery and Session", description: "Return command descriptions and JSON payload examples." },
@@ -66,11 +71,14 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "GET /File/{id}", group: "Files and Media", description: "Retrieve a stored file by its ID." },
   { operation: "GET /File/{id}/raw", group: "Files and Media", description: "Download a stored file by its ID (raw bytes)." },
   { operation: "GET /Help", group: "Core Discovery and Session", description: "Return the list of supported commands." },
+  { operation: "GET /Identities", group: "Hub Admin and Legacy Command Parity", description: "List identity moderation status entries." },
   { operation: "GET /Image", group: "Files and Media", description: "List stored images." },
   { operation: "GET /Image/{id}", group: "Files and Media", description: "Retrieve a stored image by its ID." },
   { operation: "GET /Image/{id}/raw", group: "Files and Media", description: "Download a stored image by its ID (raw bytes)." },
   { operation: "GET /messages/stream", group: "Messaging and Chat", description: "WebSocket stream for inbound/outbound messages." },
   { operation: "GET /Status", group: "Core Discovery and Session", description: "Return dashboard status metrics." },
+  { operation: "GET /Subscriber", group: "Hub Admin and Legacy Command Parity", description: "Retrieves a list of all Subscriber" },
+  { operation: "GET /Subscriber/{id}", group: "Hub Admin and Legacy Command Parity", description: "retrieve an existing Subscriber record based on the provided ID." },
   { operation: "GET /Telemetry", group: "Telemetry and Live Status", description: "Retrieve telemetry snapshots since a timestamp." },
   { operation: "GET /telemetry/stream", group: "Telemetry and Live Status", description: "WebSocket stream for live telemetry." },
   { operation: "GET /Topic", group: "Topics and Distribution", description: "Retrieves a list of all Topic" },
@@ -82,6 +90,8 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}", group: "Checklists", description: "Set checklist task cell value." },
   { operation: "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style", group: "Checklists", description: "Set checklist task row style." },
   { operation: "PATCH /checklists/templates/{template_id}", group: "Checklists", description: "Update checklist template." },
+  { operation: "PATCH /Subscriber", group: "Hub Admin and Legacy Command Parity", description: "Updates an existing Subscriber record." },
+  { operation: "PATCH /Topic", group: "Hub Admin and Legacy Command Parity", description: "Updates an existing Topic record." },
   { operation: "POST /api/markers", group: "Map, Markers, and Zones", description: "Create a new operator marker." },
   { operation: "POST /api/r3akt/assets", group: "R3AKT Assets and Assignments", description: "Create or update asset." },
   { operation: "POST /api/r3akt/assignments", group: "R3AKT Assets and Assignments", description: "Create or update assignment." },
@@ -104,9 +114,20 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "POST /checklists/offline", group: "Checklists", description: "Create offline checklist." },
   { operation: "POST /checklists/templates", group: "Checklists", description: "Create checklist template." },
   { operation: "POST /checklists/templates/{template_id}/clone", group: "Checklists", description: "Clone checklist template." },
+  { operation: "POST /Client/{id}/Ban", group: "Hub Admin and Legacy Command Parity", description: "Ban an identity." },
+  { operation: "POST /Client/{id}/Blackhole", group: "Hub Admin and Legacy Command Parity", description: "Blackhole an identity." },
+  { operation: "POST /Client/{id}/Unban", group: "Hub Admin and Legacy Command Parity", description: "Remove ban/blackhole for an identity." },
+  { operation: "POST /Command/FlushTelemetry", group: "Hub Admin and Legacy Command Parity", description: "Delete stored telemetry snapshots." },
+  { operation: "POST /Command/ReloadConfig", group: "Hub Admin and Legacy Command Parity", description: "Reload config.ini from disk." },
+  { operation: "POST /Config/Rollback", group: "Hub Admin and Legacy Command Parity", description: "Roll back config.ini using a backup." },
+  { operation: "POST /Config/Validate", group: "Hub Admin and Legacy Command Parity", description: "Validate a config.ini payload without applying." },
   { operation: "POST /Message", group: "Messaging and Chat", description: "Send a message into the hub." },
   { operation: "POST /RCH", group: "Core Discovery and Session", description: "Join an RCH instance as the supplied identity." },
   { operation: "POST /RTH", group: "Core Discovery and Session", description: "Legacy compatibility alias for join." },
+  { operation: "POST /Subscriber", group: "Hub Admin and Legacy Command Parity", description: "Creates a new Subscriber record." },
+  { operation: "POST /Subscriber/Add", group: "Hub Admin and Legacy Command Parity", description: "Add a destination/topic subscriber mapping (admin)." },
+  { operation: "POST /Topic", group: "Hub Admin and Legacy Command Parity", description: "Creates a new Topic record." },
+  { operation: "POST /Topic/Associate", group: "Hub Admin and Legacy Command Parity", description: "Associate an attachment upload with a TopicID." },
   { operation: "POST /Topic/Subscribe", group: "Topics and Distribution", description: "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted)." },
   { operation: "PUT /api/r3akt/assignments/{assignment_uid}/assets", group: "R3AKT Assets and Assignments", description: "Replace assignment asset links." },
   { operation: "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}", group: "R3AKT Assets and Assignments", description: "Link assignment to asset." },
@@ -116,6 +137,7 @@ export const CLIENT_OPERATION_CATALOG = [
   { operation: "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}", group: "R3AKT Mission Core", description: "Link mission to zone." },
   { operation: "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}", group: "R3AKT Teams, People, and Skills", description: "Link a team member to a client identity." },
   { operation: "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}", group: "R3AKT Teams, People, and Skills", description: "Link a team to a mission." },
+  { operation: "PUT /Config", group: "Hub Admin and Legacy Command Parity", description: "Apply a new config.ini payload." },
   { operation: "PUT /RCH", group: "Core Discovery and Session", description: "Leave an RCH instance as the supplied identity." },
   { operation: "PUT /RTH", group: "Core Discovery and Session", description: "Legacy compatibility alias for leave." },
 ] as const;

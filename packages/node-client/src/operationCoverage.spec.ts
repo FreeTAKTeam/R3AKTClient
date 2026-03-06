@@ -11,7 +11,7 @@ const coveragePath = path.resolve(
 );
 
 describe("operation coverage artifact", () => {
-  it("reports full 104-operation client parity", () => {
+  it("reports full 125-operation client parity", () => {
     const report = JSON.parse(fs.readFileSync(coveragePath, "utf8")) as {
       expected_operation_count: number;
       passed: boolean;
@@ -21,7 +21,7 @@ describe("operation coverage artifact", () => {
       extra_in_rust: string[];
     };
 
-    expect(report.expected_operation_count).toBe(104);
+    expect(report.expected_operation_count).toBe(125);
     expect(report.passed).toBe(true);
     expect(report.missing_in_ts).toHaveLength(0);
     expect(report.missing_in_rust).toHaveLength(0);
