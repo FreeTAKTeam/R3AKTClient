@@ -17,6 +17,10 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function wrapWireError(context: string, error: unknown): Error {
+  return new Error(`${context}: ${toErrorMessage(error)}`);
+}
+
 function parsePayload(payloadJson: string): unknown {
   const trimmed = payloadJson.trim();
   if (!trimmed) {
@@ -85,7 +89,11 @@ export function createRchFeatureStore<K extends RchFeatureKey>(
         return;
       }
       if (bootstrapOperation) {
-        await execute(bootstrapOperation);
+        try {
+          await execute(bootstrapOperation);
+        } catch (error: unknown) {
+          throw wrapWireError(`${feature}/${bootstrapOperation}`, error);
+        }
       }
       wired.value = true;
     }

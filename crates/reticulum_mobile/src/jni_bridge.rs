@@ -42,8 +42,6 @@ struct NodeConfigInput {
     announce_capabilities: Option<String>,
     hub_mode: Option<String>,
     hub_identity_hash: Option<String>,
-    hub_api_base_url: Option<String>,
-    hub_api_key: Option<String>,
     hub_refresh_interval_seconds: Option<u32>,
 }
 
@@ -119,7 +117,6 @@ fn parse_hub_mode(value: Option<&str>) -> HubMode {
         .as_str()
     {
         "rchlxmf" | "rch_lxmf" => HubMode::RchLxmf {},
-        "rchhttp" | "rch_http" => HubMode::RchHttp {},
         _ => HubMode::Disabled {},
     }
 }
@@ -165,22 +162,6 @@ fn parse_node_config(input: NodeConfigInput) -> NodeConfig {
             .unwrap_or_else(|| "R3AKT,EMergencyMessages".to_string()),
         hub_mode: parse_hub_mode(input.hub_mode.as_deref()),
         hub_identity_hash: input.hub_identity_hash.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-        hub_api_base_url: input.hub_api_base_url.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-        hub_api_key: input.hub_api_key.and_then(|v| {
             let trimmed = v.trim().to_string();
             if trimmed.is_empty() {
                 None

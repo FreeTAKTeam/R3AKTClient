@@ -60,6 +60,10 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function wrapWireError(context: string, error: unknown): Error {
+  return new Error(`${context}: ${toErrorMessage(error)}`);
+}
+
 function parsePayload(payloadJson: string): unknown {
   const trimmed = payloadJson.trim();
   if (!trimmed) {
@@ -400,7 +404,11 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
     if (wired.value) {
       return;
     }
-    await listChecklists();
+    try {
+      await listChecklists();
+    } catch (error: unknown) {
+      throw wrapWireError(CHECKLIST_LIST_OPERATION, error);
+    }
     wired.value = true;
   }
 

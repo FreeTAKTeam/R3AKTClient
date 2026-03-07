@@ -25,7 +25,7 @@ export type SupportedSouthboundOperation =
 export type KnownOperation = ClientOperation;
 
 export type LogLevel = "Trace" | "Debug" | "Info" | "Warn" | "Error";
-export type HubMode = "Disabled" | "RchLxmf" | "RchHttp";
+export type HubMode = "Disabled" | "RchLxmf";
 export type PeerState = "Connecting" | "Connected" | "Disconnected";
 export type SendOutcome =
   | "SentDirect"
@@ -74,6 +74,7 @@ export interface ChatAttachmentRef {
   transferState: AttachmentTransferState;
   url?: string;
   error?: string;
+  dataBase64?: string;
 }
 
 export interface MessageReaction {
@@ -94,6 +95,8 @@ export interface ChatMessage {
   threadId?: string;
   groupId?: string;
   issuedAt: string;
+  attachments?: ChatAttachmentRef[];
+  image?: Record<string, unknown>;
 }
 
 export interface SendMessageInput {
@@ -103,6 +106,9 @@ export interface SendMessageInput {
   destination?: string;
   topicId?: string;
   topic_id?: string;
+  fileAttachments?: ChatAttachmentRef[];
+  file_attachments?: ChatAttachmentRef[];
+  image?: Record<string, unknown>;
 }
 
 export interface TopicSubscription {
@@ -154,8 +160,6 @@ export interface NodeConfig {
   announceCapabilities: string;
   hubMode: HubMode;
   hubIdentityHash?: string;
-  hubApiBaseUrl?: string;
-  hubApiKey?: string;
   hubRefreshIntervalSeconds: number;
 }
 
@@ -660,6 +664,58 @@ function normalizeAttachmentState(raw: unknown): AttachmentTransferState {
   return "queued";
 }
 
+function normalizeAttachmentRef(raw: unknown): ChatAttachmentRef | null {
+  const value = asRecord(raw);
+  const id = readStringCandidate(value, ["id", "attachmentId", "attachment_id"]);
+  const name = readStringCandidate(value, ["name", "fileName", "file_name"]);
+  if (!id || !name) {
+    return null;
+  }
+  return {
+    id,
+    name,
+    mimeType: readStringCandidate(value, ["mimeType", "mime_type"]),
+    sizeBytes: readNumberCandidate(value, ["sizeBytes", "size_bytes"]),
+    direction: normalizeAttachmentDirection(value.direction),
+    transferState: normalizeAttachmentState(value.transferState ?? value.transfer_state),
+    url: readStringCandidate(value, ["url"]),
+    error: readStringCandidate(value, ["error"]),
+    dataBase64: readStringCandidate(value, ["dataBase64", "data_base64"]),
+  };
+}
+
+function readAttachmentRefs(
+  payload: Record<string, unknown>,
+  keys: readonly string[],
+): ChatAttachmentRef[] | undefined {
+  for (const key of keys) {
+    const raw = payload[key];
+    if (!Array.isArray(raw)) {
+      continue;
+    }
+    const attachments = raw
+      .map((entry) => normalizeAttachmentRef(entry))
+      .filter((entry): entry is ChatAttachmentRef => Boolean(entry));
+    if (attachments.length > 0) {
+      return attachments;
+    }
+  }
+  return undefined;
+}
+
+function readRecordCandidate(
+  payload: Record<string, unknown>,
+  keys: readonly string[],
+): Record<string, unknown> | undefined {
+  for (const key of keys) {
+    const value = asRecord(payload[key]);
+    if (Object.keys(value).length > 0) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
 function normalizeTimestamp(value: unknown): string {
   const raw = String(value ?? "").trim();
   if (raw) {
@@ -691,6 +747,8 @@ function toChatMessage(
     issuedAt: normalizeTimestamp(
       readStringCandidate(payload, ["issuedAt", "issued_at", "createdAt", "created_at"]),
     ),
+    attachments: readAttachmentRefs(payload, ["attachments", "fileAttachments", "file_attachments"]),
+    image: readRecordCandidate(payload, ["image"]),
   };
 }
 
@@ -818,8 +876,6 @@ function configToPlugin(config: NodeConfig): Record<string, unknown> {
     announceCapabilities: config.announceCapabilities,
     hubMode: config.hubMode,
     hubIdentityHash: config.hubIdentityHash,
-    hubApiBaseUrl: config.hubApiBaseUrl,
-    hubApiKey: config.hubApiKey,
     hubRefreshIntervalSeconds: config.hubRefreshIntervalSeconds,
   };
 }
@@ -1223,6 +1279,8 @@ class WebReticulumNodeClient implements ReticulumNodeClient {
         issued_at: new Date().toISOString(),
         sent: true,
         direction: "outbound",
+        file_attachments: request.fileAttachments ?? request.file_attachments,
+        image: request.image,
       }),
       correlationId: result.localMessageId,
     });

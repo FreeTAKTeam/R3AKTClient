@@ -35,6 +35,10 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function wrapWireError(context: string, error: unknown): Error {
+  return new Error(`${context}: ${toErrorMessage(error)}`);
+}
+
 function parsePayload(payloadJson: string): unknown {
   const trimmed = payloadJson.trim();
   if (!trimmed) {
@@ -194,7 +198,11 @@ export const useTopicsStore = defineStore("rch-topics", () => {
       return;
     }
 
-    await messagingStore.wire();
+    try {
+      await messagingStore.wire();
+    } catch (error: unknown) {
+      throw wrapWireError("messaging/chat", error);
+    }
     const client = await rchClientStore.requireClient();
     unsubscribeChatEvents?.();
     unsubscribeChatEvents = client.chat.onEvent((event) => {
@@ -207,7 +215,11 @@ export const useTopicsStore = defineStore("rch-topics", () => {
         error: undefined,
       });
     });
-    await listTopics();
+    try {
+      await listTopics();
+    } catch (error: unknown) {
+      throw wrapWireError(CHAT_TOPIC_LIST_OPERATION, error);
+    }
     wired.value = true;
   }
 

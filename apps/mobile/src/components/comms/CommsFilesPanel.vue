@@ -8,38 +8,25 @@ import { useMessagingStore } from "../../stores/messagingStore";
 const filesStore = useFilesMediaStore();
 const messagingStore = useMessagingStore();
 
-const fileName = ref("");
-const fileMimeType = ref("application/octet-stream");
-const fileSize = ref<number>(0);
 const direction = ref<AttachmentDirection>("upload");
+const fileInput = ref<HTMLInputElement | null>(null);
 
-function stageTransfer(): void {
-  const trimmedName = fileName.value.trim();
-  if (!trimmedName) {
+function openPicker(): void {
+  fileInput.value?.click();
+}
+
+async function stageTransfer(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const files = Array.from(input.files ?? []);
+  if (files.length === 0) {
     return;
   }
 
-  const transferId = filesStore.beginTransfer({
+  await filesStore.queueLocalFiles(files, {
     channelKey: messagingStore.activeChannelKey,
-    name: trimmedName,
-    mimeType: fileMimeType.value.trim() || undefined,
-    sizeBytes: Number(fileSize.value) || undefined,
     direction: direction.value,
   });
-
-  filesStore.updateTransferState(transferId, {
-    state: "in_progress",
-    progressPct: 40,
-  });
-  window.setTimeout(() => {
-    filesStore.updateTransferState(transferId, {
-      state: "completed",
-      progressPct: 100,
-    });
-  }, 500);
-
-  fileName.value = "";
-  fileSize.value = 0;
+  input.value = "";
 }
 </script>
 
@@ -54,16 +41,8 @@ function stageTransfer(): void {
 
     <section class="stage-form">
       <label class="input-label">
-        Name
-        <input v-model="fileName" class="text-input" type="text" placeholder="file name" />
-      </label>
-      <label class="input-label">
-        MIME type
-        <input v-model="fileMimeType" class="text-input" type="text" />
-      </label>
-      <label class="input-label">
-        Size (bytes)
-        <input v-model.number="fileSize" class="text-input" type="number" min="0" />
+        Active channel
+        <input :value="messagingStore.activeChannelKey" class="text-input" type="text" readonly />
       </label>
       <label class="input-label">
         Direction
@@ -72,7 +51,16 @@ function stageTransfer(): void {
           <option value="download">download</option>
         </select>
       </label>
-      <button class="stage-button" type="button" @click="stageTransfer">Stage Transfer</button>
+      <input
+        ref="fileInput"
+        class="hidden-input"
+        type="file"
+        multiple
+        @change="stageTransfer"
+      />
+      <button class="stage-button" type="button" @click="openPicker">
+        Stage Local Files
+      </button>
     </section>
 
     <section class="transfer-list">
@@ -86,9 +74,8 @@ function stageTransfer(): void {
           <strong>{{ transfer.name }}</strong>
           <span>{{ transfer.direction }}</span>
         </header>
-        <p>
-          {{ transfer.mimeType || "unknown mime" }} · {{ transfer.sizeBytes ?? 0 }} bytes
-        </p>
+        <p>{{ transfer.mimeType || "unknown mime" }} - {{ transfer.sizeBytes ?? 0 }} bytes</p>
+        <img v-if="transfer.url" class="preview-image" :src="transfer.url" :alt="transfer.name" />
         <p>State: {{ transfer.state }} ({{ transfer.progressPct }}%)</p>
       </article>
       <p v-if="filesStore.transfers.length === 0" class="empty-state">
@@ -122,7 +109,7 @@ function stageTransfer(): void {
   border-radius: 12px;
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   padding: 0.7rem;
 }
 
@@ -172,6 +159,13 @@ function stageTransfer(): void {
   padding: 0.55rem;
 }
 
+.preview-image {
+  border-radius: 10px;
+  max-height: 150px;
+  max-width: min(100%, 220px);
+  object-fit: cover;
+}
+
 .transfer-header {
   align-items: center;
   display: flex;
@@ -191,6 +185,10 @@ function stageTransfer(): void {
   color: #94b6dc;
   font-family: var(--font-body);
   margin: 0;
+}
+
+.hidden-input {
+  display: none;
 }
 
 @media (max-width: 900px) {

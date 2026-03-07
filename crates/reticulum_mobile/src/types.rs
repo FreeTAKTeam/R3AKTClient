@@ -15,7 +15,6 @@ pub enum LogLevel {
 pub enum HubMode {
     Disabled {},
     RchLxmf {},
-    RchHttp {},
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -138,6 +137,10 @@ pub struct ChatSendRequest {
     pub local_message_id: Option<String>,
     #[serde(default, alias = "topic_id")]
     pub topic_id: Option<String>,
+    #[serde(default, alias = "file_attachments")]
+    pub file_attachments: Option<serde_json::Value>,
+    #[serde(default)]
+    pub image: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -162,8 +165,6 @@ pub struct NodeConfig {
     pub announce_capabilities: String,
     pub hub_mode: HubMode,
     pub hub_identity_hash: Option<String>,
-    pub hub_api_base_url: Option<String>,
-    pub hub_api_key: Option<String>,
     pub hub_refresh_interval_seconds: u32,
 }
 

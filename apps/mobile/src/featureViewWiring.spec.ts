@@ -21,44 +21,48 @@ async function mountWithRoute(component: Component, path: string) {
   return wrapper;
 }
 
-describe("design shell wiring", () => {
-  it("renders dashboard route inside the design shell", async () => {
+describe("live shell wiring", () => {
+  it("renders the live home route inside the mobile shell", async () => {
     const wrapper = await mountWithRoute(App, "/dashboard");
-    expect(wrapper.text()).toContain("Home");
-    expect(wrapper.text()).toContain("Overview");
-    expect(wrapper.text()).toContain("Pulse");
+    expect(wrapper.text()).toContain("Event Mesh");
+    expect(wrapper.text()).toContain("Dashboard");
+    expect(wrapper.text()).toContain("Backend Control");
+    expect(wrapper.text()).toContain("Event Feed");
   });
 
-  it("renders mission and checklist design routes", async () => {
+  it("renders mission routes inside the live shell", async () => {
     const missions = await mountWithRoute(App, "/missions");
     expect(missions.text()).toContain("Missions");
-    expect(missions.text()).toContain("Workspace");
+    expect(missions.text()).toContain("Mission Core");
 
-    const checklists = await mountWithRoute(App, "/checklists");
-    expect(checklists.text()).toContain("Checklists");
-    expect(checklists.text()).toContain("Board");
+    const missionDomain = await mountWithRoute(App, "/missions/demo/log-entries");
+    expect(missionDomain.text()).toContain("Mission UID: demo");
+    expect(missionDomain.text()).toContain("Mission Log Entries");
   });
 
-  it("renders comms-adjacent design routes", async () => {
-    const topics = await mountWithRoute(App, "/topics");
-    expect(topics.text()).toContain("Topics");
-    expect(topics.text()).toContain("Registry");
+  it("renders comms routes", async () => {
+    const topics = await mountWithRoute(App, "/comms/topics");
+    expect(topics.text()).toContain("Comms Topics");
+    expect(topics.text()).toContain("Known Topics");
 
-    const chat = await mountWithRoute(App, "/chat");
-    expect(chat.text()).toContain("Secure Chat");
+    const chat = await mountWithRoute(App, "/comms/chat");
+    expect(chat.text()).toContain("Comms Chat");
   });
 
-  it("renders map and settings routes", async () => {
+  it("renders map and ops settings routes", async () => {
     const webmap = await mountWithRoute(App, "/webmap");
-    expect(webmap.text()).toContain("Webmap");
-    expect(webmap.text()).toContain("Tactical");
+    expect(webmap.text()).toContain("Map, Markers, and Zones");
 
-    const settings = await mountWithRoute(App, "/settings");
-    expect(settings.text()).toContain("Configure");
+    const settings = await mountWithRoute(App, "/ops/settings");
+    expect(settings.text()).toContain("Settings");
+    expect(settings.text()).toContain("Hub Directory");
   });
 
-  it("renders task detail route", async () => {
-    const wrapper = await mountWithRoute(App, "/checklists/task-detail");
-    expect(wrapper.text()).toContain("Task Detail");
+  it("renders ops routing surfaces", async () => {
+    const peers = await mountWithRoute(App, "/ops/connect");
+    expect(peers.text()).toContain("Peers & Discovery");
+
+    const about = await mountWithRoute(App, "/ops/about");
+    expect(about.text()).toContain("About R3AKTMobile");
   });
 });

@@ -105,16 +105,6 @@ fn address_hash_to_hex(hash: &AddressHash) -> String {
     hash.to_hex_string()
 }
 
-fn join_url(base: &str, path: &str) -> Result<String, NodeError> {
-    let base = base.trim();
-    if base.is_empty() {
-        return Err(NodeError::InvalidConfig {});
-    }
-    let base = base.trim_end_matches('/');
-    let path = path.trim_start_matches('/');
-    Ok(format!("{base}/{path}"))
-}
-
 fn extract_hex_destinations(text: &str) -> Vec<String> {
     static RE: OnceLock<Regex> = OnceLock::new();
     let re = RE.get_or_init(|| {
@@ -515,17 +505,34 @@ fn build_mission_sync_command_fields(
     source_identity: &str,
 ) -> Result<RmpValue, NodeError> {
     if !is_allowed_operation(&envelope.r#type) {
+        log::warn!(
+            "mission-sync envelope rejected: unsupported operation {}",
+            envelope.r#type
+        );
         return Err(NodeError::InvalidConfig {});
     }
 
     let expected_kind =
         expected_kind_for_operation(&envelope.r#type).ok_or(NodeError::InvalidConfig {})?;
     if envelope.kind != expected_kind {
+        log::warn!(
+            "mission-sync envelope rejected: operation {} expected {:?} but received {:?}",
+            envelope.r#type,
+            expected_kind,
+            envelope.kind
+        );
         return Err(NodeError::InvalidConfig {});
     }
 
     let command_type =
         mission_command_type_for_operation(&envelope.r#type).ok_or(NodeError::InvalidConfig {})?;
+    if command_type.trim().is_empty() {
+        log::warn!(
+            "mission-sync envelope rejected: empty command type for {}",
+            envelope.r#type
+        );
+        return Err(NodeError::InvalidConfig {});
+    }
 
     let args = envelope.payload.clone();
     let thread_id = envelope
@@ -882,10 +889,17 @@ fn normalize_chat_send_request(
         destination: Some(destination),
         local_message_id: Some(local_message_id),
         topic_id,
+        file_attachments: parsed.file_attachments,
+        image: parsed.image,
     })
 }
 
-fn build_chat_message_fields(topic_id: Option<&str>, local_message_id: &str) -> RmpValue {
+fn build_chat_message_fields(
+    topic_id: Option<&str>,
+    local_message_id: &str,
+    file_attachments: Option<&serde_json::Value>,
+    image: Option<&serde_json::Value>,
+) -> RmpValue {
     let mut fields = vec![
         (
             RmpValue::Integer(LXMF_FIELD_THREAD.into()),
@@ -909,6 +923,20 @@ fn build_chat_message_fields(topic_id: Option<&str>, local_message_id: &str) -> 
         fields.push((
             RmpValue::from("TopicID".to_string()),
             RmpValue::from(topic_id.to_string()),
+        ));
+    }
+
+    if let Some(attachments) = file_attachments {
+        fields.push((
+            RmpValue::Integer(LXMF_FIELD_FILE_ATTACHMENTS.into()),
+            json_to_rmpv(attachments),
+        ));
+    }
+
+    if let Some(image) = image {
+        fields.push((
+            RmpValue::Integer(LXMF_FIELD_IMAGE.into()),
+            json_to_rmpv(image),
         ));
     }
 
@@ -1392,7 +1420,12 @@ async fn send_chat_message_over_lxmf(
     message.destination_hash = Some(destination_hash);
     message.set_title_from_string("R3AKT Chat");
     message.set_content_from_string(&request.content);
-    message.fields = Some(build_chat_message_fields(topic_id.as_deref(), &local_message_id));
+    message.fields = Some(build_chat_message_fields(
+        topic_id.as_deref(),
+        &local_message_id,
+        request.file_attachments.as_ref(),
+        request.image.as_ref(),
+    ));
     debug_dump_lxmf_message("outbound", "message.send", &message);
 
     let wire = message
@@ -1760,6 +1793,7 @@ fn validate_envelope(mut envelope: MessageEnvelope) -> Result<MessageEnvelope, N
         envelope.api_version = "1.0".to_string();
     }
     if envelope.message_id.trim().is_empty() {
+        log::warn!("executeEnvelope rejected: missing message_id");
         return Err(NodeError::InvalidConfig {});
     }
     if envelope.issued_at.trim().is_empty() {
@@ -1769,9 +1803,18 @@ fn validate_envelope(mut envelope: MessageEnvelope) -> Result<MessageEnvelope, N
         envelope.issuer = "ui".to_string();
     }
     if !matches!(envelope.kind, EnvelopeKind::Command | EnvelopeKind::Query) {
+        log::warn!(
+            "executeEnvelope rejected: operation {} used unsupported envelope kind {:?}",
+            envelope.r#type,
+            envelope.kind
+        );
         return Err(NodeError::InvalidConfig {});
     }
     let Some(entry) = entry_for_operation_or_alias(&envelope.r#type) else {
+        log::warn!(
+            "executeEnvelope rejected: unknown operation or alias {}",
+            envelope.r#type
+        );
         return Err(NodeError::InvalidConfig {});
     };
     envelope.r#type = entry.operation.to_string();
@@ -2016,36 +2059,6 @@ async fn ensure_hub_can_reply(state: &NodeRuntimeState, hub: AddressHash) -> Res
             last_reannounce = tokio::time::Instant::now();
         }
     }
-}
-
-async fn refresh_hub_directory_http(config: &NodeConfig) -> Result<Vec<String>, NodeError> {
-    let base = config
-        .hub_api_base_url
-        .as_deref()
-        .ok_or(NodeError::InvalidConfig {})?;
-    let url = join_url(base, "/Client")?;
-
-    let mut req = reqwest::Client::new().get(url);
-    if let Some(key) = config
-        .hub_api_key
-        .as_deref()
-        .map(str::trim)
-        .filter(|v| !v.is_empty())
-    {
-        req = req
-            .header("X-API-Key", key)
-            .header("Authorization", format!("Bearer {}", key));
-    }
-
-    let body = req
-        .send()
-        .await
-        .map_err(|_| NodeError::NetworkError {})?
-        .text()
-        .await
-        .map_err(|_| NodeError::NetworkError {})?;
-
-    Ok(extract_hex_destinations(&body))
 }
 
 async fn refresh_hub_directory_lxmf(
@@ -2352,7 +2365,6 @@ pub async fn run_node(
             loop {
                 interval.tick().await;
                 let destinations = match config.hub_mode {
-                    HubMode::RchHttp {} => refresh_hub_directory_http(&config).await.ok(),
                     HubMode::RchLxmf {} => refresh_hub_directory_lxmf(&config, &state).await.ok(),
                     HubMode::Disabled {} => None,
                 };
@@ -2525,8 +2537,20 @@ pub async fn run_node(
                 resp,
             } => {
                 let result = async {
-                    let parsed: MessageEnvelope = serde_json::from_str(&envelope_json)
-                        .map_err(|_| NodeError::InvalidConfig {})?;
+                    let parsed: MessageEnvelope = serde_json::from_str(&envelope_json).map_err(
+                        |error| {
+                            log::warn!(
+                                "executeEnvelope rejected: invalid JSON payload ({error}): {}",
+                                envelope_json
+                            );
+                            NodeError::InvalidConfig {}
+                        },
+                    )?;
+                    log::info!(
+                        "executeEnvelope request received: operation={} kind={:?}",
+                        parsed.r#type,
+                        parsed.kind
+                    );
                     let envelope = validate_envelope(parsed)?;
 
                     let response_json = match config.hub_mode {
@@ -2545,26 +2569,6 @@ pub async fn run_node(
                                 payload: serde_json::json!({
                                     "status": "rejected",
                                     "reason": "hub mode disabled",
-                                }),
-                            };
-                            serde_json::to_string(&result)
-                                .map_err(|_| NodeError::InternalError {})?
-                        }
-                        HubMode::RchHttp {} => {
-                            let result = MessageEnvelope {
-                                api_version: envelope.api_version.clone(),
-                                message_id: envelope.message_id.clone(),
-                                correlation_id: envelope
-                                    .correlation_id
-                                    .clone()
-                                    .or_else(|| Some(envelope.message_id.clone())),
-                                kind: EnvelopeKind::Error,
-                                r#type: envelope.r#type.clone(),
-                                issuer: "reticulum".to_string(),
-                                issued_at: now_iso(),
-                                payload: serde_json::json!({
-                                    "status": "rejected",
-                                    "reason": "RchHttp is deprecated for feature operations",
                                 }),
                             };
                             serde_json::to_string(&result)
@@ -2609,7 +2613,6 @@ pub async fn run_node(
             Command::RefreshHubDirectory { resp } => {
                 let result = match config.hub_mode {
                     HubMode::Disabled {} => Err(NodeError::InvalidConfig {}),
-                    HubMode::RchHttp {} => refresh_hub_directory_http(&config).await,
                     HubMode::RchLxmf {} => refresh_hub_directory_lxmf(&config, &state).await,
                 }
                 .map(|destinations| {
@@ -3536,8 +3539,6 @@ mod tests {
             announce_capabilities: "R3AKT".to_string(),
             hub_mode: HubMode::RchLxmf {},
             hub_identity_hash: Some("c4de028671f01d9649aabb85e73b50a4".to_string()),
-            hub_api_base_url: None,
-            hub_api_key: None,
             hub_refresh_interval_seconds: 300,
         };
 
@@ -3563,7 +3564,12 @@ mod tests {
 
     #[test]
     fn build_chat_message_fields_carries_thread_and_topic_aliases() {
-        let json = rmpv_to_json(&build_chat_message_fields(Some("ops.alerts"), "loc-1"));
+        let json = rmpv_to_json(&build_chat_message_fields(
+            Some("ops.alerts"),
+            "loc-1",
+            None,
+            None,
+        ));
         assert_eq!(json.get("8"), Some(&serde_json::json!("loc-1")));
         assert_eq!(json.get("11"), Some(&serde_json::json!("ops.alerts")));
         assert_eq!(json.get("topic_id"), Some(&serde_json::json!("ops.alerts")));
@@ -3572,5 +3578,33 @@ mod tests {
             json.get("local_message_id"),
             Some(&serde_json::json!("loc-1"))
         );
+    }
+
+    #[test]
+    fn build_chat_message_fields_carries_attachment_and_image_payloads() {
+        let attachments = serde_json::json!([
+            {
+                "id": "file-1",
+                "name": "photo.jpg",
+                "mime_type": "image/jpeg",
+                "size_bytes": 2048,
+            }
+        ]);
+        let image = serde_json::json!({
+            "id": "image-1",
+            "name": "preview.jpg",
+            "mime_type": "image/jpeg",
+            "data_base64": "ZmFrZS1pbWFnZQ==",
+        });
+
+        let json = rmpv_to_json(&build_chat_message_fields(
+            None,
+            "loc-2",
+            Some(&attachments),
+            Some(&image),
+        ));
+
+        assert_eq!(json.get("5"), Some(&attachments));
+        assert_eq!(json.get("6"), Some(&image));
     }
 }

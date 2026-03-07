@@ -66,6 +66,10 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function wrapWireError(context: string, error: unknown): Error {
+  return new Error(`${context}: ${toErrorMessage(error)}`);
+}
+
 function parsePayload(payloadJson: string): unknown {
   const trimmed = payloadJson.trim();
   if (!trimmed) {
@@ -315,8 +319,16 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
     if (wired.value) {
       return;
     }
-    await listMissions();
-    await listLogEntries();
+    try {
+      await listMissions();
+    } catch (error: unknown) {
+      throw wrapWireError(MISSION_LIST_OPERATION, error);
+    }
+    try {
+      await listLogEntries();
+    } catch (error: unknown) {
+      throw wrapWireError(LOG_ENTRY_LIST_OPERATION, error);
+    }
     wired.value = true;
   }
 

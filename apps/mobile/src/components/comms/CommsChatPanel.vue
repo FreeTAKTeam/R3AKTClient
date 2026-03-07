@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { ChatMessage } from "@reticulum/node-client";
 import { computed, onMounted, ref } from "vue";
 
 import { buildChannelKey, useMessagingStore } from "../../stores/messagingStore";
@@ -38,6 +39,19 @@ function formatTimestamp(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function imagePreview(message: ChatMessage): string | null {
+  const dataBase64 = typeof message.image?.data_base64 === "string"
+    ? message.image.data_base64
+    : null;
+  if (!dataBase64) {
+    return null;
+  }
+  const mimeType = typeof message.image?.mime_type === "string"
+    ? message.image.mime_type
+    : "image/*";
+  return `data:${mimeType};base64,${dataBase64}`;
 }
 
 function chooseChannel(channelKey: string): void {
@@ -112,6 +126,24 @@ async function sendCurrentDraft(): Promise<void> {
               <span>{{ message.deliveryState }}</span>
             </header>
             <p class="message-content">{{ message.content || "(empty message)" }}</p>
+            <div
+              v-if="message.attachments?.length"
+              class="attachment-list"
+            >
+              <span
+                v-for="attachment in message.attachments"
+                :key="attachment.id"
+                class="attachment-chip"
+              >
+                {{ attachment.name }}
+              </span>
+            </div>
+            <img
+              v-if="imagePreview(message)"
+              class="image-preview"
+              :src="imagePreview(message) ?? undefined"
+              alt="Attached image preview"
+            />
             <p v-if="message.topicId || message.destination" class="message-route">
               {{ message.topicId ? `topic:${message.topicId}` : `dm:${message.destination}` }}
             </p>
@@ -342,7 +374,8 @@ async function sendCurrentDraft(): Promise<void> {
 }
 
 .message-route,
-.message-error {
+.message-error,
+.attachment-list {
   font-family: var(--font-body);
   margin: 0;
 }
@@ -350,6 +383,32 @@ async function sendCurrentDraft(): Promise<void> {
 .message-route {
   color: #9ac1e8;
   font-size: 0.8rem;
+}
+
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.attachment-chip {
+  background: rgb(14 42 69 / 72%);
+  border: 1px solid rgb(92 148 201 / 28%);
+  border-radius: 999px;
+  color: #cceaff;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.45rem;
+  text-transform: uppercase;
+}
+
+.image-preview {
+  border: 1px solid rgb(92 148 201 / 28%);
+  border-radius: 12px;
+  max-height: 180px;
+  max-width: min(100%, 260px);
+  object-fit: cover;
 }
 
 .message-error {

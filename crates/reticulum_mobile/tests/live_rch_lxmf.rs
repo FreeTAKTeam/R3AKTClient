@@ -310,8 +310,6 @@ fn start_probe_node(
         announce_capabilities: "R3AKT,EMergencyMessages".to_string(),
         hub_mode: HubMode::RchLxmf {},
         hub_identity_hash: Some(hub_identity_hash.to_string()),
-        hub_api_base_url: None,
-        hub_api_key: None,
         hub_refresh_interval_seconds: 300,
     })
     .expect("start live probe node");

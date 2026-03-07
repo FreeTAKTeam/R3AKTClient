@@ -5,9 +5,11 @@ import { useAssetsAssignmentsStore } from "./stores/assetsAssignmentsStore";
 import { useChecklistsStore } from "./stores/checklistsStore";
 import { useDiscoverySessionStore } from "./stores/discoverySessionStore";
 import { useFilesMediaStore } from "./stores/filesMediaStore";
+import { useFeatureBootstrapStore } from "./stores/featureBootstrapStore";
 import { useMapMarkersZonesStore } from "./stores/mapMarkersZonesStore";
 import { useMessagingStore } from "./stores/messagingStore";
 import { useMissionCoreStore } from "./stores/missionCoreStore";
+import { useNodeStore } from "./stores/nodeStore";
 import { useRchClientStore } from "./stores/rchClientStore";
 import { useTeamsSkillsStore } from "./stores/teamsSkillsStore";
 import { useTelemetryStore } from "./stores/telemetryStore";
@@ -50,6 +52,25 @@ describe("feature family stores", () => {
         store.executeFromJson("not.allowlisted", "{}"),
       ).rejects.toThrow(/allowlisted/);
     }
+  });
+
+  it("does not auto-run getAppInfo when discovery session wiring is requested", async () => {
+    const rchClientStore = useRchClientStore();
+    let executeCalled = false;
+    rchClientStore.requireClient = async () =>
+      ({
+        session: {
+          execute: async () => {
+            executeCalled = true;
+            throw new Error("should not execute during wire");
+          },
+        },
+      }) as never;
+
+    const discoverySession = useDiscoverySessionStore();
+    await expect(discoverySession.wire()).resolves.toBeUndefined();
+    expect(discoverySession.wired).toBe(true);
+    expect(executeCalled).toBe(false);
   });
 
   it("hydrates mission state from canonical mission commands", async () => {
@@ -172,5 +193,38 @@ describe("feature family stores", () => {
     await store.listZones();
     expect(store.lastOperation).toBe("mission.zone.list");
     expect(store.zones[0]?.zoneId).toBe("zone-1");
+  });
+
+  it("starts the node before wiring feature bootstrap steps", async () => {
+    const nodeStore = useNodeStore();
+    let ensuredStarted = false;
+    nodeStore.ensureNodeStarted = async () => {
+      ensuredStarted = true;
+    };
+
+    for (const makeStore of storeFactories) {
+      makeStore().wire = async () => undefined;
+    }
+
+    const bootstrap = useFeatureBootstrapStore();
+    await bootstrap.wireInOrder();
+
+    expect(ensuredStarted).toBe(true);
+    expect(Object.values(bootstrap.stepStatus).every((value) => value === "wired")).toBe(true);
+  });
+
+  it("records the failing bootstrap step in the surfaced error", async () => {
+    const nodeStore = useNodeStore();
+    nodeStore.ensureNodeStarted = async () => undefined;
+
+    useDiscoverySessionStore().wire = async () => {
+      throw new Error("invalid config");
+    };
+
+    const bootstrap = useFeatureBootstrapStore();
+    await bootstrap.wireInOrder();
+
+    expect(bootstrap.stepStatus["discovery/session"]).toBe("failed");
+    expect(bootstrap.lastError).toBe("discovery/session: invalid config");
   });
 });

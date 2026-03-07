@@ -2,6 +2,7 @@ import {
   FILES_MEDIA_OPERATIONS,
   type AttachmentDirection,
   type AttachmentTransferState,
+  type ChatAttachmentRef,
   type ExecuteEnvelopeOptions,
   type RchEnvelopeResponse,
 } from "@reticulum/node-client";
@@ -25,6 +26,8 @@ interface FileTransferRecord {
   createdAtMs: number;
   updatedAtMs: number;
   error?: string;
+  url?: string;
+  dataBase64?: string;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -47,6 +50,19 @@ function createTransferId(): string {
     return crypto.randomUUID();
   }
   return `transfer-${Date.now().toString(36)}-${Math.floor(Math.random() * 1_000_000).toString(36)}`;
+}
+
+function fileToDataBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read attachment."));
+    reader.onload = () => {
+      const value = typeof reader.result === "string" ? reader.result : "";
+      const marker = value.indexOf(",");
+      resolve(marker >= 0 ? value.slice(marker + 1) : value);
+    };
+    reader.readAsDataURL(file);
+  });
 }
 
 export const useFilesMediaStore = defineStore("rch-files-media", () => {
@@ -114,8 +130,36 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
       progressPct: 0,
       createdAtMs: Date.now(),
       updatedAtMs: Date.now(),
+      url: undefined,
+      dataBase64: undefined,
     };
     return id;
+  }
+
+  async function queueLocalFiles(
+    files: readonly File[],
+    input: {
+      channelKey: string;
+      direction?: AttachmentDirection;
+    },
+  ): Promise<string[]> {
+    const created: string[] = [];
+    for (const file of files) {
+      const transferId = beginTransfer({
+        channelKey: input.channelKey,
+        name: file.name,
+        mimeType: file.type || undefined,
+        sizeBytes: file.size,
+        direction: input.direction,
+      });
+      transfersById[transferId] = {
+        ...transfersById[transferId],
+        url: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
+        dataBase64: await fileToDataBase64(file),
+      };
+      created.push(transferId);
+    }
+    return created;
   }
 
   function updateTransferState(
@@ -124,6 +168,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
       state: AttachmentTransferState;
       progressPct?: number;
       error?: string;
+      messageLocalId?: string;
     },
   ): void {
     const current = transfersById[transferId];
@@ -135,8 +180,63 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
       state: next.state,
       progressPct: next.progressPct ?? current.progressPct,
       error: next.error,
+      messageLocalId: next.messageLocalId ?? current.messageLocalId,
       updatedAtMs: Date.now(),
     };
+  }
+
+  function getQueuedUploads(channelKey: string): {
+    transferIds: string[];
+    fileAttachments: ChatAttachmentRef[];
+    image?: Record<string, unknown>;
+  } {
+    const queued = Object.values(transfersById).filter(
+      (entry) => entry.channelKey === channelKey && entry.state === "queued",
+    );
+
+    const transferIds = queued.map((entry) => entry.id);
+    const fileAttachments = queued.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      mimeType: entry.mimeType,
+      sizeBytes: entry.sizeBytes,
+      direction: entry.direction,
+      transferState: entry.state,
+      url: entry.url,
+      error: entry.error,
+      dataBase64: entry.dataBase64,
+    }));
+
+    const imageCandidate = queued.find((entry) => entry.mimeType?.startsWith("image/"));
+    const image = imageCandidate
+      ? {
+        id: imageCandidate.id,
+        name: imageCandidate.name,
+        mime_type: imageCandidate.mimeType,
+        size_bytes: imageCandidate.sizeBytes,
+        data_base64: imageCandidate.dataBase64,
+      }
+      : undefined;
+
+    return {
+      transferIds,
+      fileAttachments,
+      image,
+    };
+  }
+
+  function markTransfers(
+    transferIds: readonly string[],
+    next: {
+      state: AttachmentTransferState;
+      progressPct: number;
+      messageLocalId?: string;
+      error?: string;
+    },
+  ): void {
+    for (const transferId of transferIds) {
+      updateTransferState(transferId, next);
+    }
   }
 
   async function wire(): Promise<void> {
@@ -176,6 +276,9 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     executeFromJson,
     wire,
     beginTransfer,
+    queueLocalFiles,
     updateTransferState,
+    getQueuedUploads,
+    markTransfers,
   };
 });

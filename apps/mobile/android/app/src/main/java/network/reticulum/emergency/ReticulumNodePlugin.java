@@ -7,6 +7,7 @@ import android.content.ServiceConnection;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Log;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Logger;
@@ -559,6 +560,11 @@ public class ReticulumNodePlugin extends Plugin {
                 String eventName = envelope.getString("event");
                 JSObject payload = envelope.getJSObject("payload", new JSObject());
                 if (eventName != null && !eventName.isEmpty()) {
+                    if ("log".equals(eventName)) {
+                        Log.i(TAG, "Node log " + payload.toString());
+                    } else if ("error".equals(eventName)) {
+                        Log.w(TAG, "Node error " + payload.toString());
+                    }
                     notifyListeners(eventName, payload);
                 }
             } catch (Exception ex) {

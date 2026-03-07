@@ -11,6 +11,7 @@ import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
 import { useNodeStore } from "./nodeStore";
+import { useFilesMediaStore } from "./filesMediaStore";
 import { useRchClientStore } from "./rchClientStore";
 
 const CHAT_DRAFT_STORAGE_KEY = "reticulum.mobile.chat.drafts.v3";
@@ -147,6 +148,7 @@ function parseStoredDrafts(): Record<string, string> {
 
 export const useMessagingStore = defineStore("rch-messaging", () => {
   const nodeStore = useNodeStore();
+  const filesMediaStore = useFilesMediaStore();
   const rchClientStore = useRchClientStore();
 
   const operations = MESSAGES_OPERATIONS;
@@ -396,6 +398,7 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
     topicId?: string;
   } = {}): Promise<void> {
     await wire();
+    await filesMediaStore.wire();
     const descriptor = {
       ...describeChannelKey(options.channelKey ?? activeChannelKey.value),
       destination: normalizeDestination(options.destination) ?? describeChannelKey(options.channelKey ?? activeChannelKey.value).destination,
@@ -409,6 +412,7 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
 
     const localMessageId = createMessageId();
     const issuedAt = nowIso();
+    const pendingUploads = filesMediaStore.getQueuedUploads(channelKey);
     const optimisticMessage: ChatMessage = {
       localMessageId,
       direction: "outbound",
@@ -416,6 +420,8 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
       destination: descriptor.destination,
       topicId: descriptor.topicId,
       issuedAt,
+      attachments: pendingUploads.fileAttachments,
+      image: pendingUploads.image,
     };
 
     ensureChannel(channelKey, {
@@ -427,6 +433,11 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
       channelKey,
       deliveryState: "queued",
     });
+    filesMediaStore.markTransfers(pendingUploads.transferIds, {
+      state: "in_progress",
+      progressPct: 35,
+      messageLocalId: localMessageId,
+    });
     draftsByChannel[channelKey] = "";
     persistDrafts();
 
@@ -437,6 +448,8 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
         content: draft,
         destination: descriptor.destination,
         topicId: descriptor.topicId,
+        fileAttachments: pendingUploads.fileAttachments,
+        image: pendingUploads.image,
       });
       upsertMessage(
         {
@@ -446,14 +459,28 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
           destination: response.payload.destination ?? descriptor.destination,
           topicId: response.payload.topicId ?? descriptor.topicId,
           issuedAt,
+          attachments: pendingUploads.fileAttachments,
+          image: pendingUploads.image,
         },
         {
           channelKey,
           deliveryState: response.payload.sent ? "sent" : "failed",
         },
       );
+      filesMediaStore.markTransfers(pendingUploads.transferIds, {
+        state: response.payload.sent ? "completed" : "failed",
+        progressPct: response.payload.sent ? 100 : 35,
+        messageLocalId: response.payload.localMessageId,
+        error: response.payload.sent ? undefined : "Attachment send was rejected.",
+      });
     } catch (error: unknown) {
       applyMessageState(localMessageId, "failed", toErrorMessage(error));
+      filesMediaStore.markTransfers(pendingUploads.transferIds, {
+        state: "failed",
+        progressPct: 35,
+        messageLocalId: localMessageId,
+        error: toErrorMessage(error),
+      });
       lastError.value = toErrorMessage(error);
       throw error;
     }

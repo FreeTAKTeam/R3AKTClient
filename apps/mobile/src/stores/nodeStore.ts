@@ -54,8 +54,6 @@ const DEFAULT_SETTINGS: NodeUiSettings = {
   hub: {
     mode: "Disabled",
     identityHash: "",
-    apiBaseUrl: "",
-    apiKey: "",
     refreshIntervalSeconds: 300,
   },
 };
@@ -163,8 +161,6 @@ function toNodeConfig(settings: NodeUiSettings): NodeConfig {
     announceCapabilities: settings.announceCapabilities,
     hubMode: settings.hub.mode,
     hubIdentityHash: settings.hub.identityHash || undefined,
-    hubApiBaseUrl: settings.hub.apiBaseUrl || undefined,
-    hubApiKey: settings.hub.apiKey || undefined,
     hubRefreshIntervalSeconds: settings.hub.refreshIntervalSeconds,
   };
 }
@@ -180,6 +176,7 @@ export const useNodeStore = defineStore("node", () => {
   const initialized = ref(false);
 
   const client = shallowRef<ReticulumNodeClient | null>(null);
+  const startPromise = shallowRef<Promise<void> | null>(null);
   const unsubscribeClientEvents = ref<Array<() => void>>([]);
   const packetListeners = new Set<PacketListener>();
 
@@ -400,23 +397,47 @@ export const useNodeStore = defineStore("node", () => {
     await refreshStatusSnapshot();
   }
 
+  async function startNodeCore(): Promise<void> {
+    await init();
+    if (!client.value || status.value.running) {
+      return;
+    }
+
+    clearLastError();
+    await client.value.start(toNodeConfig(settings));
+    const snapshot = await refreshStatusSnapshot(8, 250);
+    if (!snapshot.running) {
+      throw new Error("Node start did not reach a running state.");
+    }
+    appendLog("Info", "Node started.");
+
+    if (settings.autoConnectSaved) {
+      await connectAllSaved().catch((error: unknown) => {
+        appendLog("Warn", `Auto connect failed: ${errorMessage(error)}`);
+      });
+    }
+  }
+
+  async function ensureNodeStarted(): Promise<void> {
+    await init();
+    if (status.value.running) {
+      return;
+    }
+    if (startPromise.value) {
+      await startPromise.value;
+      return;
+    }
+
+    const pending = startNodeCore().finally(() => {
+      startPromise.value = null;
+    });
+    startPromise.value = pending;
+    await pending;
+  }
+
   async function startNode(): Promise<void> {
     try {
-      await init();
-      if (!client.value) {
-        return;
-      }
-
-      clearLastError();
-      await client.value.start(toNodeConfig(settings));
-      await refreshStatusSnapshot(8, 250);
-      appendLog("Info", "Node started.");
-
-      if (settings.autoConnectSaved) {
-        await connectAllSaved().catch((error: unknown) => {
-          appendLog("Warn", `Auto connect failed: ${errorMessage(error)}`);
-        });
-      }
+      await ensureNodeStarted();
     } catch (error: unknown) {
       throw captureActionError("Start node failed", error);
     }
@@ -718,6 +739,7 @@ export const useNodeStore = defineStore("node", () => {
     connectedDestinations,
     savedDestinations,
     init,
+    ensureNodeStarted,
     startNode,
     stopNode,
     restartNode,

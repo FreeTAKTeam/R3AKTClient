@@ -1,9 +1,13 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 
 :root {
   color: #f3fcff;
   font-family: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-headline: "Sora", sans-serif;
+  --font-ui: "Space Grotesk", sans-serif;
+  background: #06161c;
 }
 
 *,
@@ -22,7 +26,9 @@ body,
 }
 
 body {
-  background: #101f22;
+  background: #06161c;
+  color: #f3fcff;
+  font-family: var(--font-body);
 }
 
 .material-symbols-outlined {

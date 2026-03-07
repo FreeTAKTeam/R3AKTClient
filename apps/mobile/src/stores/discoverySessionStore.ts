@@ -6,5 +6,5 @@ export const useDiscoverySessionStore = createRchFeatureStore(
   "rch-discovery-session",
   "session",
   SESSION_OPERATIONS,
-  "getAppInfo",
+  null,
 );

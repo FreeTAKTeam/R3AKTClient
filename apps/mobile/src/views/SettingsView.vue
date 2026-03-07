@@ -19,8 +19,6 @@ const form = reactive({
     ? "RchLxmf"
     : "Disabled") as HubModeForm,
   hubIdentityHash: nodeStore.settings.hub.identityHash,
-  hubApiBaseUrl: nodeStore.settings.hub.apiBaseUrl,
-  hubApiKey: nodeStore.settings.hub.apiKey,
   hubRefreshIntervalSeconds: nodeStore.settings.hub.refreshIntervalSeconds,
 });
 
@@ -42,10 +40,8 @@ function applySettings(): void {
       .filter((line: string) => line.length > 0),
     broadcast: form.broadcast,
     hub: {
-      mode: form.hubMode as "Disabled" | "RchLxmf" | "RchHttp",
+      mode: form.hubMode,
       identityHash: form.hubIdentityHash.trim(),
-      apiBaseUrl: form.hubApiBaseUrl.trim(),
-      apiKey: form.hubApiKey.trim(),
       refreshIntervalSeconds: Math.max(30, Number(form.hubRefreshIntervalSeconds || 300)),
     },
   });
@@ -161,14 +157,6 @@ function importPeerList(): void {
         <label>
           Hub identity hash
           <input v-model="form.hubIdentityHash" type="text" />
-        </label>
-        <label>
-          Hub API base URL
-          <input v-model="form.hubApiBaseUrl" type="url" />
-        </label>
-        <label>
-          Hub API key
-          <input v-model="form.hubApiKey" type="text" />
         </label>
         <label>
           Refresh interval seconds

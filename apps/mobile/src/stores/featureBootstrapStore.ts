@@ -8,6 +8,7 @@ import { useFilesMediaStore } from "./filesMediaStore";
 import { useMapMarkersZonesStore } from "./mapMarkersZonesStore";
 import { useMessagingStore } from "./messagingStore";
 import { useMissionCoreStore } from "./missionCoreStore";
+import { useNodeStore } from "./nodeStore";
 import { useTeamsSkillsStore } from "./teamsSkillsStore";
 import { useTelemetryStore } from "./telemetryStore";
 import { useTopicsStore } from "./topicsStore";
@@ -52,6 +53,7 @@ export const useFeatureBootstrapStore = defineStore("feature-bootstrap", () => {
     const discoverySession = useDiscoverySessionStore();
     const telemetry = useTelemetryStore();
     const messaging = useMessagingStore();
+    const nodeStore = useNodeStore();
     const topics = useTopicsStore();
     const filesMedia = useFilesMediaStore();
     const mapMarkersZones = useMapMarkersZonesStore();
@@ -77,6 +79,13 @@ export const useFeatureBootstrapStore = defineStore("feature-bootstrap", () => {
     ];
 
     lastError.value = "";
+    try {
+      await nodeStore.ensureNodeStarted();
+    } catch (error: unknown) {
+      lastError.value = `node/start: ${toErrorMessage(error)}`;
+      return;
+    }
+
     for (const entry of orderedWires) {
       if (stepStatus[entry.step] === "wired") {
         continue;
@@ -86,7 +95,7 @@ export const useFeatureBootstrapStore = defineStore("feature-bootstrap", () => {
         stepStatus[entry.step] = "wired";
       } catch (error: unknown) {
         stepStatus[entry.step] = "failed";
-        lastError.value = toErrorMessage(error);
+        lastError.value = `${entry.step}: ${toErrorMessage(error)}`;
       }
     }
 

@@ -58,10 +58,8 @@ export interface PeerListV1 {
 }
 
 export interface HubSettings {
-  mode: "Disabled" | "RchLxmf" | "RchHttp";
+  mode: "Disabled" | "RchLxmf";
   identityHash: string;
-  apiBaseUrl: string;
-  apiKey: string;
   refreshIntervalSeconds: number;
 }
 

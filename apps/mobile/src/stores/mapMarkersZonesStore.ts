@@ -72,6 +72,10 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function wrapWireError(context: string, error: unknown): Error {
+  return new Error(`${context}: ${toErrorMessage(error)}`);
+}
+
 function parsePayload(payloadJson: string): unknown {
   const trimmed = payloadJson.trim();
   if (!trimmed) {
@@ -310,8 +314,16 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
     if (wired.value) {
       return;
     }
-    await listMarkers();
-    await listZones();
+    try {
+      await listMarkers();
+    } catch (error: unknown) {
+      throw wrapWireError(MARKER_LIST_OPERATION, error);
+    }
+    try {
+      await listZones();
+    } catch (error: unknown) {
+      throw wrapWireError(ZONE_LIST_OPERATION, error);
+    }
     wired.value = true;
   }
 
