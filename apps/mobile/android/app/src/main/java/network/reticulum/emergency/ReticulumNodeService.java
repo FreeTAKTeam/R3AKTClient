@@ -238,6 +238,10 @@ public class ReticulumNodeService extends Service {
         return nodeManager.executeEnvelope(envelopeJson);
     }
 
+    public String sendChatMessage(String requestJson) {
+        return nodeManager.sendChatMessage(requestJson);
+    }
+
     public String getLastErrorJson() {
         return nodeManager.getLastErrorJson();
     }

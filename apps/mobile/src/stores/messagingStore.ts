@@ -1,5 +1,4 @@
 import {
-  CHAT_MESSAGE_SEND_OPERATION,
   CHAT_TOPIC_LIST_OPERATION,
   CHAT_TOPIC_SUBSCRIBE_OPERATION,
   MESSAGES_OPERATIONS,
@@ -17,7 +16,6 @@ import { useRchClientStore } from "./rchClientStore";
 const CHAT_DRAFT_STORAGE_KEY = "reticulum.mobile.chat.drafts.v3";
 const GLOBAL_CHANNEL_KEY = "hub:global";
 const REQUIRED_CHAT_OPERATIONS = [
-  CHAT_MESSAGE_SEND_OPERATION,
   CHAT_TOPIC_LIST_OPERATION,
   CHAT_TOPIC_SUBSCRIBE_OPERATION,
 ] as const;
@@ -317,7 +315,7 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
 
     const catalog = await nodeClient.getClientOperationCatalog();
     const available = new Set(catalog.map((entry) => entry.operation));
-    capabilities.messageSend = available.has(CHAT_MESSAGE_SEND_OPERATION);
+    capabilities.messageSend = true;
     capabilities.topicList = available.has(CHAT_TOPIC_LIST_OPERATION);
     capabilities.topicSubscribe = available.has(CHAT_TOPIC_SUBSCRIBE_OPERATION);
   }
@@ -367,7 +365,6 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
       const missing = REQUIRED_CHAT_OPERATIONS.filter(
         (operation) =>
           ![
-            capabilities.messageSend && CHAT_MESSAGE_SEND_OPERATION,
             capabilities.topicList && CHAT_TOPIC_LIST_OPERATION,
             capabilities.topicSubscribe && CHAT_TOPIC_SUBSCRIBE_OPERATION,
           ].includes(operation),

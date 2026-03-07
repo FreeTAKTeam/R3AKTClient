@@ -12,7 +12,7 @@ use rmpv::Value as RmpValue;
 use serde_json::{json, Value};
 
 const DEFAULT_HUB_IDENTITY_HASH: &str = "c4de028671f01d9649aabb85e73b50a4";
-const DEFAULT_TCP_CLIENT: &str = "rmap.world:4242";
+const DEFAULT_TCP_CLIENT: &str = "134.122.46.48:4242";
 const NETWORK_TIMEOUT: Duration = Duration::from_secs(45);
 const PROBE_ANNOUNCE_INTERVAL_SECONDS: u32 = 5;
 
@@ -64,24 +64,126 @@ fn probe_delivery_destination_hash(label: &str) -> String {
         .expect("read probe identity")
         .trim()
         .to_string();
-    let identity = PrivateIdentity::new_from_hex_string(&identity_hex).expect("valid probe identity");
+    let identity =
+        PrivateIdentity::new_from_hex_string(&identity_hex).expect("valid probe identity");
     let destination =
         SingleInputDestination::new(identity, DestinationName::new("lxmf", "delivery"));
     destination.desc.address_hash.to_hex_string()
 }
 
+fn probe_identity(label: &str) -> PrivateIdentity {
+    let identity_hex = fs::read_to_string(probe_storage_dir(label).join("identity.hex"))
+        .expect("read probe identity")
+        .trim()
+        .to_string();
+    PrivateIdentity::new_from_hex_string(&identity_hex).expect("valid probe identity")
+}
+
+fn parse_hash_bytes(hex_32: &str) -> [u8; 16] {
+    let normalized = hex_32.trim().to_ascii_lowercase();
+    assert_valid_hash("hash", &normalized);
+    let mut out = [0u8; 16];
+    hex::decode_to_slice(normalized, &mut out).expect("decode 16-byte hash");
+    out
+}
+
+fn strip_destination_prefix<'a>(wire: &'a [u8], destination: &[u8; 16]) -> &'a [u8] {
+    wire.strip_prefix(destination).unwrap_or(wire)
+}
+
+fn build_chat_fields(topic_id: &str, local_message_id: &str) -> RmpValue {
+    RmpValue::Map(vec![
+        (
+            RmpValue::Integer(0x08.into()),
+            RmpValue::from(local_message_id.to_string()),
+        ),
+        (
+            RmpValue::Integer(0x0B.into()),
+            RmpValue::from(topic_id.to_string()),
+        ),
+        (
+            RmpValue::from("topic_id".to_string()),
+            RmpValue::from(topic_id.to_string()),
+        ),
+    ])
+}
+
+fn send_plain_lxmf_chat(
+    node: &Node,
+    label: &str,
+    destination_hex: &str,
+    content: &str,
+    topic_id: &str,
+    local_message_id: &str,
+) {
+    let identity = probe_identity(label);
+    let source_hash = parse_hash_bytes(&probe_delivery_destination_hash(label));
+    let destination_hash = parse_hash_bytes(destination_hex);
+
+    let mut message = LxmfMessage::new();
+    message.source_hash = Some(source_hash);
+    message.destination_hash = Some(destination_hash);
+    message.set_title_from_string("R3AKT Chat");
+    message.set_content_from_string(content);
+    message.fields = Some(build_chat_fields(topic_id, local_message_id));
+
+    let wire = message
+        .to_wire(Some(&identity))
+        .expect("encode chat relay LXMF wire");
+    let packet_payload = strip_destination_prefix(&wire, &destination_hash).to_vec();
+
+    eprintln!(
+        "[plain-chat-send] {}",
+        json!({
+            "destination": destination_hex,
+            "local_message_id": local_message_id,
+            "topic_id": topic_id,
+            "lxmf": describe_lxmf_message(&message, destination_hex),
+        })
+    );
+
+    node.send_bytes(destination_hex.to_string(), packet_payload)
+        .expect("send plain relay LXMF packet");
+}
+
 fn operation_kind(operation: &str) -> &'static str {
     match operation {
-        "Help" | "Examples" | "ListClients" | "getAppInfo" | "ListFiles" | "RetrieveFile"
-        | "ListImages" | "RetrieveImage" | "ListTopic" | "RetrieveTopic" | "ListSubscriber"
-        | "RetrieveSubscriber" | "GetStatus" | "ListEvents" | "ListIdentities" | "GetConfig"
-        | "DumpRouting" | "TelemetryRequest" | "topic.list" => "query",
-        _ if operation.starts_with("GET ") => "query",
-        _ => "command",
+        "Help"
+        | "Examples"
+        | "ListClients"
+        | "getAppInfo"
+        | "ListFiles"
+        | "RetrieveFile"
+        | "ListImages"
+        | "RetrieveImage"
+        | "ListTopic"
+        | "RetrieveTopic"
+        | "ListSubscriber"
+        | "RetrieveSubscriber"
+        | "GetStatus"
+        | "ListEvents"
+        | "ListIdentities"
+        | "GetConfig"
+        | "DumpRouting"
+        | "TelemetryRequest"
+        | "topic.list"
+        | "checklist.template.list" => "query",
+        "join"
+        | "leave"
+        | "SubscribeTopic"
+        | "mission.join"
+        | "mission.leave"
+        | "topic.subscribe"
+        | "mission.message.send" => "command",
+        _ => panic!("live probe only accepts documented LXMF command names, got {operation}"),
     }
 }
 
 fn build_envelope(operation: &str, payload: Value) -> String {
+    assert!(
+        !operation.contains(" /") && !operation.starts_with("GET ") && !operation.starts_with("POST "),
+        "live probe must use documented LXMF command names, got {operation}"
+    );
     let message_id = format!("probe-{}", now_millis());
     let kind = operation_kind(operation);
 
@@ -101,7 +203,7 @@ fn build_envelope(operation: &str, payload: Value) -> String {
 fn execute_and_parse(node: &Node, operation: &str, payload: Value) -> Value {
     const MAX_TIMEOUT_RETRIES: usize = 3;
     const RETRY_DELAY: Duration = Duration::from_secs(2);
-    let retry_timeouts = !matches!(operation, "ListTopic" | "SubscribeTopic");
+    let retry_timeouts = true;
 
     for attempt in 0..=MAX_TIMEOUT_RETRIES {
         match node.execute_envelope(build_envelope(operation, payload.clone())) {
@@ -146,7 +248,33 @@ fn response_payload_text(response: &Value) -> Option<String> {
     None
 }
 
+fn extract_topic_id_from_value(value: &Value) -> Option<String> {
+    match value {
+        Value::Array(items) => items.iter().find_map(extract_topic_id_from_value),
+        Value::Object(map) => {
+            for key in ["topic_id", "TopicID", "id", "topicId"] {
+                if let Some(topic_id) = map.get(key).and_then(Value::as_str) {
+                    let topic_id = topic_id.trim();
+                    if !topic_id.is_empty() && topic_id != "<unassigned>" {
+                        return Some(topic_id.to_string());
+                    }
+                }
+            }
+
+            map.values().find_map(extract_topic_id_from_value)
+        }
+        _ => None,
+    }
+}
+
 fn extract_first_topic_id(response: &Value) -> Option<String> {
+    if let Some(topic_id) = response
+        .pointer("/payload/result")
+        .and_then(extract_topic_id_from_value)
+    {
+        return Some(topic_id);
+    }
+
     let text = response_payload_text(response)?;
     for line in text.lines() {
         let Some(marker) = line.find("(ID:") else {
@@ -262,7 +390,11 @@ where
     None
 }
 
-fn wait_for_announce(events: &Arc<EventSubscription>, destination_hex: &str, timeout: Duration) -> bool {
+fn wait_for_announce(
+    events: &Arc<EventSubscription>,
+    destination_hex: &str,
+    timeout: Duration,
+) -> bool {
     let deadline = Instant::now() + timeout;
     while Instant::now() < deadline {
         let Some(event) = events.next(250) else {
@@ -279,11 +411,7 @@ fn wait_for_announce(events: &Arc<EventSubscription>, destination_hex: &str, tim
             } => {
                 eprintln!(
                     "[announce] dst={} hops={} iface={} received_at_ms={} app_data={}",
-                    observed,
-                    hops,
-                    interface_hex,
-                    received_at_ms,
-                    app_data,
+                    observed, hops, interface_hex, received_at_ms, app_data,
                 );
                 if observed.eq_ignore_ascii_case(destination_hex) {
                     return true;
@@ -478,7 +606,9 @@ fn live_rch_lxmf_mission_sync_probe() {
         .unwrap_or_else(|_| DEFAULT_HUB_IDENTITY_HASH.to_string());
     let tcp_client =
         std::env::var("RCH_LIVE_TCP_CLIENT").unwrap_or_else(|_| DEFAULT_TCP_CLIENT.to_string());
-    let message_body = format!("codex live probe {}", now_millis());
+    let message_body =
+        "Why do ravens make terrible field couriers? They keep cawing the punchline before they land."
+            .to_string();
 
     assert_valid_hash("RCH hub hash", &hub_identity_hash);
 
@@ -488,8 +618,6 @@ fn live_rch_lxmf_mission_sync_probe() {
     let _observer_guard = NodeStopGuard { node: &observer };
     let (sender, sender_events) = start_probe_node("sender", &hub_identity_hash, &tcp_client);
     let _sender_guard = NodeStopGuard { node: &sender };
-    let sender_identity = sender.get_status().identity_hex;
-    let observer_identity = observer.get_status().identity_hex;
     let sender_delivery_hash = probe_delivery_destination_hash("sender");
     let observer_delivery_hash = probe_delivery_destination_hash("observer");
 
@@ -504,101 +632,63 @@ fn live_rch_lxmf_mission_sync_probe() {
         );
     }
 
-    let sender_join = execute_and_parse(
-        &sender,
-        "join",
-        json!({ "identity": sender_identity }),
-    );
+    let sender_join = execute_and_parse(&sender, "join", json!({}));
     eprintln!("[sender-join] {sender_join}");
     drain_and_log_events(&sender_events, Duration::from_secs(2));
     assert_ne!(
         sender_join["kind"],
         json!("error"),
-        "join returned an error envelope for sender"
+        "join returned an error envelope for sender: {sender_join}"
     );
 
-    let observer_join = execute_and_parse(
-        &observer,
-        "join",
-        json!({ "identity": observer_identity }),
-    );
+    let observer_join = execute_and_parse(&observer, "join", json!({}));
     eprintln!("[observer-join] {observer_join}");
     drain_and_log_events(&observer_events, Duration::from_secs(2));
     assert_ne!(
         observer_join["kind"],
         json!("error"),
-        "join returned an error envelope for observer"
+        "join returned an error envelope for observer: {observer_join}"
     );
 
-    let mut send_payload = json!({
-        "local_message_id": format!("live-msg-{}", now_millis()),
-        "content": message_body,
-    });
-    let mut expected_topic_id = None::<String>;
-
-    let topic_list = execute_and_parse(&sender, "ListTopic", json!({}));
-    eprintln!("[topic-list] {topic_list}");
-    drain_and_log_events(&sender_events, Duration::from_secs(2));
-
-    if topic_list["kind"] == json!("error") {
-        eprintln!("[topic-list-fallback] falling back to broadcast relay");
-    } else if let Some(topic_id) = extract_first_topic_id(&topic_list) {
-        let subscribe = execute_and_parse(
-            &observer,
-            "SubscribeTopic",
-            json!({
-                "topic_id": topic_id,
-            }),
-        );
-        eprintln!("[topic-subscribe] {subscribe}");
-        drain_and_log_events(&observer_events, Duration::from_secs(2));
-        if subscribe["kind"] != json!("error") {
-            send_payload["topic_id"] = json!(topic_id.clone());
-            expected_topic_id = Some(topic_id);
-        } else {
-            eprintln!("[topic-subscribe-fallback] falling back to broadcast relay");
-        }
-    } else {
-        eprintln!("[topic-list] no topic IDs found; falling back to broadcast relay");
-    }
-
-    let send = execute_and_parse(&sender, "POST /Message", send_payload);
-    eprintln!("[message-send] {send}");
+    let topics = execute_and_parse(&sender, "ListTopic", json!({}));
+    eprintln!("[list-topic] {topics}");
     assert_ne!(
-        send["kind"],
+        topics["kind"],
         json!("error"),
-        "POST /Message returned an error envelope"
+        "ListTopic returned an error envelope: {topics}"
     );
-    assert_eq!(
-        send["payload"]["sent"],
-        json!(true),
-        "message send was not accepted"
+    let topic_id = extract_first_topic_id(&topics).expect("hub returned at least one topic id");
+
+    let subscribe = execute_and_parse(&observer, "SubscribeTopic", json!({ "TopicID": topic_id }));
+    eprintln!("[subscribe-topic] {subscribe}");
+    assert_ne!(
+        subscribe["kind"],
+        json!("error"),
+        "SubscribeTopic returned an error envelope: {subscribe}"
     );
 
-    let sent_event =
-        wait_for_domain_event(&sender_events, NETWORK_TIMEOUT, |event_type, payload| {
-            event_type == "message.sent" && payload["content"] == json!(message_body)
-        });
-    assert!(sent_event.is_some(), "did not observe message.sent");
+    let local_message_id = format!("live-msg-{}", now_millis());
+    send_plain_lxmf_chat(
+        &sender,
+        "sender",
+        &hub_identity_hash,
+        &message_body,
+        &topic_id,
+        &local_message_id,
+    );
     drain_and_log_events(&sender_events, Duration::from_secs(2));
 
     let relay_event =
         wait_for_domain_event(&observer_events, NETWORK_TIMEOUT, |event_type, payload| {
-            let content_matches = payload
-                .get("content")
-                .and_then(Value::as_str)
-                .map(|value| value.contains(&message_body))
-                .unwrap_or(false);
-            let topic_matches = match expected_topic_id.as_deref() {
-                Some(topic_id) => payload.get("topic_id") == Some(&json!(topic_id)),
-                None => true,
-            };
-
-            event_type == "rch.message.relay" && topic_matches && content_matches
+            event_type == "rch.message.relay"
+                && payload["topic_id"] == json!(topic_id)
+                && payload["source_hash"] == json!(sender_delivery_hash)
+                && payload["thread_id"] == json!(local_message_id)
+                && payload["content"]
+                    .as_str()
+                    .map(|value| value.contains(&message_body))
+                    .unwrap_or(false)
         });
-
-    assert!(
-        relay_event.is_some(),
-        "did not observe rch.message.relay on the observer probe node"
-    );
+    assert!(relay_event.is_some(), "did not observe rch.message.relay");
+    drain_and_log_events(&observer_events, Duration::from_secs(2));
 }

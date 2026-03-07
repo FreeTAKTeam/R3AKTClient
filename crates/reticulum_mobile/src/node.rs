@@ -301,6 +301,24 @@ impl Node {
             .recv_timeout(Duration::from_secs(30))
             .unwrap_or(Err(NodeError::Timeout {}))
     }
+
+    pub fn send_chat_message(&self, request_json: String) -> Result<String, NodeError> {
+        let tx = {
+            let inner = self.inner.lock().map_err(|_| NodeError::InternalError {})?;
+            inner.cmd_tx.clone().ok_or(NodeError::NotRunning {})?
+        };
+
+        let (resp_tx, resp_rx) = cb::bounded(1);
+        tx.send(Command::SendChatMessage {
+            request_json,
+            resp: resp_tx,
+        })
+        .map_err(|_| NodeError::NotRunning {})?;
+        resp_rx
+            .recv_timeout(Duration::from_secs(30))
+            .unwrap_or(Err(NodeError::Timeout {}))
+    }
+
     pub fn refresh_hub_directory(&self) -> Result<(), NodeError> {
         let tx = {
             let inner = self.inner.lock().map_err(|_| NodeError::InternalError {})?;

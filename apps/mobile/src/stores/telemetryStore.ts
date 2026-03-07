@@ -6,4 +6,5 @@ export const useTelemetryStore = createRchFeatureStore(
   "rch-telemetry",
   "telemetry",
   TELEMETRY_OPERATIONS,
+  "TelemetryRequest",
 );

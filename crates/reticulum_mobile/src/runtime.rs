@@ -24,10 +24,12 @@ use rmpv::Value as RmpValue;
 use tokio::sync::{mpsc, Mutex as TokioMutex};
 
 use crate::event_bus::EventBus;
-use crate::generated::client_operations::CLIENT_OPERATION_KEYS;
+use crate::generated::client_operations::{
+    entry_for_operation_or_alias, ClientOperationKind, ClientTransportVariant,
+};
 use crate::types::{
-    EnvelopeKind, HubMode, MessageEnvelope, NodeConfig, NodeError, NodeEvent, NodeStatus,
-    PeerChange, PeerState, SendOutcome,
+    ChatSendRequest, ChatSendResult, EnvelopeKind, HubMode, MessageEnvelope, NodeConfig,
+    NodeError, NodeEvent, NodeStatus, PeerChange, PeerState, SendOutcome,
 };
 
 const APP_DESTINATION_NAME: (&str, &str) = ("r3akt", "emergency");
@@ -72,8 +74,8 @@ struct LxmfExecutionResult {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum LxmfEnvelopeEncoding {
     Legacy,
-    MissionSync,
-    RelayMessage,
+    Telemetry,
+    FieldCommands,
 }
 
 fn now_ms() -> u64 {
@@ -179,331 +181,55 @@ fn chrono_like_now_iso() -> String {
     format!("{}.{:03}Z", now.as_secs(), now.subsec_millis())
 }
 
-fn is_generated_client_operation(operation: &str) -> bool {
-    CLIENT_OPERATION_KEYS
-        .iter()
-        .any(|entry| *entry == operation)
+fn create_runtime_message_id(prefix: &str) -> String {
+    format!("{prefix}-{}", now_ms())
+}
+
+fn normalize_optional_string(value: Option<String>) -> Option<String> {
+    value.and_then(|entry| {
+        let trimmed = entry.trim();
+        (!trimmed.is_empty()).then(|| trimmed.to_string())
+    })
 }
 
 fn is_allowed_operation(operation: &str) -> bool {
-    is_generated_client_operation(operation)
-        || legacy_command_name_for_operation(operation).is_some()
-        || mission_command_type_for_operation(operation).is_some()
+    entry_for_operation_or_alias(operation).is_some()
 }
 
 fn mission_command_type_for_operation(operation: &str) -> Option<&'static str> {
-    match operation {
-        "mission.join" => Some("mission.join"),
-        "mission.leave" => Some("mission.leave"),
-        "mission.events.list" | "GET /api/r3akt/events" => Some("mission.events.list"),
-        "mission.message.send" | "POST /Message" => Some("mission.message.send"),
-        "topic.list" | "GET /Topic" => Some("topic.list"),
-        "topic.create" | "POST /Topic" => Some("topic.create"),
-        "topic.patch" | "PATCH /Topic" => Some("topic.patch"),
-        "topic.delete" | "DELETE /Topic" => Some("topic.delete"),
-        "topic.subscribe" | "POST /Topic/Subscribe" => Some("topic.subscribe"),
-        "mission.marker.list" | "GET /api/markers" => Some("mission.marker.list"),
-        "mission.marker.create" | "POST /api/markers" => Some("mission.marker.create"),
-        "mission.marker.position.patch" | "PATCH /api/markers/{object_destination_hash}/position" => {
-            Some("mission.marker.position.patch")
-        }
-        "mission.zone.list" | "GET /api/zones" => Some("mission.zone.list"),
-        "mission.zone.create" | "POST /api/zones" => Some("mission.zone.create"),
-        "mission.zone.patch" | "PATCH /api/zones/{zone_id}" => Some("mission.zone.patch"),
-        "mission.zone.delete" | "DELETE /api/zones/{zone_id}" => Some("mission.zone.delete"),
-        "mission.registry.mission.upsert" | "POST /api/r3akt/missions" => {
-            Some("mission.registry.mission.upsert")
-        }
-        "mission.registry.mission.get" | "GET /api/r3akt/missions/{mission_uid}" => {
-            Some("mission.registry.mission.get")
-        }
-        "mission.registry.mission.list" | "GET /api/r3akt/missions" => {
-            Some("mission.registry.mission.list")
-        }
-        "mission.registry.mission.patch" | "PATCH /api/r3akt/missions/{mission_uid}" => {
-            Some("mission.registry.mission.patch")
-        }
-        "mission.registry.mission.delete" | "DELETE /api/r3akt/missions/{mission_uid}" => {
-            Some("mission.registry.mission.delete")
-        }
-        "mission.registry.mission.parent.set" | "PUT /api/r3akt/missions/{mission_uid}/parent" => {
-            Some("mission.registry.mission.parent.set")
-        }
-        "mission.registry.mission.rde.set" | "PUT /api/r3akt/missions/{mission_uid}/rde" => {
-            Some("mission.registry.mission.rde.set")
-        }
-        "mission.registry.mission_change.upsert" | "POST /api/r3akt/mission-changes" => {
-            Some("mission.registry.mission_change.upsert")
-        }
-        "mission.registry.mission_change.list" | "GET /api/r3akt/mission-changes" => {
-            Some("mission.registry.mission_change.list")
-        }
-        "mission.registry.log_entry.upsert" | "POST /api/r3akt/log-entries" => {
-            Some("mission.registry.log_entry.upsert")
-        }
-        "mission.registry.log_entry.list" | "GET /api/r3akt/log-entries" => {
-            Some("mission.registry.log_entry.list")
-        }
-        "mission.registry.team.upsert" | "POST /api/r3akt/teams" => {
-            Some("mission.registry.team.upsert")
-        }
-        "mission.registry.team.get" | "GET /api/r3akt/teams/{team_uid}" => {
-            Some("mission.registry.team.get")
-        }
-        "mission.registry.team.list" | "GET /api/r3akt/teams" => {
-            Some("mission.registry.team.list")
-        }
-        "mission.registry.team.delete" | "DELETE /api/r3akt/teams/{team_uid}" => {
-            Some("mission.registry.team.delete")
-        }
-        "mission.registry.team.mission.link" | "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}" => {
-            Some("mission.registry.team.mission.link")
-        }
-        "mission.registry.team.mission.unlink" | "DELETE /api/r3akt/teams/{team_uid}/missions/{mission_uid}" => {
-            Some("mission.registry.team.mission.unlink")
-        }
-        "mission.registry.mission.zone.link" | "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}" => {
-            Some("mission.registry.mission.zone.link")
-        }
-        "mission.registry.mission.zone.unlink" | "DELETE /api/r3akt/missions/{mission_uid}/zones/{zone_id}" => {
-            Some("mission.registry.mission.zone.unlink")
-        }
-        "mission.registry.team_member.upsert" | "POST /api/r3akt/team-members" => {
-            Some("mission.registry.team_member.upsert")
-        }
-        "mission.registry.team_member.get" | "GET /api/r3akt/team-members/{team_member_uid}" => {
-            Some("mission.registry.team_member.get")
-        }
-        "mission.registry.team_member.list" | "GET /api/r3akt/team-members" => {
-            Some("mission.registry.team_member.list")
-        }
-        "mission.registry.team_member.delete" | "DELETE /api/r3akt/team-members/{team_member_uid}" => {
-            Some("mission.registry.team_member.delete")
-        }
-        "mission.registry.team_member.client.link" | "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}" => {
-            Some("mission.registry.team_member.client.link")
-        }
-        "mission.registry.team_member.client.unlink" | "DELETE /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}" => {
-            Some("mission.registry.team_member.client.unlink")
-        }
-        "mission.registry.asset.upsert" | "POST /api/r3akt/assets" => {
-            Some("mission.registry.asset.upsert")
-        }
-        "mission.registry.asset.get" | "GET /api/r3akt/assets/{asset_uid}" => {
-            Some("mission.registry.asset.get")
-        }
-        "mission.registry.asset.list" | "GET /api/r3akt/assets" => {
-            Some("mission.registry.asset.list")
-        }
-        "mission.registry.asset.delete" | "DELETE /api/r3akt/assets/{asset_uid}" => {
-            Some("mission.registry.asset.delete")
-        }
-        "mission.registry.skill.upsert" | "POST /api/r3akt/skills" => {
-            Some("mission.registry.skill.upsert")
-        }
-        "mission.registry.skill.list" | "GET /api/r3akt/skills" => {
-            Some("mission.registry.skill.list")
-        }
-        "mission.registry.team_member_skill.upsert" | "POST /api/r3akt/team-member-skills" => {
-            Some("mission.registry.team_member_skill.upsert")
-        }
-        "mission.registry.team_member_skill.list" | "GET /api/r3akt/team-member-skills" => {
-            Some("mission.registry.team_member_skill.list")
-        }
-        "mission.registry.task_skill_requirement.upsert" | "POST /api/r3akt/task-skill-requirements" => {
-            Some("mission.registry.task_skill_requirement.upsert")
-        }
-        "mission.registry.task_skill_requirement.list" | "GET /api/r3akt/task-skill-requirements" => {
-            Some("mission.registry.task_skill_requirement.list")
-        }
-        "mission.registry.assignment.upsert" | "POST /api/r3akt/assignments" => {
-            Some("mission.registry.assignment.upsert")
-        }
-        "mission.registry.assignment.list" | "GET /api/r3akt/assignments" => {
-            Some("mission.registry.assignment.list")
-        }
-        "mission.registry.assignment.asset.set" | "PUT /api/r3akt/assignments/{assignment_uid}/assets" => {
-            Some("mission.registry.assignment.asset.set")
-        }
-        "mission.registry.assignment.asset.link" | "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}" => {
-            Some("mission.registry.assignment.asset.link")
-        }
-        "mission.registry.assignment.asset.unlink" | "DELETE /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}" => {
-            Some("mission.registry.assignment.asset.unlink")
-        }
-        "checklist.template.list" | "GET /checklists/templates" => Some("checklist.template.list"),
-        "checklist.template.get" | "GET /checklists/templates/{template_id}" => {
-            Some("checklist.template.get")
-        }
-        "checklist.template.create" | "POST /checklists/templates" => {
-            Some("checklist.template.create")
-        }
-        "checklist.template.update" | "PATCH /checklists/templates/{template_id}" => {
-            Some("checklist.template.update")
-        }
-        "checklist.template.clone" | "POST /checklists/templates/{template_id}/clone" => {
-            Some("checklist.template.clone")
-        }
-        "checklist.template.delete" | "DELETE /checklists/templates/{template_id}" => {
-            Some("checklist.template.delete")
-        }
-        "checklist.list.active" | "GET /checklists" => Some("checklist.list.active"),
-        "checklist.create.online" | "POST /checklists" => Some("checklist.create.online"),
-        "checklist.create.offline" | "POST /checklists/offline" => {
-            Some("checklist.create.offline")
-        }
-        "checklist.update" | "PATCH /checklists/{checklist_id}" => Some("checklist.update"),
-        "checklist.delete" | "DELETE /checklists/{checklist_id}" => Some("checklist.delete"),
-        "checklist.import.csv" | "POST /checklists/import/csv" => Some("checklist.import.csv"),
-        "checklist.join" | "POST /checklists/{checklist_id}/join" => Some("checklist.join"),
-        "checklist.get" | "GET /checklists/{checklist_id}" => Some("checklist.get"),
-        "checklist.upload" | "POST /checklists/{checklist_id}/upload" => Some("checklist.upload"),
-        "checklist.feed.publish" | "POST /checklists/{checklist_id}/feeds/{feed_id}" => {
-            Some("checklist.feed.publish")
-        }
-        "checklist.task.status.set" | "POST /checklists/{checklist_id}/tasks/{task_id}/status" => {
-            Some("checklist.task.status.set")
-        }
-        "checklist.task.row.add" | "POST /checklists/{checklist_id}/tasks" => {
-            Some("checklist.task.row.add")
-        }
-        "checklist.task.row.delete" | "DELETE /checklists/{checklist_id}/tasks/{task_id}" => {
-            Some("checklist.task.row.delete")
-        }
-        "checklist.task.row.style.set" | "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style" => {
-            Some("checklist.task.row.style.set")
-        }
-        "checklist.task.cell.set" | "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}" => {
-            Some("checklist.task.cell.set")
-        }
-        _ => None,
-    }
-}
-
-fn mission_command_type_is_query(command_type: &str) -> bool {
+    let entry = entry_for_operation_or_alias(operation)?;
     matches!(
-        command_type,
-        "mission.events.list"
-            | "topic.list"
-            | "mission.marker.list"
-            | "mission.zone.list"
-            | "mission.registry.mission.get"
-            | "mission.registry.mission.list"
-            | "mission.registry.mission_change.list"
-            | "mission.registry.log_entry.list"
-            | "mission.registry.team.get"
-            | "mission.registry.team.list"
-            | "mission.registry.team_member.get"
-            | "mission.registry.team_member.list"
-            | "mission.registry.asset.get"
-            | "mission.registry.asset.list"
-            | "mission.registry.skill.list"
-            | "mission.registry.team_member_skill.list"
-            | "mission.registry.task_skill_requirement.list"
-            | "mission.registry.assignment.list"
-            | "checklist.template.list"
-            | "checklist.template.get"
-            | "checklist.list.active"
-            | "checklist.get"
+        entry.transport_variant,
+        ClientTransportVariant::MissionSync | ClientTransportVariant::Checklist
     )
+    .then_some(entry.operation)
 }
 
 fn legacy_command_name_for_operation(operation: &str) -> Option<&'static str> {
-    match operation {
-        "Help" | "GET /Help" => Some("Help"),
-        "Examples" | "GET /Examples" => Some("Examples"),
-        "join" | "POST /RCH" | "POST /RTH" => Some("join"),
-        "leave" | "PUT /RCH" | "PUT /RTH" => Some("leave"),
-        "ListClients" | "GET /Client" => Some("ListClients"),
-        "getAppInfo" | "GET /api/v1/app/info" => Some("getAppInfo"),
-        "ListFiles" | "GET /File" => Some("ListFiles"),
-        "RetrieveFile" | "GET /File/{id}" | "GET /File/{id}/raw" => Some("RetrieveFile"),
-        "ListImages" | "GET /Image" => Some("ListImages"),
-        "RetrieveImage" | "GET /Image/{id}" | "GET /Image/{id}/raw" => Some("RetrieveImage"),
-        "ListTopic" | "GET /Topic" => Some("ListTopic"),
-        "CreateTopic" | "POST /Topic" => Some("CreateTopic"),
-        "RetrieveTopic" | "GET /Topic/{id}" => Some("RetrieveTopic"),
-        "DeleteTopic" | "DELETE /Topic" => Some("DeleteTopic"),
-        "PatchTopic" | "PATCH /Topic" => Some("PatchTopic"),
-        "SubscribeTopic" | "POST /Topic/Subscribe" => Some("SubscribeTopic"),
-        "AssociateTopicID" | "POST /Topic/Associate" => Some("AssociateTopicID"),
-        "ListSubscriber" | "GET /Subscriber" => Some("ListSubscriber"),
-        "CreateSubscriber" | "POST /Subscriber" => Some("CreateSubscriber"),
-        "AddSubscriber" | "POST /Subscriber/Add" => Some("AddSubscriber"),
-        "RetrieveSubscriber" | "GET /Subscriber/{id}" => Some("RetrieveSubscriber"),
-        "DeleteSubscriber" | "DELETE /Subscriber" => Some("DeleteSubscriber"),
-        "RemoveSubscriber" => Some("RemoveSubscriber"),
-        "PatchSubscriber" | "PATCH /Subscriber" => Some("PatchSubscriber"),
-        "GetStatus" | "GET /Status" => Some("GetStatus"),
-        "ListEvents" | "GET /Events" => Some("ListEvents"),
-        "ListIdentities" | "GET /Identities" => Some("ListIdentities"),
-        "BanIdentity" | "POST /Client/{id}/Ban" => Some("BanIdentity"),
-        "UnbanIdentity" | "POST /Client/{id}/Unban" => Some("UnbanIdentity"),
-        "BlackholeIdentity" | "POST /Client/{id}/Blackhole" => Some("BlackholeIdentity"),
-        "GetConfig" | "GET /Config" => Some("GetConfig"),
-        "ValidateConfig" | "POST /Config/Validate" => Some("ValidateConfig"),
-        "ApplyConfig" | "PUT /Config" => Some("ApplyConfig"),
-        "RollbackConfig" | "POST /Config/Rollback" => Some("RollbackConfig"),
-        "FlushTelemetry" | "POST /Command/FlushTelemetry" => Some("FlushTelemetry"),
-        "ReloadConfig" | "POST /Command/ReloadConfig" => Some("ReloadConfig"),
-        "DumpRouting" | "GET /Command/DumpRouting" => Some("DumpRouting"),
-        "TelemetryRequest" | "GET /Telemetry" => Some("TelemetryRequest"),
-        _ => None,
-    }
+    let entry = entry_for_operation_or_alias(operation)?;
+    matches!(
+        entry.transport_variant,
+        ClientTransportVariant::Legacy | ClientTransportVariant::Telemetry
+    )
+    .then_some(entry.operation)
 }
 
 fn expected_kind_for_operation(operation: &str) -> Option<EnvelopeKind> {
-    if let Some(command_type) = mission_command_type_for_operation(operation) {
-        return Some(if mission_command_type_is_query(command_type) {
-            EnvelopeKind::Query
-        } else {
-            EnvelopeKind::Command
-        });
-    }
-
-    if let Some(command_name) = legacy_command_name_for_operation(operation) {
-        return Some(match command_name {
-            "Help" | "Examples" | "ListClients" | "getAppInfo" | "ListFiles" | "RetrieveFile"
-            | "ListImages" | "RetrieveImage" | "ListTopic" | "RetrieveTopic" | "ListSubscriber"
-            | "RetrieveSubscriber" | "GetStatus" | "ListEvents" | "ListIdentities"
-            | "GetConfig" | "DumpRouting" | "TelemetryRequest" => EnvelopeKind::Query,
-            _ => EnvelopeKind::Command,
-        });
-    }
-
-    is_generated_client_operation(operation).then(|| {
-        if operation.starts_with("GET ") {
-            EnvelopeKind::Query
-        } else {
-            EnvelopeKind::Command
-        }
+    entry_for_operation_or_alias(operation).map(|entry| match entry.kind {
+        ClientOperationKind::Query => EnvelopeKind::Query,
+        ClientOperationKind::Command => EnvelopeKind::Command,
     })
 }
 
 fn lxmf_encoding_for_envelope(envelope: &MessageEnvelope) -> Option<LxmfEnvelopeEncoding> {
-    if envelope.r#type == "POST /Message"
-        && payload_string(
-            &envelope.payload,
-            &[
-                "Destination",
-                "destination",
-                "destinationHex",
-                "destination_hex",
-            ],
-        )
-        .is_none()
-    {
-        return Some(LxmfEnvelopeEncoding::RelayMessage);
+    let entry = entry_for_operation_or_alias(&envelope.r#type)?;
+    match entry.transport_variant {
+        ClientTransportVariant::Legacy => Some(LxmfEnvelopeEncoding::Legacy),
+        ClientTransportVariant::Telemetry => Some(LxmfEnvelopeEncoding::Telemetry),
+        ClientTransportVariant::MissionSync | ClientTransportVariant::Checklist => {
+            Some(LxmfEnvelopeEncoding::FieldCommands)
+        }
     }
-
-    let operation = envelope.r#type.as_str();
-    if mission_command_type_for_operation(operation).is_some() {
-        return Some(LxmfEnvelopeEncoding::MissionSync);
-    }
-    if legacy_command_name_for_operation(operation).is_some() {
-        return Some(LxmfEnvelopeEncoding::Legacy);
-    }
-    None
 }
 
 fn payload_map(payload: &serde_json::Value) -> Option<&serde_json::Map<String, serde_json::Value>> {
@@ -1093,51 +819,6 @@ fn build_legacy_command_payload(
     Ok(serde_json::Value::Object(payload))
 }
 
-fn build_relay_message_fields(envelope: &MessageEnvelope, thread_id: &str) -> RmpValue {
-    let mut entries = vec![(
-        RmpValue::Integer(LXMF_FIELD_THREAD.into()),
-        RmpValue::from(thread_id.to_string()),
-    )];
-
-    if let Some(topic_id) = payload_string(
-        &envelope.payload,
-        &["TopicID", "topic_id", "topicId", "topic", "Topic"],
-    ) {
-        entries.push((RmpValue::from("TopicID"), RmpValue::from(topic_id)));
-    }
-
-    RmpValue::Map(entries)
-}
-
-fn build_chat_send_result_payload(envelope: &MessageEnvelope, sent: bool) -> serde_json::Value {
-    serde_json::json!({
-        "local_message_id": payload_string(
-            &envelope.payload,
-            &["local_message_id", "localMessageId", "message_id", "messageId"],
-        )
-        .or_else(|| envelope.correlation_id.clone())
-        .unwrap_or_else(|| envelope.message_id.clone()),
-        "sent": sent,
-        "content": payload_string(
-            &envelope.payload,
-            &["content", "body", "message", "text"],
-        )
-        .unwrap_or_default(),
-        "destination": payload_string(
-            &envelope.payload,
-            &["Destination", "destination", "destinationHex", "destination_hex"],
-        ),
-        "topic_id": payload_string(
-            &envelope.payload,
-            &["TopicID", "topic_id", "topicId", "topic", "Topic"],
-        ),
-    })
-}
-
-fn relay_message_content(envelope: &MessageEnvelope) -> Result<String, NodeError> {
-    require_payload_string(&envelope.payload, &["content", "body", "message", "text"])
-}
-
 fn lxmf_title_for_operation(operation: &str) -> String {
     if let Some(command_name) = legacy_command_name_for_operation(operation) {
         return command_name.to_string();
@@ -1171,6 +852,67 @@ fn build_thread_context_fields(thread_id: &str) -> RmpValue {
         RmpValue::Integer(LXMF_FIELD_THREAD.into()),
         RmpValue::from(thread_id.to_string()),
     )])
+}
+
+fn normalize_chat_send_request(
+    config: &NodeConfig,
+    request_json: &str,
+) -> Result<ChatSendRequest, NodeError> {
+    let parsed: ChatSendRequest =
+        serde_json::from_str(request_json).map_err(|_| NodeError::InvalidConfig {})?;
+    let content = parsed.content.trim().to_string();
+    if content.is_empty() {
+        return Err(NodeError::InvalidConfig {});
+    }
+
+    let destination = match normalize_optional_string(parsed.destination) {
+        Some(explicit) => normalize_hex_32(&explicit).ok_or(NodeError::InvalidConfig {})?,
+        None => config
+            .hub_identity_hash
+            .as_deref()
+            .and_then(normalize_hex_32)
+            .ok_or(NodeError::InvalidConfig {})?,
+    };
+    let topic_id = normalize_optional_string(parsed.topic_id);
+    let local_message_id = normalize_optional_string(parsed.local_message_id)
+        .unwrap_or_else(|| create_runtime_message_id("chat"));
+
+    Ok(ChatSendRequest {
+        content,
+        destination: Some(destination),
+        local_message_id: Some(local_message_id),
+        topic_id,
+    })
+}
+
+fn build_chat_message_fields(topic_id: Option<&str>, local_message_id: &str) -> RmpValue {
+    let mut fields = vec![
+        (
+            RmpValue::Integer(LXMF_FIELD_THREAD.into()),
+            RmpValue::from(local_message_id.to_string()),
+        ),
+        (
+            RmpValue::from("local_message_id".to_string()),
+            RmpValue::from(local_message_id.to_string()),
+        ),
+    ];
+
+    if let Some(topic_id) = topic_id.map(str::trim).filter(|value| !value.is_empty()) {
+        fields.push((
+            RmpValue::Integer(LXMF_FIELD_GROUP.into()),
+            RmpValue::from(topic_id.to_string()),
+        ));
+        fields.push((
+            RmpValue::from("topic_id".to_string()),
+            RmpValue::from(topic_id.to_string()),
+        ));
+        fields.push((
+            RmpValue::from("TopicID".to_string()),
+            RmpValue::from(topic_id.to_string()),
+        ));
+    }
+
+    RmpValue::Map(fields)
 }
 
 fn build_escape_prefixed_command_text(command: &serde_json::Value) -> String {
@@ -1525,6 +1267,180 @@ async fn send_lxmf_request_message(
     }
 }
 
+fn node_error_from_response_envelope(response: &MessageEnvelope) -> NodeError {
+    let payload = response.payload.as_object();
+    let status = payload
+        .and_then(|entry| entry.get("status"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    let reason = payload
+        .and_then(|entry| entry.get("reason"))
+        .and_then(serde_json::Value::as_str)
+        .map(str::trim)
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+
+    if status == "timeout" || reason.contains("timeout") {
+        NodeError::Timeout {}
+    } else {
+        NodeError::NetworkError {}
+    }
+}
+
+async fn ensure_hub_joined_for_chat(
+    config: &NodeConfig,
+    state: &NodeRuntimeState,
+    bus: &EventBus,
+    destination_hex: &str,
+) -> Result<(), NodeError> {
+    if !matches!(config.hub_mode, HubMode::RchLxmf {}) {
+        return Ok(());
+    }
+
+    let Some(hub_hex) = config
+        .hub_identity_hash
+        .as_deref()
+        .and_then(normalize_hex_32)
+    else {
+        return Ok(());
+    };
+
+    if destination_hex != hub_hex {
+        return Ok(());
+    }
+
+    {
+        let joined = state.hub_session_joined.lock().await;
+        if *joined {
+            return Ok(());
+        }
+    }
+
+    let join_message_id = create_runtime_message_id("join");
+    let join_envelope = MessageEnvelope {
+        api_version: "1.0".to_string(),
+        message_id: join_message_id.clone(),
+        correlation_id: Some(join_message_id.clone()),
+        kind: EnvelopeKind::Command,
+        r#type: "join".to_string(),
+        issuer: "mobile-runtime".to_string(),
+        issued_at: now_iso(),
+        payload: serde_json::json!({}),
+    };
+
+    let result = execute_envelope_over_lxmf(config, state, bus, &join_envelope).await?;
+    if let Some(event_type) = result.mission_event_type.clone() {
+        let payload = result
+            .mission_event_payload
+            .clone()
+            .unwrap_or_else(|| result.response_envelope.payload.clone());
+        emit_domain_event(
+            bus,
+            &event_type,
+            payload,
+            result.response_envelope.correlation_id.clone(),
+        );
+    }
+
+    if matches!(result.response_envelope.kind, EnvelopeKind::Error) {
+        return Err(node_error_from_response_envelope(&result.response_envelope));
+    }
+
+    let mut joined = state.hub_session_joined.lock().await;
+    *joined = true;
+    Ok(())
+}
+
+async fn send_chat_message_over_lxmf(
+    config: &NodeConfig,
+    state: &NodeRuntimeState,
+    bus: &EventBus,
+    request_json: &str,
+) -> Result<String, NodeError> {
+    let request = normalize_chat_send_request(config, request_json)?;
+    let destination_hex = request
+        .destination
+        .clone()
+        .ok_or(NodeError::InvalidConfig {})?;
+    ensure_hub_joined_for_chat(config, state, bus, &destination_hex).await?;
+
+    let destination = parse_address_hash(&destination_hex)?;
+    let mut source_hash = [0u8; 16];
+    source_hash.copy_from_slice(
+        state
+            .lxmf_destination
+            .lock()
+            .await
+            .desc
+            .address_hash
+            .as_slice(),
+    );
+    let mut destination_hash = [0u8; 16];
+    destination_hash.copy_from_slice(destination.as_slice());
+
+    let local_message_id = request
+        .local_message_id
+        .clone()
+        .ok_or(NodeError::InvalidConfig {})?;
+    let topic_id = request.topic_id.clone();
+    let issued_at = now_iso();
+
+    let mut message = LxmfMessage::new();
+    message.source_hash = Some(source_hash);
+    message.destination_hash = Some(destination_hash);
+    message.set_title_from_string("R3AKT Chat");
+    message.set_content_from_string(&request.content);
+    message.fields = Some(build_chat_message_fields(topic_id.as_deref(), &local_message_id));
+    debug_dump_lxmf_message("outbound", "message.send", &message);
+
+    let wire = message
+        .to_wire(Some(&state.identity))
+        .map_err(|_| NodeError::InternalError {})?;
+    let packet_payload = strip_destination_prefix(&wire, &destination_hash).to_vec();
+    let outcome =
+        send_transport_packet_with_path_retry(&state.transport, destination, &packet_payload).await;
+    bus.emit(NodeEvent::PacketSent {
+        destination_hex: destination_hex.clone(),
+        bytes: packet_payload,
+        outcome: send_outcome_to_udl(outcome),
+    });
+
+    if !matches!(
+        outcome,
+        RnsSendOutcome::SentDirect | RnsSendOutcome::SentBroadcast
+    ) {
+        return Err(NodeError::NetworkError {});
+    }
+
+    emit_domain_event(
+        bus,
+        "message.sent",
+        serde_json::json!({
+            "local_message_id": local_message_id.clone(),
+            "content": request.content.clone(),
+            "destination": destination_hex.clone(),
+            "topic_id": topic_id.clone(),
+            "thread_id": local_message_id.clone(),
+            "group_id": topic_id.clone(),
+            "issued_at": issued_at.clone(),
+            "sent": true,
+            "direction": "outbound",
+        }),
+        Some(local_message_id.clone()),
+    );
+
+    serde_json::to_string(&ChatSendResult {
+        local_message_id,
+        sent: true,
+        content: request.content,
+        destination: Some(destination_hex),
+        topic_id,
+    })
+    .map_err(|_| NodeError::InternalError {})
+}
+
 async fn await_lxmf_execution_result(
     state: &NodeRuntimeState,
     _hub: AddressHash,
@@ -1594,7 +1510,10 @@ async fn await_lxmf_execution_result(
                     return Ok(Some(result));
                 }
 
-                if matches!(encoding, LxmfEnvelopeEncoding::Legacy) {
+                if matches!(
+                    encoding,
+                    LxmfEnvelopeEncoding::Legacy | LxmfEnvelopeEncoding::Telemetry
+                ) {
                     if let Some(result) = decode_legacy_reply(envelope, &reply, correlation_id) {
                         return Ok(Some(result));
                     }
@@ -1645,7 +1564,10 @@ async fn await_lxmf_execution_result(
                     return Ok(Some(result));
                 }
 
-                if matches!(encoding, LxmfEnvelopeEncoding::Legacy) {
+                if matches!(
+                    encoding,
+                    LxmfEnvelopeEncoding::Legacy | LxmfEnvelopeEncoding::Telemetry
+                ) {
                     if let Some(result) = decode_legacy_reply(envelope, &reply, correlation_id) {
                         return Ok(Some(result));
                     }
@@ -1744,7 +1666,7 @@ async fn execute_envelope_over_lxmf(
     let lxmf_title = lxmf_title_for_operation(&envelope.r#type);
 
     match encoding {
-        LxmfEnvelopeEncoding::MissionSync => {
+        LxmfEnvelopeEncoding::FieldCommands => {
             let fields = build_mission_sync_command_fields(envelope, &source_identity)?;
             send_lxmf_request_message(
                 state,
@@ -1769,7 +1691,7 @@ async fn execute_envelope_over_lxmf(
                 return Ok(result);
             }
         }
-        LxmfEnvelopeEncoding::Legacy => {
+        LxmfEnvelopeEncoding::Legacy | LxmfEnvelopeEncoding::Telemetry => {
             let command = build_legacy_command_payload(envelope)?;
             let fields = build_legacy_command_fields_from_payload(&command, &correlation);
             send_lxmf_request_message(state, bus, hub_desc, &lxmf_title, None, Some(fields))
@@ -1812,35 +1734,6 @@ async fn execute_envelope_over_lxmf(
                 return Ok(result);
             }
         }
-        LxmfEnvelopeEncoding::RelayMessage => {
-            let content = relay_message_content(envelope)?;
-            let fields = build_relay_message_fields(envelope, &correlation);
-            send_lxmf_request_message(
-                state,
-                bus,
-                hub_desc,
-                "message",
-                Some(&content),
-                Some(fields),
-            )
-            .await?;
-
-            let payload = build_chat_send_result_payload(envelope, true);
-            return Ok(LxmfExecutionResult {
-                response_envelope: MessageEnvelope {
-                    api_version: envelope.api_version.clone(),
-                    message_id: envelope.message_id.clone(),
-                    correlation_id: Some(correlation),
-                    kind: EnvelopeKind::Result,
-                    r#type: envelope.r#type.clone(),
-                    issuer: "reticulum".to_string(),
-                    issued_at: now_iso(),
-                    payload: payload.clone(),
-                },
-                mission_event_type: Some("message.sent".to_string()),
-                mission_event_payload: Some(payload),
-            });
-        }
     }
 
     Ok(LxmfExecutionResult {
@@ -1878,9 +1771,10 @@ fn validate_envelope(mut envelope: MessageEnvelope) -> Result<MessageEnvelope, N
     if !matches!(envelope.kind, EnvelopeKind::Command | EnvelopeKind::Query) {
         return Err(NodeError::InvalidConfig {});
     }
-    if !is_allowed_operation(&envelope.r#type) {
+    let Some(entry) = entry_for_operation_or_alias(&envelope.r#type) else {
         return Err(NodeError::InvalidConfig {});
-    }
+    };
+    envelope.r#type = entry.operation.to_string();
     Ok(envelope)
 }
 
@@ -1975,6 +1869,10 @@ pub enum Command {
         envelope_json: String,
         resp: cb::Sender<Result<String, NodeError>>,
     },
+    SendChatMessage {
+        request_json: String,
+        resp: cb::Sender<Result<String, NodeError>>,
+    },
 }
 
 #[derive(Clone)]
@@ -1986,6 +1884,7 @@ struct NodeRuntimeState {
     known_destinations: Arc<TokioMutex<HashMap<AddressHash, DestinationDesc>>>,
     seen_announces: Arc<TokioMutex<HashSet<AddressHash>>>,
     hub_reply_identity_announced: Arc<TokioMutex<bool>>,
+    hub_session_joined: Arc<TokioMutex<bool>>,
 }
 
 fn destination_desc_for_expected_name(
@@ -2064,7 +1963,10 @@ async fn ensure_hub_can_reply(state: &NodeRuntimeState, hub: AddressHash) -> Res
     }
 
     let mut rx = state.transport.recv_announces().await;
-    state.transport.send_announce(&state.app_destination, None).await;
+    state
+        .transport
+        .send_announce(&state.app_destination, None)
+        .await;
     state
         .transport
         .send_announce(&state.lxmf_destination, None)
@@ -2103,7 +2005,10 @@ async fn ensure_hub_can_reply(state: &NodeRuntimeState, hub: AddressHash) -> Res
         }
 
         if last_reannounce.elapsed() >= Duration::from_secs(5) {
-            state.transport.send_announce(&state.app_destination, None).await;
+            state
+                .transport
+                .send_announce(&state.app_destination, None)
+                .await;
             state
                 .transport
                 .send_announce(&state.lxmf_destination, None)
@@ -2307,6 +2212,7 @@ pub async fn run_node(
         known_destinations: known_destinations.clone(),
         seen_announces: seen_announces.clone(),
         hub_reply_identity_announced: Arc::new(TokioMutex::new(false)),
+        hub_session_joined: Arc::new(TokioMutex::new(false)),
     };
 
     if let Ok(mut guard) = status.lock() {
@@ -2609,6 +2515,11 @@ pub async fn run_node(
                 .await;
                 let _ = resp.send(result);
             }
+            Command::SendChatMessage { request_json, resp } => {
+                let result =
+                    send_chat_message_over_lxmf(&config, &state, &bus, &request_json).await;
+                let _ = resp.send(result);
+            }
             Command::ExecuteEnvelope {
                 envelope_json,
                 resp,
@@ -2751,12 +2662,14 @@ pub fn load_or_create_identity(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::generated::client_operations::entry_for_operation;
 
     fn allowed_operation() -> String {
-        CLIENT_OPERATION_KEYS
-            .first()
-            .map(|value| (*value).to_string())
-            .unwrap_or_else(|| "GET /Status".to_string())
+        if entry_for_operation("mission.join").is_some() {
+            "mission.join".to_string()
+        } else {
+            "GetStatus".to_string()
+        }
     }
 
     const DOCUMENTED_LEGACY_QUERY_COMMANDS: &[&str] = &[
@@ -2929,7 +2842,7 @@ mod tests {
     }
 
     #[test]
-    fn validate_envelope_accepts_direct_lxmf_command_name() {
+    fn validate_envelope_accepts_supported_southbound_command_name() {
         let envelope = MessageEnvelope {
             api_version: "1.0".to_string(),
             message_id: "msg-join-1".to_string(),
@@ -2943,6 +2856,43 @@ mod tests {
 
         let validated = validate_envelope(envelope).expect("direct command should validate");
         assert_eq!(validated.r#type, "join");
+    }
+
+    #[test]
+    fn validate_envelope_normalizes_http_aliases_to_canonical_operations() {
+        for (operation, kind, expected) in [
+            ("POST /RCH", EnvelopeKind::Command, "mission.join"),
+            ("GET /Telemetry", EnvelopeKind::Query, "TelemetryRequest"),
+            (
+                "POST /Message",
+                EnvelopeKind::Command,
+                "mission.message.send",
+            ),
+            (
+                "POST /Topic/Subscribe",
+                EnvelopeKind::Command,
+                "topic.subscribe",
+            ),
+            (
+                "GET /checklists/templates",
+                EnvelopeKind::Query,
+                "checklist.template.list",
+            ),
+        ] {
+            let envelope = MessageEnvelope {
+                api_version: "1.0".to_string(),
+                message_id: format!("msg-{}", expected.replace('.', "-")),
+                correlation_id: None,
+                kind,
+                r#type: operation.to_string(),
+                issuer: "ui".to_string(),
+                issued_at: "2026-01-01T00:00:00Z".to_string(),
+                payload: serde_json::json!({}),
+            };
+
+            let validated = validate_envelope(envelope).expect("alias should validate");
+            assert_eq!(validated.r#type, expected);
+        }
     }
 
     #[test]
@@ -3006,60 +2956,70 @@ mod tests {
     }
 
     #[test]
-    fn session_http_aliases_use_mission_sync_command_mapping() {
-        assert_eq!(mission_command_type_for_operation("mission.join"), Some("mission.join"));
+    fn mission_sync_aliases_resolve_to_structured_command_types() {
         assert_eq!(
-            mission_command_type_for_operation("mission.leave"),
+            mission_command_type_for_operation("POST /RCH"),
+            Some("mission.join")
+        );
+        assert_eq!(
+            mission_command_type_for_operation("PUT /RCH"),
             Some("mission.leave")
+        );
+        assert_eq!(
+            mission_command_type_for_operation("POST /Topic/Subscribe"),
+            Some("topic.subscribe")
         );
     }
 
     #[test]
-    fn canonical_join_and_legacy_join_alias_use_expected_encodings() {
-        let join = MessageEnvelope {
-            api_version: "1.0".to_string(),
-            message_id: "msg-join-mission-sync".to_string(),
-            correlation_id: Some("corr-join-mission-sync".to_string()),
-            kind: EnvelopeKind::Command,
-            r#type: "mission.join".to_string(),
-            issuer: "ui".to_string(),
-            issued_at: "2026-01-01T00:00:00Z".to_string(),
-            payload: serde_json::json!({ "identity": "abcd" }),
-        };
-        assert_eq!(
-            lxmf_encoding_for_envelope(&join),
-            Some(LxmfEnvelopeEncoding::MissionSync)
-        );
+    fn transport_selection_matches_command_catalog() {
+        for (operation, kind, expected) in [
+            ("Help", EnvelopeKind::Query, LxmfEnvelopeEncoding::Legacy),
+            (
+                "TelemetryRequest",
+                EnvelopeKind::Query,
+                LxmfEnvelopeEncoding::Telemetry,
+            ),
+            (
+                "mission.message.send",
+                EnvelopeKind::Command,
+                LxmfEnvelopeEncoding::FieldCommands,
+            ),
+            (
+                "topic.subscribe",
+                EnvelopeKind::Command,
+                LxmfEnvelopeEncoding::FieldCommands,
+            ),
+            (
+                "checklist.template.list",
+                EnvelopeKind::Query,
+                LxmfEnvelopeEncoding::FieldCommands,
+            ),
+            (
+                "POST /RCH",
+                EnvelopeKind::Command,
+                LxmfEnvelopeEncoding::FieldCommands,
+            ),
+        ] {
+            let envelope = MessageEnvelope {
+                api_version: "1.0".to_string(),
+                message_id: format!(
+                    "msg-{}",
+                    operation
+                        .replace('/', "-")
+                        .replace(' ', "-")
+                        .replace('.', "-")
+                ),
+                correlation_id: Some("corr-transport".to_string()),
+                kind,
+                r#type: operation.to_string(),
+                issuer: "ui".to_string(),
+                issued_at: "2026-01-01T00:00:00Z".to_string(),
+                payload: serde_json::json!({ "identity": "abcd", "topic_id": "ops.alpha" }),
+            };
 
-        let legacy_join_alias = MessageEnvelope {
-            api_version: "1.0".to_string(),
-            message_id: "msg-join-legacy".to_string(),
-            correlation_id: Some("corr-join-legacy".to_string()),
-            kind: EnvelopeKind::Command,
-            r#type: "POST /RCH".to_string(),
-            issuer: "ui".to_string(),
-            issued_at: "2026-01-01T00:00:00Z".to_string(),
-            payload: serde_json::json!({ "identity": "abcd" }),
-        };
-        assert_eq!(
-            lxmf_encoding_for_envelope(&legacy_join_alias),
-            Some(LxmfEnvelopeEncoding::Legacy)
-        );
-
-        let subscribe = MessageEnvelope {
-            api_version: "1.0".to_string(),
-            message_id: "msg-topic-subscribe".to_string(),
-            correlation_id: Some("corr-topic-subscribe".to_string()),
-            kind: EnvelopeKind::Command,
-            r#type: "POST /Topic/Subscribe".to_string(),
-            issuer: "ui".to_string(),
-            issued_at: "2026-01-01T00:00:00Z".to_string(),
-            payload: serde_json::json!({ "topic_id": "ops.alpha" }),
-        };
-        assert_eq!(
-            lxmf_encoding_for_envelope(&subscribe),
-            Some(LxmfEnvelopeEncoding::MissionSync)
-        );
+            assert_eq!(lxmf_encoding_for_envelope(&envelope), Some(expected));
+        }
     }
 
     #[test]
@@ -3131,13 +3091,13 @@ mod tests {
     }
 
     #[test]
-    fn build_legacy_command_fields_map_topic_create_payload() {
+    fn build_legacy_command_fields_map_create_topic_payload() {
         let envelope = MessageEnvelope {
             api_version: "1.0".to_string(),
             message_id: "msg-legacy-topic-1".to_string(),
             correlation_id: Some("corr-legacy-topic-1".to_string()),
             kind: EnvelopeKind::Command,
-            r#type: "POST /Topic".to_string(),
+            r#type: "CreateTopic".to_string(),
             issuer: "ui".to_string(),
             issued_at: "2026-03-06T00:00:00Z".to_string(),
             payload: serde_json::json!({
@@ -3175,42 +3135,13 @@ mod tests {
     }
 
     #[test]
-    fn build_relay_message_fields_include_topic_id() {
-        let envelope = MessageEnvelope {
-            api_version: "1.0".to_string(),
-            message_id: "msg-relay-1".to_string(),
-            correlation_id: Some("corr-relay-1".to_string()),
-            kind: EnvelopeKind::Command,
-            r#type: "POST /Message".to_string(),
-            issuer: "ui".to_string(),
-            issued_at: "2026-03-06T00:00:00Z".to_string(),
-            payload: serde_json::json!({
-                "content": "hello",
-                "topic_id": "ops.alpha",
-            }),
-        };
-
-        let fields = build_relay_message_fields(&envelope, "corr-relay-1");
-        assert_eq!(
-            field_json_from_rmpv(&fields, LXMF_FIELD_THREAD),
-            Some(serde_json::json!("corr-relay-1"))
-        );
-        assert_eq!(field_json_from_rmpv(&fields, LXMF_FIELD_GROUP), None);
-        assert_eq!(field_json_from_rmpv(&fields, LXMF_FIELD_COMMANDS), None);
-        assert_eq!(
-            rmpv_to_json(&fields).get("TopicID").cloned(),
-            Some(serde_json::json!("ops.alpha"))
-        );
-    }
-
-    #[test]
     fn build_legacy_command_fields_keep_numeric_telemetry_key() {
         let envelope = MessageEnvelope {
             api_version: "1.0".to_string(),
             message_id: "msg-legacy-telemetry-1".to_string(),
             correlation_id: Some("corr-legacy-telemetry-1".to_string()),
             kind: EnvelopeKind::Query,
-            r#type: "GET /Telemetry".to_string(),
+            r#type: "TelemetryRequest".to_string(),
             issuer: "ui".to_string(),
             issued_at: "2026-03-06T00:00:00Z".to_string(),
             payload: serde_json::json!({
@@ -3353,11 +3284,13 @@ mod tests {
             )),
         );
 
-        assert_eq!(resolved.identity.to_hex_string(), app_desc.identity.to_hex_string());
+        assert_eq!(
+            resolved.identity.to_hex_string(),
+            app_desc.identity.to_hex_string()
+        );
         assert_eq!(
             resolved.name.as_name_hash_slice(),
-            DestinationName::new(LXMF_DELIVERY_NAME.0, LXMF_DELIVERY_NAME.1)
-                .as_name_hash_slice()
+            DestinationName::new(LXMF_DELIVERY_NAME.0, LXMF_DELIVERY_NAME.1).as_name_hash_slice()
         );
         assert_ne!(resolved.address_hash, app_desc.address_hash);
     }
@@ -3369,7 +3302,7 @@ mod tests {
             message_id: "msg-chat-1".to_string(),
             correlation_id: Some("corr-chat-1".to_string()),
             kind: EnvelopeKind::Command,
-            r#type: "POST /Message".to_string(),
+            r#type: "mission.message.send".to_string(),
             issuer: "ui".to_string(),
             issued_at: "2026-03-05T00:00:00Z".to_string(),
             payload: serde_json::json!({
@@ -3434,7 +3367,7 @@ mod tests {
             message_id: "msg-legacy-1".to_string(),
             correlation_id: Some("corr-legacy-1".to_string()),
             kind: EnvelopeKind::Query,
-            r#type: "GET /Topic".to_string(),
+            r#type: "ListTopic".to_string(),
             issuer: "ui".to_string(),
             issued_at: "2026-03-06T00:00:00Z".to_string(),
             payload: serde_json::json!({}),
@@ -3502,7 +3435,7 @@ mod tests {
             message_id: "msg-telemetry-1".to_string(),
             correlation_id: Some("corr-telemetry-1".to_string()),
             kind: EnvelopeKind::Query,
-            r#type: "GET /Telemetry".to_string(),
+            r#type: "TelemetryRequest".to_string(),
             issuer: "ui".to_string(),
             issued_at: "2026-03-06T00:00:00Z".to_string(),
             payload: serde_json::json!({ "1": 0 }),
@@ -3590,5 +3523,54 @@ mod tests {
         );
         assert_eq!(payload.get("group_id"), Some(&serde_json::json!("group-1")));
         assert_eq!(payload.get("event_id"), Some(&serde_json::json!("relay-1")));
+    }
+
+    #[test]
+    fn normalize_chat_send_request_defaults_to_configured_hub_destination() {
+        let config = NodeConfig {
+            name: "test-node".to_string(),
+            storage_dir: None,
+            tcp_clients: vec![],
+            broadcast: true,
+            announce_interval_seconds: 30,
+            announce_capabilities: "R3AKT".to_string(),
+            hub_mode: HubMode::RchLxmf {},
+            hub_identity_hash: Some("c4de028671f01d9649aabb85e73b50a4".to_string()),
+            hub_api_base_url: None,
+            hub_api_key: None,
+            hub_refresh_interval_seconds: 300,
+        };
+
+        let request = normalize_chat_send_request(
+            &config,
+            r#"{"content":"  Hello from R3AKT  ","topic_id":"ops.alerts"}"#,
+        )
+        .expect("normalized chat send request");
+
+        assert_eq!(request.content, "Hello from R3AKT");
+        assert_eq!(
+            request.destination.as_deref(),
+            Some("c4de028671f01d9649aabb85e73b50a4")
+        );
+        assert_eq!(request.topic_id.as_deref(), Some("ops.alerts"));
+        assert!(
+            request
+                .local_message_id
+                .as_deref()
+                .is_some_and(|value| value.starts_with("chat-"))
+        );
+    }
+
+    #[test]
+    fn build_chat_message_fields_carries_thread_and_topic_aliases() {
+        let json = rmpv_to_json(&build_chat_message_fields(Some("ops.alerts"), "loc-1"));
+        assert_eq!(json.get("8"), Some(&serde_json::json!("loc-1")));
+        assert_eq!(json.get("11"), Some(&serde_json::json!("ops.alerts")));
+        assert_eq!(json.get("topic_id"), Some(&serde_json::json!("ops.alerts")));
+        assert_eq!(json.get("TopicID"), Some(&serde_json::json!("ops.alerts")));
+        assert_eq!(
+            json.get("local_message_id"),
+            Some(&serde_json::json!("loc-1"))
+        );
     }
 }

@@ -380,6 +380,46 @@ public class ReticulumNodePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void sendChatMessage(PluginCall call) {
+        String requestJson = call.getString("requestJson");
+        if (requestJson == null || requestJson.isEmpty()) {
+            rejectWithCode(call, "InvalidArgs", "requestJson is required.");
+            return;
+        }
+
+        ReticulumNodeService service = requireService(call, false, "ServiceUnavailable", "Node service is unavailable.");
+        if (service == null) {
+            return;
+        }
+
+        String resultJson;
+        try {
+            resultJson = service.sendChatMessage(requestJson);
+        } catch (UnsatisfiedLinkError linkError) {
+            Logger.error(TAG, "Native runtime linkage failed while sending chat message.", linkError);
+            rejectWithCode(
+                    call,
+                    "NativeRuntimeUnavailable",
+                    "Native runtime linkage failed while sending chat message."
+            );
+            return;
+        } catch (Throwable throwable) {
+            Logger.error(TAG, "Unexpected native chat send failure.", throwable);
+            rejectWithCode(call, "ChatSendFailed", "Failed to send chat message.");
+            return;
+        }
+
+        if (resultJson == null || resultJson.isEmpty()) {
+            rejectFromService(call, service, "ChatSendFailed", "Failed to send chat message.");
+            return;
+        }
+
+        JSObject payload = new JSObject();
+        payload.put("resultJson", resultJson);
+        call.resolve(payload);
+    }
+
+    @PluginMethod
     public void getClientOperationCatalog(PluginCall call) {
         String catalogJson = ReticulumBridge.getClientOperationCatalogJson();
         if (catalogJson == null || catalogJson.isEmpty()) {

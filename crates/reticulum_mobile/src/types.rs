@@ -128,6 +128,30 @@ pub struct MessageEnvelope {
     pub payload: serde_json::Value,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatSendRequest {
+    pub content: String,
+    #[serde(default)]
+    pub destination: Option<String>,
+    #[serde(default, alias = "local_message_id")]
+    pub local_message_id: Option<String>,
+    #[serde(default, alias = "topic_id")]
+    pub topic_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatSendResult {
+    pub local_message_id: String,
+    pub sent: bool,
+    pub content: String,
+    #[serde(default)]
+    pub destination: Option<String>,
+    #[serde(default)]
+    pub topic_id: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct NodeConfig {
     pub name: String,

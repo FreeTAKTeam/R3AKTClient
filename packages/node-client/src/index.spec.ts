@@ -7,6 +7,7 @@ import {
   MESSAGES_OPERATIONS,
   SESSION_OPERATIONS,
   type ChatEvent,
+  type ChatSendResult,
   createReticulumNodeClient,
   createRchClient,
   type DomainEventPayload,
@@ -14,6 +15,7 @@ import {
   type NodeClientEvents,
   type NodeConfig,
   type ServiceStatus,
+  type SendMessageInput,
   type NodeStatus,
   type ReticulumNodeClient,
   type RchEnvelope,
@@ -25,6 +27,7 @@ class FakeNodeClient implements ReticulumNodeClient {
   lastEnvelope: RchEnvelope<unknown> | null = null;
   allEnvelopes: RchEnvelope<unknown>[] = [];
   failExecuteCount = 0;
+  lastChatSendRequest: Record<string, unknown> | null = null;
 
   async start(_config: NodeConfig): Promise<void> {}
 
@@ -154,6 +157,36 @@ class FakeNodeClient implements ReticulumNodeClient {
     }
   }
 
+  async sendChatMessage(request: SendMessageInput): Promise<ChatSendResult> {
+    this.lastChatSendRequest = {
+      local_message_id: request.localMessageId ?? request.local_message_id,
+      content: request.content,
+      destination: request.destination,
+      topic_id: request.topicId ?? request.topic_id,
+    };
+    this.emitDomainEvent({
+      eventType: "message.sent",
+      payloadJson: JSON.stringify({
+        local_message_id: request.localMessageId ?? request.local_message_id,
+        content: request.content,
+        destination: request.destination,
+        topic_id: request.topicId ?? request.topic_id,
+        thread_id: request.localMessageId ?? request.local_message_id,
+        group_id: request.topicId ?? request.topic_id,
+        issued_at: "2026-03-06T12:00:00Z",
+        sent: true,
+      }),
+      correlationId: String(request.localMessageId ?? request.local_message_id ?? ""),
+    });
+    return {
+      localMessageId: String(request.localMessageId ?? request.local_message_id ?? "fake-chat-1"),
+      sent: true,
+      content: request.content,
+      destination: request.destination,
+      topicId: request.topicId ?? request.topic_id,
+    };
+  }
+
   async dispose(): Promise<void> {
     this.listeners.clear();
   }
@@ -176,16 +209,12 @@ describe("RchClient grouped feature API", () => {
     const fake = new FakeNodeClient();
     const client = createRchClient(fake);
 
-    const operation =
-      MESSAGES_OPERATIONS.find((candidate) => candidate.startsWith("POST")) ??
-      MESSAGES_OPERATIONS[0];
+    const operation = CHAT_MESSAGE_SEND_OPERATION;
 
     await client.messages.execute(operation, { body: "hello" });
 
     expect(fake.lastEnvelope).not.toBeNull();
-    expect(fake.lastEnvelope?.kind).toBe(
-      operation.startsWith("GET") ? "query" : "command",
-    );
+    expect(fake.lastEnvelope?.kind).toBe("command");
     expect(fake.lastEnvelope?.type).toBe(operation);
   });
 
@@ -213,6 +242,38 @@ describe("RchClient grouped feature API", () => {
     expect(fake.lastEnvelope?.payload).toEqual({ search: "alpha" });
   });
 
+  it("sends chat messages to the requested hub destination through the public chat API", async () => {
+    const fake = new FakeNodeClient();
+    const client = createRchClient(fake);
+    const hubDestination = "c4de028671f01d9649aabb85e73b50a4";
+    const topicList = await client.chat.listTopics();
+    const topicId = (
+      topicList.payload as {
+        topics?: Array<{ topic_id?: string }>;
+      }
+    ).topics?.[0]?.topic_id;
+    expect(topicId).toBeTruthy();
+
+    const jokePayload =
+      "Why do ravens make terrible field couriers? They keep cawing the punchline before they land.";
+    const localMessageId = "client-raven-joke-1";
+
+    const response = await client.chat.sendMessage({
+      content: jokePayload,
+      destination: hubDestination,
+      topic_id: topicId,
+      local_message_id: localMessageId,
+    });
+
+    expect(response.payload.sent).toBe(true);
+    expect(fake.lastChatSendRequest).toMatchObject({
+      content: jokePayload,
+      destination: hubDestination,
+      topic_id: topicId,
+      local_message_id: localMessageId,
+    });
+  });
+
   it("forwards domain events through grouped client emitter", async () => {
     const fake = new FakeNodeClient();
     const client = createRchClient(fake);
@@ -223,13 +284,13 @@ describe("RchClient grouped feature API", () => {
     });
 
     fake.emitDomainEvent({
-      eventType: "GET /Status",
+      eventType: "GetStatus",
       payloadJson: "{\"ok\":true}",
       correlationId: "corr-1",
     });
 
     expect(observed).not.toBeNull();
-    expect(observed?.eventType).toBe("GET /Status");
+    expect(observed?.eventType).toBe("GetStatus");
 
     unsubscribe();
   });
@@ -277,7 +338,7 @@ describe("RchClient grouped feature API", () => {
     unsubscribe();
   });
 
-  it("sends backend-shaped mission-sync chat payloads", async () => {
+  it("routes public chat sends through the native sender instead of executeEnvelope", async () => {
     const fake = new FakeNodeClient();
     const client = createRchClient(fake);
 
@@ -287,14 +348,26 @@ describe("RchClient grouped feature API", () => {
       topicId: "ops.alerts",
     });
 
-    expect(fake.allEnvelopes.length).toBe(1);
-    expect(fake.allEnvelopes[0]?.type).toBe("POST /Message");
-    expect(fake.allEnvelopes[0]?.payload).toMatchObject({
+    expect(fake.allEnvelopes.length).toBe(0);
+    expect(fake.lastChatSendRequest).toMatchObject({
       content: "hello",
       destination: "aa11bb22cc33dd44ee55ff66aa77bb88",
       topic_id: "ops.alerts",
     });
     expect(response.payload.sent).toBe(true);
+  });
+
+  it("normalizes ingress HTTP aliases to canonical southbound commands", async () => {
+    const fake = new FakeNodeClient();
+    const client = createRchClient(fake);
+
+    await client.execute("POST /Message" as never, { content: "hello" });
+    expect(fake.lastEnvelope?.type).toBe("mission.message.send");
+    expect(fake.lastEnvelope?.kind).toBe("command");
+
+    await client.execute("POST /RCH" as never, { identity: "abcd" });
+    expect(fake.lastEnvelope?.type).toBe("mission.join");
+    expect(fake.lastEnvelope?.kind).toBe("command");
   });
 
   it("emits ordered, de-duped chat events from domain events", async () => {

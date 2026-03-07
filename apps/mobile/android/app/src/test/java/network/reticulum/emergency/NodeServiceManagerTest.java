@@ -159,6 +159,11 @@ public class NodeServiceManagerTest {
         }
 
         @Override
+        public String sendChatMessage(String requestJson) {
+            return "{\"localMessageId\":\"test-1\",\"sent\":true,\"content\":\"hello\"}";
+        }
+
+        @Override
         public String nextEventJson(int timeoutMs) {
             try {
                 Thread.sleep(Math.min(Math.max(timeoutMs, 1), 10));

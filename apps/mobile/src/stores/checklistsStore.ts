@@ -19,6 +19,15 @@ import {
 
 type ChecklistOperation = (typeof CHECKLISTS_OPERATIONS)[number];
 
+const CHECKLIST_LIST_OPERATION: ChecklistOperation = "checklist.list.active";
+const CHECKLIST_GET_OPERATION: ChecklistOperation = "checklist.get";
+const CHECKLIST_CREATE_ONLINE_OPERATION: ChecklistOperation = "checklist.create.online";
+const CHECKLIST_CREATE_OFFLINE_OPERATION: ChecklistOperation = "checklist.create.offline";
+const CHECKLIST_UPDATE_OPERATION: ChecklistOperation = "checklist.update";
+const CHECKLIST_TASK_ADD_OPERATION: ChecklistOperation = "checklist.task.row.add";
+const CHECKLIST_TASK_STATUS_OPERATION: ChecklistOperation = "checklist.task.status.set";
+const CHECKLIST_TASK_ROW_STYLE_OPERATION: ChecklistOperation = "checklist.task.row.style.set";
+
 export interface ChecklistTaskRecord {
   taskId: string;
   title: string;
@@ -82,7 +91,15 @@ function taskTitleFromCells(value: Record<string, unknown>): string | undefined 
 
 function normalizeChecklistTaskRecord(raw: unknown): ChecklistTaskRecord | null {
   const value = asRecord(raw);
-  const taskId = readString(value, ["task_id", "taskId", "uid", "id", "row_id"]);
+  const taskId = readString(value, [
+    "task_id",
+    "taskId",
+    "task_uid",
+    "taskUid",
+    "uid",
+    "id",
+    "row_id",
+  ]);
   if (!taskId) {
     return null;
   }
@@ -114,6 +131,8 @@ function normalizeChecklistRecord(raw: unknown): ChecklistRecord | null {
   const checklistId = readString(value, [
     "checklist_id",
     "checklistId",
+    "checklist_uid",
+    "checklistUid",
     "uid",
     "id",
     "template_id",
@@ -210,7 +229,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
     const value = asRecord(payload);
     const arrayPayload = asArray(payload);
 
-    if (operation === "GET /checklists") {
+    if (operation === CHECKLIST_LIST_OPERATION) {
       const entries = (
         arrayPayload.length > 0
           ? arrayPayload
@@ -223,10 +242,10 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
     }
 
     if (
-      operation === "GET /checklists/{checklist_id}"
-      || operation === "POST /checklists"
-      || operation === "POST /checklists/offline"
-      || operation === "PATCH /checklists/{checklist_id}"
+      operation === CHECKLIST_GET_OPERATION
+      || operation === CHECKLIST_CREATE_ONLINE_OPERATION
+      || operation === CHECKLIST_CREATE_OFFLINE_OPERATION
+      || operation === CHECKLIST_UPDATE_OPERATION
     ) {
       const checklist = normalizeChecklistRecord(value.checklist ?? value);
       if (checklist) {
@@ -235,7 +254,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
       return;
     }
 
-    if (operation === "POST /checklists/{checklist_id}/tasks") {
+    if (operation === CHECKLIST_TASK_ADD_OPERATION) {
       const checklist = normalizeChecklistRecord(value.checklist ?? value);
       if (checklist) {
         upsertChecklistRecord(checklist);
@@ -259,8 +278,8 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
     }
 
     if (
-      operation === "POST /checklists/{checklist_id}/tasks/{task_id}/status"
-      || operation === "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style"
+      operation === CHECKLIST_TASK_STATUS_OPERATION
+      || operation === CHECKLIST_TASK_ROW_STYLE_OPERATION
     ) {
       const checklist = normalizeChecklistRecord(value.checklist ?? value);
       if (checklist) {
@@ -311,7 +330,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
   }
 
   async function listChecklists(payload: Record<string, unknown> = {}): Promise<void> {
-    await execute("GET /checklists", payload);
+    await execute(CHECKLIST_LIST_OPERATION, payload);
   }
 
   async function getChecklist(checklistId: string): Promise<void> {
@@ -320,13 +339,13 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
       return;
     }
 
-    await execute("GET /checklists/{checklist_id}", {
+    await execute(CHECKLIST_GET_OPERATION, {
       checklist_id: normalizedChecklistId,
     });
   }
 
   async function createChecklist(payload: Record<string, unknown>): Promise<void> {
-    await execute("POST /checklists", payload);
+    await execute(CHECKLIST_CREATE_ONLINE_OPERATION, payload);
   }
 
   async function patchChecklist(
@@ -338,7 +357,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
       return;
     }
 
-    await execute("PATCH /checklists/{checklist_id}", {
+    await execute(CHECKLIST_UPDATE_OPERATION, {
       checklist_id: normalizedChecklistId,
       ...patch,
     });
@@ -353,7 +372,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
       return;
     }
 
-    await execute("POST /checklists/{checklist_id}/tasks", {
+    await execute(CHECKLIST_TASK_ADD_OPERATION, {
       checklist_id: normalizedChecklistId,
       ...payload,
     });
@@ -370,7 +389,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
       return;
     }
 
-    await execute("POST /checklists/{checklist_id}/tasks/{task_id}/status", {
+    await execute(CHECKLIST_TASK_STATUS_OPERATION, {
       checklist_id: normalizedChecklistId,
       task_id: normalizedTaskId,
       status,

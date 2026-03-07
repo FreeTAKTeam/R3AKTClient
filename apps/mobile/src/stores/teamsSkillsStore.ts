@@ -6,4 +6,5 @@ export const useTeamsSkillsStore = createRchFeatureStore(
   "rch-teams-skills",
   "teamsSkills",
   TEAMS_SKILLS_OPERATIONS,
+  "mission.registry.team.list",
 );

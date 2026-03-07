@@ -29,6 +29,7 @@ export function createRchFeatureStore<K extends RchFeatureKey>(
   storeId: string,
   feature: K,
   operations: readonly RchFeatureOperationMap[K][],
+  bootstrapOperation: RchFeatureOperationMap[K] | null,
 ) {
   return defineStore(storeId, () => {
     const rchClientStore = useRchClientStore();
@@ -80,10 +81,12 @@ export function createRchFeatureStore<K extends RchFeatureKey>(
     }
 
     async function wire(): Promise<void> {
-      if (wired.value || operations.length === 0) {
+      if (wired.value) {
         return;
       }
-      await execute(operations[0]);
+      if (bootstrapOperation) {
+        await execute(bootstrapOperation);
+      }
       wired.value = true;
     }
 

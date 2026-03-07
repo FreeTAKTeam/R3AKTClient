@@ -20,6 +20,13 @@ import {
 
 type MissionOperation = (typeof MISSIONS_OPERATIONS)[number];
 
+const MISSION_LIST_OPERATION: MissionOperation = "mission.registry.mission.list";
+const MISSION_GET_OPERATION: MissionOperation = "mission.registry.mission.get";
+const MISSION_UPSERT_OPERATION: MissionOperation = "mission.registry.mission.upsert";
+const MISSION_PATCH_OPERATION: MissionOperation = "mission.registry.mission.patch";
+const LOG_ENTRY_LIST_OPERATION: MissionOperation = "mission.registry.log_entry.list";
+const LOG_ENTRY_UPSERT_OPERATION: MissionOperation = "mission.registry.log_entry.upsert";
+
 export interface MissionRecord {
   uid: string;
   name: string;
@@ -165,7 +172,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
   ): void {
     const value = asRecord(payload);
 
-    if (operation === "GET /api/r3akt/missions") {
+    if (operation === MISSION_LIST_OPERATION) {
       const missions = asArray(value.missions)
         .map(normalizeMissionRecord)
         .filter((entry): entry is MissionRecord => Boolean(entry));
@@ -174,9 +181,9 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
     }
 
     if (
-      operation === "GET /api/r3akt/missions/{mission_uid}"
-      || operation === "POST /api/r3akt/missions"
-      || operation === "PATCH /api/r3akt/missions/{mission_uid}"
+      operation === MISSION_GET_OPERATION
+      || operation === MISSION_UPSERT_OPERATION
+      || operation === MISSION_PATCH_OPERATION
     ) {
       const mission = normalizeMissionRecord(value.mission ?? value);
       if (mission) {
@@ -185,7 +192,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
       return;
     }
 
-    if (operation === "GET /api/r3akt/log-entries") {
+    if (operation === LOG_ENTRY_LIST_OPERATION) {
       const entries = asArray(value.log_entries)
         .map(normalizeMissionLogEntryRecord)
         .filter((entry): entry is MissionLogEntryRecord => Boolean(entry));
@@ -193,7 +200,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
       return;
     }
 
-    if (operation === "POST /api/r3akt/log-entries") {
+    if (operation === LOG_ENTRY_UPSERT_OPERATION) {
       const entry = normalizeMissionLogEntryRecord(value.entry ?? value.log_entry ?? value);
       if (entry) {
         missionLogEntriesByUid[entry.uid] = entry;
@@ -239,7 +246,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
     expand_topic?: boolean;
     expand?: string | string[];
   } = {}): Promise<void> {
-    await execute("GET /api/r3akt/missions", payload);
+    await execute(MISSION_LIST_OPERATION, payload);
   }
 
   async function getMission(missionUid: string, payload: {
@@ -250,7 +257,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
     if (!normalizedMissionUid) {
       return;
     }
-    await execute("GET /api/r3akt/missions/{mission_uid}", {
+    await execute(MISSION_GET_OPERATION, {
       ...payload,
       mission_uid: normalizedMissionUid,
     });
@@ -269,7 +276,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
     mission_status?: string;
     mission_priority?: number;
   }): Promise<void> {
-    await execute("POST /api/r3akt/missions", payload);
+    await execute(MISSION_UPSERT_OPERATION, payload);
   }
 
   async function patchMission(
@@ -281,7 +288,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
       return;
     }
 
-    await execute("PATCH /api/r3akt/missions/{mission_uid}", {
+    await execute(MISSION_PATCH_OPERATION, {
       mission_uid: normalizedMissionUid,
       patch,
     });
@@ -291,7 +298,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
     mission_uid?: string;
     marker_ref?: string;
   } = {}): Promise<void> {
-    await execute("GET /api/r3akt/log-entries", payload);
+    await execute(LOG_ENTRY_LIST_OPERATION, payload);
   }
 
   async function createLogEntry(payload: {
@@ -301,7 +308,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
     client_time?: string;
     keywords?: string[];
   }): Promise<void> {
-    await execute("POST /api/r3akt/log-entries", payload);
+    await execute(LOG_ENTRY_UPSERT_OPERATION, payload);
   }
 
   async function wire(): Promise<void> {

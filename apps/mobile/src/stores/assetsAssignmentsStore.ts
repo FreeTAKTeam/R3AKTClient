@@ -6,4 +6,5 @@ export const useAssetsAssignmentsStore = createRchFeatureStore(
   "rch-assets-assignments",
   "assetsAssignments",
   ASSETS_ASSIGNMENTS_OPERATIONS,
+  "mission.registry.asset.list",
 );

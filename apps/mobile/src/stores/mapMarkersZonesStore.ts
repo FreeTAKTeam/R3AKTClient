@@ -17,6 +17,13 @@ import {
 
 type MapOperation = (typeof MAP_OPERATIONS)[number];
 
+const MARKER_LIST_OPERATION: MapOperation = "mission.marker.list";
+const MARKER_CREATE_OPERATION: MapOperation = "mission.marker.create";
+const MARKER_POSITION_PATCH_OPERATION: MapOperation = "mission.marker.position.patch";
+const ZONE_LIST_OPERATION: MapOperation = "mission.zone.list";
+const ZONE_CREATE_OPERATION: MapOperation = "mission.zone.create";
+const ZONE_PATCH_OPERATION: MapOperation = "mission.zone.patch";
+
 export interface MapPointRecord {
   lat: number;
   lon: number;
@@ -159,7 +166,7 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
   function applyResponseCache(operation: MapOperation, payload: unknown): void {
     const value = asRecord(payload);
 
-    if (operation === "GET /api/markers") {
+    if (operation === MARKER_LIST_OPERATION) {
       const markers = asArray(value.markers ?? value.items ?? value.entries)
         .map(normalizeMapMarkerRecord)
         .filter((entry): entry is MapMarkerRecord => Boolean(entry));
@@ -168,8 +175,8 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
     }
 
     if (
-      operation === "POST /api/markers"
-      || operation === "PATCH /api/markers/{object_destination_hash}/position"
+      operation === MARKER_CREATE_OPERATION
+      || operation === MARKER_POSITION_PATCH_OPERATION
     ) {
       const marker = normalizeMapMarkerRecord(value.marker ?? value);
       if (marker) {
@@ -181,7 +188,7 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
       return;
     }
 
-    if (operation === "GET /api/zones") {
+    if (operation === ZONE_LIST_OPERATION) {
       const zones = asArray(value.zones ?? value.items ?? value.entries)
         .map(normalizeMapZoneRecord)
         .filter((entry): entry is MapZoneRecord => Boolean(entry));
@@ -189,7 +196,7 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
       return;
     }
 
-    if (operation === "POST /api/zones" || operation === "PATCH /api/zones/{zone_id}") {
+    if (operation === ZONE_CREATE_OPERATION || operation === ZONE_PATCH_OPERATION) {
       const zone = normalizeMapZoneRecord(value.zone ?? value);
       if (zone) {
         zonesById[zone.zoneId] = {
@@ -235,11 +242,11 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
   }
 
   async function listMarkers(): Promise<void> {
-    await execute("GET /api/markers", {});
+    await execute(MARKER_LIST_OPERATION, {});
   }
 
   async function listZones(): Promise<void> {
-    await execute("GET /api/zones", {});
+    await execute(ZONE_LIST_OPERATION, {});
   }
 
   async function createMarker(payload: {
@@ -250,7 +257,7 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
     symbol?: string;
     mission_uid?: string;
   }): Promise<void> {
-    await execute("POST /api/markers", payload);
+    await execute(MARKER_CREATE_OPERATION, payload);
   }
 
   async function updateMarkerPosition(
@@ -262,7 +269,7 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
       return;
     }
 
-    await execute("PATCH /api/markers/{object_destination_hash}/position", {
+    await execute(MARKER_POSITION_PATCH_OPERATION, {
       object_destination_hash: normalizedMarkerId,
       ...payload,
     });
@@ -278,7 +285,7 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
   }
 
   async function createZone(payload: MapZoneUpsertPayload): Promise<void> {
-    await execute("POST /api/zones", payload);
+    await execute(ZONE_CREATE_OPERATION, payload);
   }
 
   async function updateZone(
@@ -290,7 +297,7 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
       return;
     }
 
-    await execute("PATCH /api/zones/{zone_id}", {
+    await execute(ZONE_PATCH_OPERATION, {
       zone_id: normalizedZoneId,
       name: payload.name,
       description: payload.description,

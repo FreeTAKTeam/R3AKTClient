@@ -1,146 +1,28 @@
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
 import {
+  CLIENT_COMMAND_OPERATION_KEYS,
   CLIENT_OPERATION_CATALOG,
+  CLIENT_OPERATION_ALIAS_MAP,
   CLIENT_OPERATION_KEYS,
+  CLIENT_OPERATION_LOOKUP,
+  CLIENT_QUERY_OPERATION_KEYS,
   type ClientFeatureGroup,
   type ClientOperation,
   type ClientOperationEntry,
 } from "./generated/clientOperations";
 
-export const SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS = [
-  "Help",
-  "Examples",
-  "ListClients",
-  "getAppInfo",
-  "ListFiles",
-  "ListImages",
-  "ListTopic",
-  "RetrieveTopic",
-  "RetrieveFile",
-  "RetrieveImage",
-  "ListSubscriber",
-  "RetrieveSubscriber",
-  "GetStatus",
-  "ListEvents",
-  "ListIdentities",
-  "GetConfig",
-  "DumpRouting",
-  "TelemetryRequest",
-  "mission.events.list",
-  "topic.list",
-  "mission.marker.list",
-  "mission.zone.list",
-  "mission.registry.mission.get",
-  "mission.registry.mission.list",
-  "mission.registry.mission_change.list",
-  "mission.registry.log_entry.list",
-  "mission.registry.team.get",
-  "mission.registry.team.list",
-  "mission.registry.team_member.get",
-  "mission.registry.team_member.list",
-  "mission.registry.asset.get",
-  "mission.registry.asset.list",
-  "mission.registry.skill.list",
-  "mission.registry.team_member_skill.list",
-  "mission.registry.task_skill_requirement.list",
-  "mission.registry.assignment.list",
-  "checklist.template.list",
-  "checklist.template.get",
-  "checklist.list.active",
-  "checklist.get",
-] as const;
-
-export const SUPPORTED_SOUTHBOUND_COMMAND_OPERATIONS = [
-  "join",
-  "leave",
-  "CreateTopic",
-  "PatchTopic",
-  "DeleteTopic",
-  "SubscribeTopic",
-  "AssociateTopicID",
-  "CreateSubscriber",
-  "AddSubscriber",
-  "DeleteSubscriber",
-  "RemoveSubscriber",
-  "PatchSubscriber",
-  "BanIdentity",
-  "UnbanIdentity",
-  "BlackholeIdentity",
-  "ValidateConfig",
-  "ApplyConfig",
-  "RollbackConfig",
-  "FlushTelemetry",
-  "ReloadConfig",
-  "mission.join",
-  "mission.leave",
-  "mission.message.send",
-  "topic.create",
-  "topic.patch",
-  "topic.delete",
-  "topic.subscribe",
-  "mission.marker.create",
-  "mission.marker.position.patch",
-  "mission.zone.create",
-  "mission.zone.patch",
-  "mission.zone.delete",
-  "mission.registry.mission.upsert",
-  "mission.registry.mission.patch",
-  "mission.registry.mission.delete",
-  "mission.registry.mission.parent.set",
-  "mission.registry.mission.rde.set",
-  "mission.registry.mission_change.upsert",
-  "mission.registry.log_entry.upsert",
-  "mission.registry.team.upsert",
-  "mission.registry.team.delete",
-  "mission.registry.team.mission.link",
-  "mission.registry.team.mission.unlink",
-  "mission.registry.mission.zone.link",
-  "mission.registry.mission.zone.unlink",
-  "mission.registry.team_member.upsert",
-  "mission.registry.team_member.delete",
-  "mission.registry.team_member.client.link",
-  "mission.registry.team_member.client.unlink",
-  "mission.registry.asset.upsert",
-  "mission.registry.asset.delete",
-  "mission.registry.skill.upsert",
-  "mission.registry.team_member_skill.upsert",
-  "mission.registry.task_skill_requirement.upsert",
-  "mission.registry.assignment.upsert",
-  "mission.registry.assignment.asset.set",
-  "mission.registry.assignment.asset.link",
-  "mission.registry.assignment.asset.unlink",
-  "checklist.template.create",
-  "checklist.template.update",
-  "checklist.template.clone",
-  "checklist.template.delete",
-  "checklist.create.online",
-  "checklist.create.offline",
-  "checklist.update",
-  "checklist.delete",
-  "checklist.import.csv",
-  "checklist.join",
-  "checklist.upload",
-  "checklist.feed.publish",
-  "checklist.task.status.set",
-  "checklist.task.row.add",
-  "checklist.task.row.delete",
-  "checklist.task.row.style.set",
-  "checklist.task.cell.set",
-] as const;
-
-export const SUPPORTED_SOUTHBOUND_OPERATIONS = [
-  ...SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS,
-  ...SUPPORTED_SOUTHBOUND_COMMAND_OPERATIONS,
-] as const;
+export const SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS = CLIENT_QUERY_OPERATION_KEYS;
+export const SUPPORTED_SOUTHBOUND_COMMAND_OPERATIONS = CLIENT_COMMAND_OPERATION_KEYS;
+export const SUPPORTED_SOUTHBOUND_OPERATIONS = CLIENT_OPERATION_KEYS;
 
 export type SupportedSouthboundQueryOperation =
-  typeof SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS[number];
+  typeof CLIENT_QUERY_OPERATION_KEYS[number];
 export type SupportedSouthboundCommandOperation =
-  typeof SUPPORTED_SOUTHBOUND_COMMAND_OPERATIONS[number];
+  typeof CLIENT_COMMAND_OPERATION_KEYS[number];
 export type SupportedSouthboundOperation =
-  typeof SUPPORTED_SOUTHBOUND_OPERATIONS[number];
-export type KnownOperation = ClientOperation | SupportedSouthboundOperation;
+  typeof CLIENT_OPERATION_KEYS[number];
+export type KnownOperation = ClientOperation;
 
 export type LogLevel = "Trace" | "Debug" | "Info" | "Warn" | "Error";
 export type HubMode = "Disabled" | "RchLxmf" | "RchHttp";
@@ -217,8 +99,10 @@ export interface ChatMessage {
 export interface SendMessageInput {
   content: string;
   localMessageId?: string;
+  local_message_id?: string;
   destination?: string;
   topicId?: string;
+  topic_id?: string;
 }
 
 export interface TopicSubscription {
@@ -383,6 +267,7 @@ export interface ReticulumNodeClient {
     envelope: RchEnvelope<TPayload>,
   ): Promise<RchEnvelopeResponse<TResult>>;
   getClientOperationCatalog(): Promise<readonly ClientOperationEntry[]>;
+  sendChatMessage(request: SendMessageInput): Promise<ChatSendResult>;
   on<K extends keyof NodeClientEvents>(
     event: K,
     handler: (payload: NodeClientEvents[K]) => void,
@@ -396,7 +281,7 @@ export interface ReticulumNodeClientFactoryOptions {
 
 export const DEFAULT_NODE_CONFIG: NodeConfig = {
   name: "emergency-ops-mobile",
-  tcpClients: ["rmap.world:4242"],
+  tcpClients: ["134.122.46.48:4242"],
   broadcast: true,
   announceIntervalSeconds: 30,
   announceCapabilities: "R3AKT,EMergencyMessages",
@@ -459,6 +344,7 @@ interface ReticulumNodePlugin {
   refreshHubDirectory(): Promise<void>;
   executeEnvelope(options: { envelopeJson: string }): Promise<Record<string, unknown>>;
   getClientOperationCatalog(): Promise<Record<string, unknown>>;
+  sendChatMessage(options: { requestJson: string }): Promise<Record<string, unknown>>;
   addListener(
     eventName: string,
     listener: (event: unknown) => void,
@@ -1084,6 +970,26 @@ class CapacitorReticulumNodeClient implements ReticulumNodeClient {
     return JSON.parse(catalogJson) as ClientOperationEntry[];
   }
 
+  async sendChatMessage(request: SendMessageInput): Promise<ChatSendResult> {
+    await this.ready();
+    const response = await this.plugin.sendChatMessage({
+      requestJson: JSON.stringify(request),
+    });
+    const resultJson = String(response.resultJson ?? response.result_json ?? "");
+    if (!resultJson) {
+      throw new Error("Native sendChatMessage returned empty response.");
+    }
+    return toChatSendResult(
+      JSON.parse(resultJson) as Record<string, unknown>,
+      {
+        localMessageId:
+          request.localMessageId
+          ?? request.local_message_id
+          ?? createMessageId(),
+      },
+    );
+  }
+
   on<K extends keyof NodeClientEvents>(
     event: K,
     handler: (payload: NodeClientEvents[K]) => void,
@@ -1291,6 +1197,36 @@ class WebReticulumNodeClient implements ReticulumNodeClient {
 
   async getClientOperationCatalog(): Promise<readonly ClientOperationEntry[]> {
     return CLIENT_OPERATION_CATALOG;
+  }
+
+  async sendChatMessage(request: SendMessageInput): Promise<ChatSendResult> {
+    const localMessageId =
+      request.localMessageId
+      ?? request.local_message_id
+      ?? createMessageId();
+    const result: ChatSendResult = {
+      localMessageId,
+      sent: true,
+      content: request.content,
+      destination: request.destination?.trim() || undefined,
+      topicId: (request.topicId ?? request.topic_id)?.trim() || undefined,
+    };
+    this.emitter.emit("domainEvent", {
+      eventType: "message.sent",
+      payloadJson: JSON.stringify({
+        local_message_id: result.localMessageId,
+        content: result.content,
+        destination: result.destination,
+        topic_id: result.topicId,
+        thread_id: result.localMessageId,
+        group_id: result.topicId,
+        issued_at: new Date().toISOString(),
+        sent: true,
+        direction: "outbound",
+      }),
+      correlationId: result.localMessageId,
+    });
+    return result;
   }
 
   on<K extends keyof NodeClientEvents>(
@@ -1556,6 +1492,36 @@ class MockReticulumNodeClient implements ReticulumNodeClient {
     return CLIENT_OPERATION_CATALOG;
   }
 
+  async sendChatMessage(request: SendMessageInput): Promise<ChatSendResult> {
+    const localMessageId =
+      request.localMessageId
+      ?? request.local_message_id
+      ?? createMessageId();
+    const result: ChatSendResult = {
+      localMessageId,
+      sent: true,
+      content: request.content,
+      destination: request.destination?.trim() || undefined,
+      topicId: (request.topicId ?? request.topic_id)?.trim() || undefined,
+    };
+    this.emitter.emit("domainEvent", {
+      eventType: "message.sent",
+      payloadJson: JSON.stringify({
+        local_message_id: result.localMessageId,
+        content: result.content,
+        destination: result.destination,
+        topic_id: result.topicId,
+        thread_id: result.localMessageId,
+        group_id: result.topicId,
+        issued_at: new Date().toISOString(),
+        sent: true,
+        direction: "outbound",
+      }),
+      correlationId: result.localMessageId,
+    });
+    return result;
+  }
+
   on<K extends keyof NodeClientEvents>(
     event: K,
     handler: (payload: NodeClientEvents[K]) => void,
@@ -1706,10 +1672,6 @@ export interface RchClient {
 }
 
 const CLIENT_OPERATION_SET = new Set<string>(CLIENT_OPERATION_KEYS);
-const SOUTHBOUND_OPERATION_SET = new Set<string>(SUPPORTED_SOUTHBOUND_OPERATIONS);
-const SOUTHBOUND_QUERY_OPERATION_SET = new Set<string>(
-  SUPPORTED_SOUTHBOUND_QUERY_OPERATIONS,
-);
 
 function operationsByGroup<G extends ClientFeatureGroup>(
   group: G,
@@ -1740,10 +1702,9 @@ export const ASSETS_ASSIGNMENTS_OPERATIONS = operationsByGroup(
   "R3AKT Assets and Assignments",
 );
 export const CHECKLISTS_OPERATIONS = operationsByGroup("Checklists");
-export const CHAT_MESSAGE_SEND_OPERATION: MessagingOperation = "POST /Message";
-export const CHAT_MESSAGE_STREAM_OPERATION: MessagingOperation = "GET /messages/stream";
-export const CHAT_TOPIC_LIST_OPERATION: TopicsOperation = "GET /Topic";
-export const CHAT_TOPIC_SUBSCRIBE_OPERATION: TopicsOperation = "POST /Topic/Subscribe";
+export const CHAT_MESSAGE_SEND_OPERATION: MessagingOperation = "mission.message.send";
+export const CHAT_TOPIC_LIST_OPERATION: TopicsOperation = "topic.list";
+export const CHAT_TOPIC_SUBSCRIBE_OPERATION: TopicsOperation = "topic.subscribe";
 const FEATURE_OPERATION_SETS: {
   [K in RchFeatureKey]: ReadonlySet<RchFeatureOperationMap[K]>;
 } = {
@@ -1784,12 +1745,11 @@ function createMessageId(): string {
 }
 
 function inferEnvelopeKind(operation: KnownOperation): EnvelopeKind {
-  if (CLIENT_OPERATION_SET.has(operation)) {
-    const method = operation.split(" ", 1)[0];
-    return method === "GET" ? "query" : "command";
+  const entry = CLIENT_OPERATION_LOOKUP.get(operation);
+  if (!entry) {
+    throw new Error(`Operation is not in the client allowlist: ${operation}`);
   }
-
-  return SOUTHBOUND_QUERY_OPERATION_SET.has(operation) ? "query" : "command";
+  return entry.kind;
 }
 
 function buildEnvelope<TPayload>(
@@ -1810,10 +1770,17 @@ function buildEnvelope<TPayload>(
   };
 }
 
-function assertKnownOperation(operation: string): asserts operation is KnownOperation {
-  if (!CLIENT_OPERATION_SET.has(operation) && !SOUTHBOUND_OPERATION_SET.has(operation)) {
-    throw new Error(`Operation is not in the client allowlist: ${operation}`);
+function normalizeKnownOperation(operation: string): KnownOperation {
+  if (CLIENT_OPERATION_SET.has(operation)) {
+    return operation as KnownOperation;
   }
+
+  const canonical = CLIENT_OPERATION_ALIAS_MAP.get(operation);
+  if (canonical) {
+    return canonical;
+  }
+
+  throw new Error(`Operation is not in the client allowlist: ${operation}`);
 }
 
 function assertFeatureOperation<K extends RchFeatureKey>(
@@ -1931,10 +1898,10 @@ class RchClientImpl implements RchClient {
 
   private buildSendPayload(input: SendMessageInput): Record<string, unknown> {
     return {
-      local_message_id: input.localMessageId,
+      local_message_id: input.localMessageId ?? input.local_message_id,
       content: input.content,
       destination: input.destination?.trim() || undefined,
-      topic_id: input.topicId?.trim() || undefined,
+      topic_id: (input.topicId ?? input.topic_id)?.trim() || undefined,
     };
   }
 
@@ -1984,38 +1951,32 @@ class RchClientImpl implements RchClient {
         input: SendMessageInput,
         options?: ExecuteEnvelopeOptions,
       ): Promise<RchEnvelopeResponse<ChatSendResult>> => {
-        const localMessageId = input.localMessageId?.trim() || createMessageId();
+        const localMessageId =
+          input.localMessageId?.trim()
+          || input.local_message_id?.trim()
+          || options?.correlationId?.trim()
+          || options?.messageId?.trim()
+          || createMessageId();
+        const topicId = (input.topicId ?? input.topic_id)?.trim() || undefined;
         const prepared: SendMessageInput = {
           ...input,
           localMessageId,
+          local_message_id: localMessageId,
+          topicId,
+          topic_id: topicId,
         };
-        const response = await this.execute<Record<string, unknown>, Record<string, unknown>>(
-          CHAT_MESSAGE_SEND_OPERATION,
-          this.buildSendPayload(prepared),
-          {
-            ...options,
-            messageId: options?.messageId ?? localMessageId,
-            correlationId: options?.correlationId ?? localMessageId,
-          },
-        );
-        const responsePayload = this.ensureEnvelopeSuccess(response, "Message send failed.");
-        const normalizedResult = toChatSendResult(
-          {
-            ...responsePayload,
-            localMessageId,
-            content: responsePayload.content ?? prepared.content,
-            destination: responsePayload.destination ?? prepared.destination,
-            topicId:
-              readStringCandidate(responsePayload, ["topicId", "topic_id"])
-              ?? prepared.topicId,
-          },
-          { localMessageId },
-        );
+        const normalizedResult = await this.nodeClient.sendChatMessage(prepared);
         if (!normalizedResult.sent) {
           throw new Error("Message send was not accepted by the hub.");
         }
         return {
-          ...response,
+          api_version: options?.apiVersion ?? "1.0",
+          message_id: options?.messageId ?? localMessageId,
+          correlation_id: options?.correlationId ?? localMessageId,
+          kind: "result",
+          type: CHAT_MESSAGE_SEND_OPERATION,
+          issuer: options?.issuer ?? "mobile-runtime",
+          issued_at: new Date().toISOString(),
           payload: normalizedResult,
         };
       },
@@ -2113,9 +2074,9 @@ class RchClientImpl implements RchClient {
     payload?: TPayload,
     options?: ExecuteEnvelopeOptions,
   ): Promise<RchEnvelopeResponse<TResult>> {
-    assertKnownOperation(operation);
+    const normalizedOperation = normalizeKnownOperation(operation);
     const envelope = buildEnvelope(
-      operation,
+      normalizedOperation,
       (payload ?? ({} as TPayload)),
       options,
     );
