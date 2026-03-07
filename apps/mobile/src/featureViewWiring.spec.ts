@@ -24,7 +24,7 @@ async function mountWithRoute(component: Component, path: string) {
 describe("live shell wiring", () => {
   it("renders the live home route inside the mobile shell", async () => {
     const wrapper = await mountWithRoute(App, "/dashboard");
-    expect(wrapper.text()).toContain("Event Mesh");
+    expect(wrapper.text()).toContain("Community Hub");
     expect(wrapper.text()).toContain("Dashboard");
     expect(wrapper.text()).toContain("Backend Control");
     expect(wrapper.text()).toContain("Event Feed");

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { RouterLink } from "vue-router";
 
 import DashboardControlStrip from "../../components/dashboard/DashboardControlStrip.vue";
 import DashboardEventFeed from "../../components/dashboard/DashboardEventFeed.vue";
@@ -30,23 +29,16 @@ const stopAllowed = computed(() => nodeStore.status.running);
 
 <template>
   <section class="dashboard-view">
-    <header class="dashboard-header">
-      <div class="header-bar">
-        <RouterLink class="menu-button" to="/ops" aria-label="Open ops">
-          <span class="material-symbols-outlined">menu</span>
-        </RouterLink>
-        <h1>Dashboard</h1>
-        <p class="live-pill">{{ headerPillLabel }}</p>
-      </div>
-
-      <div class="header-copy">
+    <section class="dashboard-intro">
+      <div class="intro-copy">
         <p>Reticulum + hub handshake driven strictly by announce events.</p>
         <div class="config-pills">
           <span>{{ hubCaption }}</span>
           <span>{{ nodeStore.settings.announceCapabilities }}</span>
         </div>
       </div>
-    </header>
+      <p class="live-pill">{{ headerPillLabel }}</p>
+    </section>
 
     <DashboardMetricGrid :metrics="metrics" />
     <DashboardEventFeed :items="feedItems" />
@@ -70,57 +62,16 @@ const stopAllowed = computed(() => nodeStore.status.running);
   display: grid;
   gap: 1.1rem;
   min-height: 100%;
-  padding: 0.35rem 0 1rem;
+  padding: 1rem 0 1rem;
 }
 
-.dashboard-header {
+.dashboard-intro {
+  align-items: start;
   border-bottom: 1px solid rgb(41 190 219 / 20%);
-  display: grid;
+  display: flex;
   gap: 0.85rem;
-  padding: 0 0 1rem;
-}
-
-.header-bar,
-.header-copy {
-  padding: 0 1rem;
-}
-
-.header-bar {
-  align-items: center;
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: auto 1fr auto;
-  min-height: 3.85rem;
-}
-
-.menu-button,
-.live-pill {
-  border-radius: 999px;
-}
-
-.menu-button {
-  align-items: center;
-  color: #42d8ff;
-  display: inline-flex;
-  height: 2.5rem;
-  justify-content: center;
-  text-decoration: none;
-  width: 2.5rem;
-}
-
-.menu-button .material-symbols-outlined {
-  font-size: 2rem;
-}
-
-.header-bar h1 {
-  color: #33d8ff;
-  font-family: var(--font-headline);
-  font-size: clamp(1.8rem, 5vw, 2.4rem);
-  font-style: italic;
-  letter-spacing: 0.18em;
-  margin: 0;
-  text-align: center;
-  text-transform: uppercase;
+  justify-content: space-between;
+  padding: 0 1rem 1rem;
 }
 
 .live-pill {
@@ -134,12 +85,12 @@ const stopAllowed = computed(() => nodeStore.status.running);
   text-transform: uppercase;
 }
 
-.header-copy {
+.intro-copy {
   display: grid;
   gap: 0.75rem;
 }
 
-.header-copy p {
+.intro-copy p {
   color: #9ab7c7;
   font-family: var(--font-body);
   font-size: 1.02rem;

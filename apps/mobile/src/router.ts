@@ -48,6 +48,10 @@ const routes: RouteRecordRaw[] = [
     },
   },
   {
+    path: "/checklists",
+    redirect: "/missions",
+  },
+  {
     path: "/missions/:missionUid/:domainKind",
     name: "mission-domain",
     component: () => import("./views/missions/MissionDomainStackView.vue"),

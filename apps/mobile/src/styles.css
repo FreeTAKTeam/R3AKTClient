@@ -7,6 +7,8 @@
   --font-body: "Inter", sans-serif;
   --font-headline: "Sora", sans-serif;
   --font-ui: "Space Grotesk", sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   background: #06161c;
 }
 
@@ -29,6 +31,7 @@ body {
   background: #06161c;
   color: #f3fcff;
   font-family: var(--font-body);
+  overflow: hidden;
 }
 
 .material-symbols-outlined {
