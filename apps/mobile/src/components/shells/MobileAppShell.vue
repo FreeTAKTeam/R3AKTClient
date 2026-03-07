@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from "vue";
+import { computed, onMounted, useTemplateRef, watch } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 
 import { useNavigationDrawer } from "../../composables/useNavigationDrawer";
+import { useViewportChrome } from "../../composables/useViewportChrome";
 import { useNodeStore } from "../../stores/nodeStore";
 
 interface DrawerItem {
@@ -114,6 +115,9 @@ const currentPath = computed(() => route.path);
 const routeStatusLabel = computed(() =>
   nodeStore.settings.hub.mode === "RchLxmf" ? "LXMF Hub" : "Hub Disabled",
 );
+const headerRef = useTemplateRef<HTMLElement>("appHeader");
+const footerRef = useTemplateRef<HTMLElement>("appFooter");
+const { contentStyle } = useViewportChrome(headerRef, footerRef);
 
 function itemIsActive(item: DrawerItem): boolean {
   return item.match(currentPath.value);
@@ -202,7 +206,7 @@ function itemIsActive(item: DrawerItem): boolean {
     </aside>
 
     <main class="main-panel">
-      <header class="android-header">
+      <header ref="appHeader" class="android-header">
         <button
           class="menu-trigger"
           type="button"
@@ -224,11 +228,15 @@ function itemIsActive(item: DrawerItem): boolean {
         </div>
       </header>
 
-      <section class="content-frame" :class="{ dashboard: route.name === 'home' }">
+      <section
+        class="content-frame"
+        :class="{ dashboard: route.name === 'home' }"
+        :style="contentStyle"
+      >
         <RouterView />
       </section>
 
-      <footer class="android-footer">
+      <footer ref="appFooter" class="android-footer">
         <div class="footer-meta">
           <span>{{ runtimeLabel }}</span>
           <span>{{ connectedCount }} links</span>
@@ -246,7 +254,7 @@ function itemIsActive(item: DrawerItem): boolean {
     radial-gradient(circle at 82% 0%, rgb(27 223 199 / 10%), transparent 18%),
     linear-gradient(160deg, #07131b, #0b2028 42%, #07161d 100%);
   color: #eff8ff;
-  min-height: 100dvh;
+  height: 100dvh;
   overflow: hidden;
   position: relative;
 }
@@ -415,10 +423,12 @@ function itemIsActive(item: DrawerItem): boolean {
 }
 
 .main-panel {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.85rem;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: 100dvh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   padding: 0;
 }
 
@@ -429,10 +439,13 @@ function itemIsActive(item: DrawerItem): boolean {
   display: grid;
   gap: 1rem;
   grid-template-columns: auto minmax(0, 1fr);
+  min-height: fit-content;
   padding:
     calc(env(safe-area-inset-top) + 0.85rem)
     0.95rem
     0.95rem;
+  position: relative;
+  z-index: 1;
 }
 
 .menu-trigger {
@@ -505,9 +518,15 @@ function itemIsActive(item: DrawerItem): boolean {
   border: 1px solid rgb(73 197 221 / 12%);
   border-radius: 24px;
   margin: 0 0.85rem;
+  flex: 0 0 auto;
+  min-width: 0;
   min-height: 0;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1rem;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
 }
 
 .content-frame.dashboard {
@@ -519,10 +538,13 @@ function itemIsActive(item: DrawerItem): boolean {
     linear-gradient(180deg, rgb(5 18 24 / 0%), rgb(5 18 24 / 92%)),
     rgb(5 18 24 / 94%);
   border-top: 1px solid rgb(73 197 221 / 10%);
+  min-height: fit-content;
   padding:
     0.75rem
     0.95rem
     calc(env(safe-area-inset-bottom) + 0.85rem);
+  position: relative;
+  z-index: 1;
 }
 
 .footer-meta {

@@ -35,11 +35,6 @@ function runMissionCore(operation: string, payloadJson: string): void {
 
 <template>
   <section class="tab-view">
-    <header class="tab-header">
-      <h1>Missions</h1>
-      <p>Mission-domain stack shells with direct deep-link support for every parity domain route.</p>
-    </header>
-
     <section class="domain-grid">
       <RouterLink
         v-for="domainKind in domainKinds"
@@ -70,18 +65,6 @@ function runMissionCore(operation: string, payloadJson: string): void {
 .tab-view {
   display: grid;
   gap: 0.9rem;
-}
-
-.tab-header h1 {
-  font-family: var(--font-headline);
-  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
-  margin: 0;
-}
-
-.tab-header p {
-  color: #8eaad4;
-  font-family: var(--font-body);
-  margin: 0.3rem 0 0;
 }
 
 .domain-grid {

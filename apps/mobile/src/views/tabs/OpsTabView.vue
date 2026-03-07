@@ -4,11 +4,6 @@ import { RouterLink } from "vue-router";
 
 <template>
   <section class="tab-view">
-    <header class="tab-header">
-      <h1>Ops</h1>
-      <p>Node controls and migration-safe legacy tooling while native shells are completed.</p>
-    </header>
-
     <section class="ops-grid">
       <RouterLink to="/ops/connect" class="ops-link">Peer Connect</RouterLink>
       <RouterLink to="/ops/settings" class="ops-link">Settings</RouterLink>
@@ -25,18 +20,6 @@ import { RouterLink } from "vue-router";
 .tab-view {
   display: grid;
   gap: 0.9rem;
-}
-
-.tab-header h1 {
-  font-family: var(--font-headline);
-  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
-  margin: 0;
-}
-
-.tab-header p {
-  color: #8eaad4;
-  font-family: var(--font-body);
-  margin: 0.3rem 0 0;
 }
 
 .ops-grid {

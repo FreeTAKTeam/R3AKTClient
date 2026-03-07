@@ -19,11 +19,6 @@ const section = computed(() => {
 
 <template>
   <section class="tab-view">
-    <header class="tab-header">
-      <h1>Comms</h1>
-      <p>Messaging, topic fan-out, and file/media transfer shells.</p>
-    </header>
-
     <nav class="subnav">
       <RouterLink to="/comms/chat" class="subnav-link" :class="{ active: section === 'chat' }">
         Chat
@@ -50,18 +45,6 @@ const section = computed(() => {
 .tab-view {
   display: grid;
   gap: 0.9rem;
-}
-
-.tab-header h1 {
-  font-family: var(--font-headline);
-  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
-  margin: 0;
-}
-
-.tab-header p {
-  color: #8eaad4;
-  font-family: var(--font-body);
-  margin: 0.3rem 0 0;
 }
 
 .subnav {
