@@ -51,10 +51,30 @@ separate app.
 ## Data behavior
 
 - Messages, events, settings, and saved peers persist in local storage on-device.
-- On web in `auto` mode (or when `mock` mode is selected), demo data is seeded for quick testing.
 - Current replication uses JSON payloads exchanged over the node packet channel.
 - The target RCH client path adds structured LXMF command, result, and event
   envelopes on top of the same local runtime foundation.
+- This app does **not** currently auto-seed demo data in runtime startup paths.
+
+## Runtime modes (`clientMode`)
+
+`clientMode` is currently a two-value setting: `auto` or `capacitor`.
+
+- `auto`
+  - On mobile runtime profile (`VITE_RUNTIME_PROFILE=mobile`), the store passes
+    `mode: "auto"` into `createReticulumNodeClient(...)`.
+  - On web runtime profile (`VITE_RUNTIME_PROFILE=web`, default), the store
+    always builds the client with `mode: "web"`, so the `clientMode` setting is
+    effectively ignored at runtime.
+- `capacitor`
+  - On mobile runtime profile, the store passes `mode: "capacitor"` into
+    `createReticulumNodeClient(...)`.
+  - On web runtime profile, stored `capacitor` is normalized back to `auto`,
+    and runtime still uses `mode: "web"`.
+
+> Source of truth: runtime mode type and values are defined in
+> `apps/mobile/src/types/domain.ts`, and runtime/client construction behavior is
+> implemented in `apps/mobile/src/stores/nodeStore.ts`.
 
 ## Local development
 
