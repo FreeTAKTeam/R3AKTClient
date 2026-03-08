@@ -1,4 +1,4 @@
-﻿[
+[
     {
         "order":  1,
         "requestedTitle":  "RCH Side Navigation Menu",
@@ -252,6 +252,22 @@
         "htmlUrl":  "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzZiYWUyYTAwMDBiYzRhOWI4YzkzZDYzZDg5ZjU4YzMwEgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE\u0026filename=\u0026opi=89354086",
         "width":  "780",
         "height":  "1768",
+        "deviceType":  "MOBILE",
+        "status":  "COMPLETE"
+    },
+    {
+        "order":  17,
+        "requestedTitle":  "Webmap - Functional Header",
+        "apiTitle":  "Webmap - Functional Header",
+        "screenId":  "27f35ec59daa4d0583f695da423580a2",
+        "screenName":  "projects/4350946208414714711/screens/27f35ec59daa4d0583f695da423580a2",
+        "prompt":  "Implement the map screen with a functional WEBMAP header and tactical controls.",
+        "imagePath":  "C:\\Users\\broth\\Documents\\work\\ATAK\\src\\R3AKTClient\\docs\\stitch\\4350946208414714711\\images\\17-webmap-functional-header-27f35ec59daa4d0583f695da423580a2.png",
+        "imageUrl":  "https://lh3.googleusercontent.com/aida/AOfcidVfvAjXgIFUX8ITwQMl7bSNezSdphQxYCJL4epGBW5OyRfHzr6CT4KQvbqVlrYpLpOP7jy3bq76MtY3G7JUXZvryHc2HNgoLORJihTbp3wk_oipRPP9VuF-36KZwSWj4GC7-TcohGKq6MCLHr5iqkxD8_kGe2Lf-Ru6qQUxef60H3LbZDQFfAPghL7tMN3xiiGJbUqR_C_gYfWojG2H6Npw847kukD_wgP-qbnaXpMSWAZKy8mPixILOw",
+        "htmlPath":  "C:\\Users\\broth\\Documents\\work\\ATAK\\src\\R3AKTClient\\docs\\stitch\\4350946208414714711\\html\\17-webmap-functional-header-27f35ec59daa4d0583f695da423580a2.html",
+        "htmlUrl":  "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzU4Y2UxNjQ5YTk3MTRiZTY4MzViMGQ0YzBmODY3YzljEgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE\u0026filename=\u0026opi=89354086",
+        "width":  "390",
+        "height":  "884",
         "deviceType":  "MOBILE",
         "status":  "COMPLETE"
     }

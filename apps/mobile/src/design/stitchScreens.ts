@@ -163,6 +163,14 @@ export const stitchScreens: StitchScreen[] = [
     "StitchScreen16TaskDetailCleanHeader.vue",
     "16-task-detail-clean-header-0d6df06555a24c089123b1af5d5d5f77.html",
   ),
+  createStitchScreen(
+    17,
+    "Webmap - Functional Header",
+    "webmap-functional-header",
+    "27f35ec59daa4d0583f695da423580a2",
+    "StitchScreen17WebmapFunctionalHeader.vue",
+    "17-webmap-functional-header-27f35ec59daa4d0583f695da423580a2.html",
+  ),
 ];
 
 export const stitchScreensBySlug = Object.fromEntries(

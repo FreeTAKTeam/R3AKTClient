@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, useTemplateRef, watch } from "vue";
 import { RouterLink, RouterView, useRoute } from "vue-router";
 
@@ -52,6 +52,12 @@ const middleItems: DrawerItem[] = [
     path: "/comms/files",
     icon: "folder_open",
     match: (currentPath) => currentPath.startsWith("/comms/files") || currentPath === "/files",
+  },
+  {
+    label: "Images",
+    path: "/comms/images",
+    icon: "image",
+    match: (currentPath) => currentPath.startsWith("/comms/images") || currentPath === "/images",
   },
   {
     label: "Chat",
@@ -114,6 +120,9 @@ const runtimeLabel = computed(() => (nodeStore.status.running ? "Connected" : "S
 const currentPath = computed(() => route.path);
 const routeStatusLabel = computed(() =>
   nodeStore.settings.hub.mode === "RchLxmf" ? "LXMF Hub" : "Hub Disabled",
+);
+const isImmersiveRoute = computed(
+  () => route.path === "/dashboard" || route.path === "/missions" || route.path === "/checklists" || route.path.startsWith("/checklists/") || route.path.startsWith("/missions/") || route.path.startsWith("/comms/chat") || route.path.startsWith("/comms/topics") || route.path.startsWith("/comms/files") || route.path.startsWith("/comms/images") || route.path.startsWith("/ops/settings") || route.path === "/settings",
 );
 const headerRef = useTemplateRef<HTMLElement>("appHeader");
 const footerRef = useTemplateRef<HTMLElement>("appFooter");
@@ -206,7 +215,7 @@ function itemIsActive(item: DrawerItem): boolean {
     </aside>
 
     <main class="main-panel">
-      <header ref="appHeader" class="android-header">
+      <header v-if="!isImmersiveRoute" ref="appHeader" class="android-header">
         <button
           class="menu-trigger"
           type="button"
@@ -230,13 +239,13 @@ function itemIsActive(item: DrawerItem): boolean {
 
       <section
         class="content-frame"
-        :class="{ dashboard: route.name === 'home' }"
-        :style="contentStyle"
+        :class="{ immersive: isImmersiveRoute }"
+        :style="isImmersiveRoute ? undefined : contentStyle"
       >
         <RouterView />
       </section>
 
-      <footer ref="appFooter" class="android-footer">
+      <footer v-if="!isImmersiveRoute" ref="appFooter" class="android-footer">
         <div class="footer-meta">
           <span>{{ runtimeLabel }}</span>
           <span>{{ connectedCount }} links</span>
@@ -336,13 +345,13 @@ function itemIsActive(item: DrawerItem): boolean {
 
 .drawer-scroll {
   overflow: auto;
-  padding: 1rem 0;
+  padding: 1.05rem 0 0.9rem;
 }
 
 .drawer-group {
   display: grid;
-  gap: 0.2rem;
-  padding: 0 0.4rem;
+  gap: 0.16rem;
+  padding: 0 0.35rem;
 }
 
 .drawer-link {
@@ -351,13 +360,24 @@ function itemIsActive(item: DrawerItem): boolean {
   color: #8fa9bb;
   display: flex;
   font-family: var(--font-ui);
-  font-size: 1rem;
-  font-weight: 600;
-  gap: 1rem;
-  min-height: 3.1rem;
-  padding: 0 0.9rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  gap: 0.95rem;
+  min-height: 3rem;
+  padding: 0 1rem 0 0.95rem;
   text-decoration: none;
   transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.drawer-link .material-symbols-outlined {
+  flex: 0 0 1.35rem;
+  font-size: 1.38rem;
+  font-variation-settings: "wght" 450;
+  text-align: center;
+}
+
+.drawer-link span:last-child {
+  letter-spacing: 0.01em;
 }
 
 .drawer-link:hover {
@@ -366,14 +386,16 @@ function itemIsActive(item: DrawerItem): boolean {
 }
 
 .drawer-link.active {
-  background: linear-gradient(90deg, rgb(17 56 71 / 88%), rgb(17 56 71 / 0%));
+  background:
+    linear-gradient(90deg, rgb(13 76 95 / 52%), rgb(11 57 72 / 16%) 72%, rgb(11 57 72 / 0%));
   border-left-color: #2dd3f4;
+  box-shadow: inset 0 1px 0 rgb(45 211 244 / 8%), inset 0 -1px 0 rgb(45 211 244 / 8%);
   color: #2dd3f4;
 }
 
 .drawer-divider {
   border-top: 1px solid rgb(38 183 214 / 14%);
-  margin: 1.1rem 1rem;
+  margin: 1rem 0.95rem;
 }
 
 .drawer-footer {
@@ -529,7 +551,14 @@ function itemIsActive(item: DrawerItem): boolean {
   touch-action: pan-y;
 }
 
-.content-frame.dashboard {
+.content-frame.immersive {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  flex: 1 1 auto;
+  height: 100dvh;
+  margin: 0;
+  max-height: none;
   padding: 0;
 }
 
@@ -593,3 +622,9 @@ function itemIsActive(item: DrawerItem): boolean {
   }
 }
 </style>
+
+
+
+
+
+

@@ -45,6 +45,8 @@ const fileToComponent = {
     "StitchScreen15MissionsCleanHeaderB.vue",
   "16-task-detail-clean-header-0d6df06555a24c089123b1af5d5d5f77.html":
     "StitchScreen16TaskDetailCleanHeader.vue",
+  "17-webmap-functional-header-27f35ec59daa4d0583f695da423580a2.html":
+    "StitchScreen17WebmapFunctionalHeader.vue",
 };
 
 function rewriteBodySelectors(css) {

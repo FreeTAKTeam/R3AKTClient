@@ -51,7 +51,7 @@ describe("live shell wiring", () => {
 
   it("renders map and ops settings routes", async () => {
     const webmap = await mountWithRoute(App, "/webmap");
-    expect(webmap.text()).toContain("Map, Markers, and Zones");
+    expect(webmap.text()).toContain("WEBMAP");
 
     const settings = await mountWithRoute(App, "/ops/settings");
     expect(settings.text()).toContain("Settings");

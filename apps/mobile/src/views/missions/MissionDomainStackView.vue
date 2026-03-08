@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
+import { RouterLink } from "vue-router";
 
 import FeatureFamilyShell from "../../components/shells/FeatureFamilyShell.vue";
+import MissionWorkspaceOverview from "./MissionWorkspaceOverview.vue";
 import { useAssetsAssignmentsStore } from "../../stores/assetsAssignmentsStore";
 import { useChecklistsStore } from "../../stores/checklistsStore";
 import { useMapMarkersZonesStore } from "../../stores/mapMarkersZonesStore";
@@ -43,6 +45,17 @@ const domainTitleMap: Record<string, string> = {
   "audit-events": "Audit Events",
 };
 
+const workspaceLinks = [
+  ["overview", "Overview"],
+  ["mission", "Mission"],
+  ["topic", "Topic"],
+  ["checklists", "Checklists"],
+  ["teams", "Teams"],
+  ["assets", "Assets"],
+  ["zones", "Zones"],
+  ["log-entries", "Logs"],
+] as const;
+
 const storeByDomain = computed(() => {
   if (props.domainKind === "topic") {
     return topics;
@@ -78,6 +91,7 @@ const storeByDomain = computed(() => {
 });
 
 const title = computed(() => domainTitleMap[props.domainKind] ?? "Mission Domain");
+const isOverview = computed(() => props.domainKind === "overview");
 
 function execute(operation: string, payloadJson: string): void {
   storeByDomain.value.executeFromJson(operation, payloadJson).catch(() => undefined);
@@ -85,10 +99,26 @@ function execute(operation: string, payloadJson: string): void {
 </script>
 
 <template>
-  <section class="tab-view">
+  <MissionWorkspaceOverview v-if="isOverview" :mission-uid="missionUid" />
+
+  <section v-else class="tab-view">
     <header class="tab-header">
-      <h1>{{ title }}</h1>
-      <p>Mission UID: {{ missionUid }} | Domain: {{ domainKind }}</p>
+      <div>
+        <p class="eyebrow">Mission Domain</p>
+        <h1>{{ title }}</h1>
+        <p>Mission UID: {{ missionUid }}</p>
+      </div>
+      <nav class="domain-nav">
+        <RouterLink
+          v-for="[key, label] in workspaceLinks"
+          :key="key"
+          :to="`/missions/${missionUid}/${key}`"
+          class="domain-link"
+          :class="{ active: key === domainKind }"
+        >
+          {{ label }}
+        </RouterLink>
+      </nav>
     </header>
 
     <FeatureFamilyShell
@@ -112,15 +142,59 @@ function execute(operation: string, payloadJson: string): void {
   gap: 0.9rem;
 }
 
+.tab-header {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.eyebrow {
+  color: #7fc3ff;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
 .tab-header h1 {
   font-family: var(--font-headline);
   font-size: clamp(1.7rem, 3.2vw, 2.4rem);
-  margin: 0;
+  margin: 0.2rem 0 0;
 }
 
-.tab-header p {
+.tab-header p:last-child {
   color: #90afd9;
   font-family: var(--font-body);
   margin: 0.28rem 0 0;
+}
+
+.domain-nav {
+  display: flex;
+  gap: 0.6rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.domain-nav::-webkit-scrollbar {
+  display: none;
+}
+
+.domain-link {
+  background: rgb(9 21 48 / 84%);
+  border: 1px solid rgb(82 126 188 / 35%);
+  border-radius: 12px;
+  color: #9ed8ff;
+  flex: none;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  padding: 0.55rem 0.7rem;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.domain-link.active {
+  border-color: rgb(99 190 255 / 75%);
+  color: #d8f2ff;
 }
 </style>

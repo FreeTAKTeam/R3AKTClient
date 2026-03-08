@@ -241,6 +241,14 @@ export const designViews: DesignView[] = [
     "webmap-clean-header-b",
   ),
   createDesignView(
+    "webmap-functional-header",
+    "Webmap Functional Header",
+    "Functional",
+    "/webmap/functional",
+    "webmap",
+    "webmap-functional-header",
+  ),
+  createDesignView(
     "topics-registry",
     "Topic Registry",
     "Registry",

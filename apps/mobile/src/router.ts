@@ -1,4 +1,4 @@
-import {
+﻿import {
   createRouter,
   createWebHistory,
   type RouteRecordRaw,
@@ -25,7 +25,7 @@ const routes: RouteRecordRaw[] = [
     redirect: "/comms/chat",
   },
   {
-    path: "/comms/:section(chat|topics|files)",
+    path: "/comms/:section(chat|topics|files|images)",
     name: "comms",
     component: () => import("./views/tabs/CommsTabView.vue"),
     meta: {
@@ -37,6 +37,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/chat", redirect: "/comms/chat" },
   { path: "/topics", redirect: "/comms/topics" },
   { path: "/files", redirect: "/comms/files" },
+  { path: "/images", redirect: "/comms/images" },
   {
     path: "/missions",
     name: "missions",
@@ -49,7 +50,24 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: "/checklists",
-    redirect: "/missions",
+    name: "checklists",
+    component: () => import("./views/checklists/ChecklistsListView.vue"),
+    meta: {
+      section: "missions",
+      title: "Checklists",
+      subtitle: "Checklist registry and task readiness across active operations.",
+    },
+  },
+  {
+    path: "/checklists/:checklistId",
+    name: "checklist-detail",
+    component: () => import("./views/checklists/ChecklistDetailView.vue"),
+    props: true,
+    meta: {
+      section: "missions",
+      title: "Checklist Detail",
+      subtitle: "Focused checklist execution surface for field operations.",
+    },
   },
   {
     path: "/missions/:missionUid/:domainKind",
