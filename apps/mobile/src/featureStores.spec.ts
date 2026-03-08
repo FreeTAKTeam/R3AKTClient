@@ -45,4 +45,15 @@ describe("feature family stores", () => {
       ).rejects.toThrow(/allowlisted/);
     }
   });
+
+  it("reports invalid JSON payloads consistently", async () => {
+    for (const makeStore of storeFactories) {
+      const store = makeStore();
+      const operation = store.operations[0];
+      await expect(store.executeFromJson(operation, "{"))
+        .rejects.toMatchObject({ name: "InvalidPayloadJsonError" });
+      expect(store.lastError).toMatch(/Invalid JSON payload/);
+      expect(store.busy).toBe(false);
+    }
+  });
 });

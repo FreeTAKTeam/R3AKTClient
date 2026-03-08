@@ -8,6 +8,7 @@ import {
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
 import { useRchClientStore } from "./rchClientStore";
 
 type FilesMediaOperation = (typeof FILES_MEDIA_OPERATIONS)[number];
@@ -32,14 +33,6 @@ function toErrorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
-}
-
-function parsePayload(payloadJson: string): unknown {
-  const trimmed = payloadJson.trim();
-  if (!trimmed) {
-    return {};
-  }
-  return JSON.parse(trimmed) as unknown;
 }
 
 function createTransferId(): string {
@@ -90,7 +83,15 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     if (!(operations as readonly string[]).includes(operation)) {
       throw new Error(`Operation "${operation}" is not allowlisted for filesMedia.`);
     }
-    await execute(operation as FilesMediaOperation, parsePayload(payloadJson), options);
+
+    const parsedPayload = tryParsePayload(payloadJson);
+    if (!parsedPayload.ok) {
+      const message = `Invalid JSON payload for filesMedia ${operation}: ${parsedPayload.error.message}`;
+      lastError.value = message;
+      throw new InvalidPayloadJsonError(message);
+    }
+
+    await execute(operation as FilesMediaOperation, parsedPayload.value, options);
   }
 
   function beginTransfer(input: {
