@@ -25,28 +25,29 @@ describe("live shell wiring", () => {
   it("renders the live home route inside the mobile shell", async () => {
     const wrapper = await mountWithRoute(App, "/dashboard");
     expect(wrapper.text()).toContain("Community Hub");
-    expect(wrapper.text()).toContain("Dashboard");
+    expect(wrapper.text()).toContain("DASHBOARD");
     expect(wrapper.text()).toContain("Backend Control");
     expect(wrapper.text()).toContain("Event Feed");
   });
 
   it("renders mission routes inside the live shell", async () => {
     const missions = await mountWithRoute(App, "/missions");
-    expect(missions.text()).toContain("Missions");
-    expect(missions.text()).toContain("Mission Core");
+    expect(missions.text()).toContain("MISSIONS");
+    expect(missions.text()).toContain("Mission Directory");
 
     const missionDomain = await mountWithRoute(App, "/missions/demo/log-entries");
-    expect(missionDomain.text()).toContain("Mission UID: demo");
-    expect(missionDomain.text()).toContain("Mission Log Entries");
+    expect(missionDomain.text()).toContain("Mission Workspace");
+    expect(missionDomain.text()).toContain("Mission UID");
+    expect(missionDomain.text()).toContain("Logs & Changes");
   });
 
   it("renders comms routes", async () => {
     const topics = await mountWithRoute(App, "/comms/topics");
-    expect(topics.text()).toContain("Comms Topics");
-    expect(topics.text()).toContain("Known Topics");
+    expect(topics.text()).toContain("TOPIC REGISTRY");
+    expect(topics.text()).toContain("Selected Branch");
 
     const chat = await mountWithRoute(App, "/comms/chat");
-    expect(chat.text()).toContain("Comms Chat");
+    expect(chat.text()).toContain("CHAT");
   });
 
   it("renders map and ops settings routes", async () => {
@@ -55,7 +56,7 @@ describe("live shell wiring", () => {
 
     const settings = await mountWithRoute(App, "/ops/settings");
     expect(settings.text()).toContain("Settings");
-    expect(settings.text()).toContain("Hub Directory");
+    expect(settings.text()).toContain("Application Hub");
   });
 
   it("renders ops routing surfaces", async () => {

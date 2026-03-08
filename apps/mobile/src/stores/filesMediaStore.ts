@@ -10,10 +10,16 @@ import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
 import { useRchClientStore } from "./rchClientStore";
+import { asArray, asRecord, readNumber, readString } from "./rchPayloadUtils";
 
 type FilesMediaOperation = (typeof FILES_MEDIA_OPERATIONS)[number];
 
-interface FileTransferRecord {
+const LIST_FILES_OPERATION: FilesMediaOperation = "ListFiles";
+const LIST_IMAGES_OPERATION: FilesMediaOperation = "ListImages";
+const RETRIEVE_FILE_OPERATION: FilesMediaOperation = "RetrieveFile";
+const RETRIEVE_IMAGE_OPERATION: FilesMediaOperation = "RetrieveImage";
+
+export interface FileTransferRecord {
   id: string;
   channelKey: string;
   messageLocalId?: string;
@@ -28,6 +34,20 @@ interface FileTransferRecord {
   error?: string;
   url?: string;
   dataBase64?: string;
+}
+
+export interface MediaRegistryRecord {
+  id: string;
+  name: string;
+  kind: "file" | "image";
+  mimeType?: string;
+  sizeBytes?: number;
+  topicId?: string;
+  updatedAt?: string;
+  downloadedAtMs?: number;
+  dataBase64?: string;
+  previewUrl?: string;
+  raw: Record<string, unknown>;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -65,6 +85,45 @@ function fileToDataBase64(file: File): Promise<string> {
   });
 }
 
+function normalizeMediaRecord(raw: unknown, kind: "file" | "image"): MediaRegistryRecord | null {
+  const value = asRecord(raw);
+  const id = readString(value, ["file_id", "fileId", "image_id", "imageId", "uid", "id"]);
+  if (!id) {
+    return null;
+  }
+
+  const mimeType =
+    readString(value, ["mime_type", "mimeType", "content_type", "contentType"])
+    || (kind === "image" ? "image/png" : undefined);
+  const dataBase64 = readString(value, ["data_base64", "dataBase64", "base64"]);
+
+  return {
+    id,
+    name: readString(value, ["name", "file_name", "filename", "title"]) ?? id,
+    kind,
+    mimeType,
+    sizeBytes: readNumber(value, ["size_bytes", "sizeBytes", "size"]),
+    topicId: readString(value, ["topic_id", "topicId", "TopicID"]),
+    updatedAt: readString(value, ["updated_at", "updatedAt", "created_at", "createdAt"]),
+    downloadedAtMs: dataBase64 ? Date.now() : undefined,
+    dataBase64,
+    previewUrl:
+      dataBase64 && mimeType?.startsWith("image/")
+        ? `data:${mimeType};base64,${dataBase64}`
+        : undefined,
+    raw: value,
+  };
+}
+
+function sortRegistry(left: MediaRegistryRecord, right: MediaRegistryRecord): number {
+  const leftTime = Date.parse(left.updatedAt ?? "") || 0;
+  const rightTime = Date.parse(right.updatedAt ?? "") || 0;
+  if (rightTime !== leftTime) {
+    return rightTime - leftTime;
+  }
+  return left.name.localeCompare(right.name);
+}
+
 export const useFilesMediaStore = defineStore("rch-files-media", () => {
   const rchClientStore = useRchClientStore();
 
@@ -76,6 +135,63 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
   const lastResponse = shallowRef<RchEnvelopeResponse<unknown> | null>(null);
 
   const transfersById = reactive<Record<string, FileTransferRecord>>({});
+  const registryById = reactive<Record<string, MediaRegistryRecord>>({});
+
+  function upsertRegistryRecord(record: MediaRegistryRecord): void {
+    registryById[record.id] = {
+      ...(registryById[record.id] ?? {}),
+      ...record,
+      raw: record.raw,
+    };
+  }
+
+  function replaceRegistry(kind: "file" | "image", records: readonly MediaRegistryRecord[]): void {
+    const nextIds = new Set(records.map((record) => record.id));
+    for (const record of records) {
+      upsertRegistryRecord(record);
+    }
+    for (const existingId of Object.keys(registryById)) {
+      if (registryById[existingId]?.kind === kind && !nextIds.has(existingId)) {
+        delete registryById[existingId];
+      }
+    }
+  }
+
+  function applyResponseCache(operation: FilesMediaOperation, payload: unknown): void {
+    const value = asRecord(payload);
+
+    if (operation === LIST_FILES_OPERATION) {
+      const records = asArray(value.files ?? value.attachments ?? value.items ?? value.entries)
+        .map((entry) => normalizeMediaRecord(entry, "file"))
+        .filter((entry): entry is MediaRegistryRecord => Boolean(entry));
+      replaceRegistry("file", records);
+      return;
+    }
+
+    if (operation === LIST_IMAGES_OPERATION) {
+      const records = asArray(value.images ?? value.items ?? value.entries)
+        .map((entry) => normalizeMediaRecord(entry, "image"))
+        .filter((entry): entry is MediaRegistryRecord => Boolean(entry));
+      replaceRegistry("image", records);
+      return;
+    }
+
+    if (operation === RETRIEVE_FILE_OPERATION || operation === RETRIEVE_IMAGE_OPERATION) {
+      const kind = operation === RETRIEVE_IMAGE_OPERATION ? "image" : "file";
+      const record =
+        normalizeMediaRecord(value.file ?? value.image ?? value.attachment ?? value, kind)
+        || normalizeMediaRecord(
+          (asArray(value.attachments)[0] ?? asArray(value.images)[0] ?? value) as unknown,
+          kind,
+        );
+      if (record) {
+        upsertRegistryRecord({
+          ...record,
+          downloadedAtMs: Date.now(),
+        });
+      }
+    }
+  }
 
   async function execute(
     operation: FilesMediaOperation,
@@ -89,6 +205,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
       const response = await client.filesMedia.execute(operation, payload, options);
       lastOperation.value = operation;
       lastResponse.value = response;
+      applyResponseCache(operation, response.payload);
       return response;
     } catch (error: unknown) {
       lastError.value = toErrorMessage(error);
@@ -239,11 +356,36 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     }
   }
 
+  async function listFiles(): Promise<void> {
+    await execute(LIST_FILES_OPERATION, {});
+  }
+
+  async function listImages(): Promise<void> {
+    await execute(LIST_IMAGES_OPERATION, {});
+  }
+
+  async function retrieveFile(fileId: string): Promise<void> {
+    const normalizedFileId = fileId.trim();
+    if (!normalizedFileId) {
+      return;
+    }
+    await execute(RETRIEVE_FILE_OPERATION, { FileID: normalizedFileId, file_id: normalizedFileId });
+  }
+
+  async function retrieveImage(fileId: string): Promise<void> {
+    const normalizedFileId = fileId.trim();
+    if (!normalizedFileId) {
+      return;
+    }
+    await execute(RETRIEVE_IMAGE_OPERATION, { FileID: normalizedFileId, file_id: normalizedFileId });
+  }
+
   async function wire(): Promise<void> {
     if (wired.value) {
       return;
     }
     await rchClientStore.requireClient();
+    await Promise.allSettled([listFiles(), listImages()]);
     wired.value = true;
   }
 
@@ -255,6 +397,18 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     transfers.value.filter(
       (entry) => entry.state === "queued" || entry.state === "in_progress",
     ),
+  );
+
+  const fileRegistry = computed(() =>
+    Object.values(registryById)
+      .filter((entry) => entry.kind === "file")
+      .sort(sortRegistry),
+  );
+
+  const imageRegistry = computed(() =>
+    Object.values(registryById)
+      .filter((entry) => entry.kind === "image")
+      .sort(sortRegistry),
   );
 
   const lastResponseJson = computed(() =>
@@ -272,6 +426,9 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     transfersById,
     transfers,
     activeTransfers,
+    registryById,
+    fileRegistry,
+    imageRegistry,
     execute,
     executeFromJson,
     wire,
@@ -280,5 +437,9 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     updateTransferState,
     getQueuedUploads,
     markTransfers,
+    listFiles,
+    listImages,
+    retrieveFile,
+    retrieveImage,
   };
 });

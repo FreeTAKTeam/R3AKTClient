@@ -77,7 +77,10 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const activeTab = ref<"files" | "images">(props.initialTab);
 
 const liveLabel = computed(() => (nodeStore.status.running ? "LIVE" : "IDLE"));
+const selectedRegistryId = ref("");
 const hasTransfers = computed(() => filesStore.transfers.length > 0);
+const hasBackendFiles = computed(() => filesStore.fileRegistry.length > 0);
+const hasBackendImages = computed(() => filesStore.imageRegistry.length > 0);
 
 const normalizedTransfers = computed(() =>
   filesStore.transfers.map((transfer) => ({
@@ -93,6 +96,18 @@ const normalizedTransfers = computed(() =>
 );
 
 const fileItems = computed(() => {
+  if (hasBackendFiles.value) {
+    return filesStore.fileRegistry.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      kind: "file" as const,
+      mimeType: entry.mimeType || "unknown mime",
+      sizeLabel: entry.sizeBytes ? `${Math.max(1, Math.round(entry.sizeBytes / 1024))} KB` : "0 KB",
+      state: entry.dataBase64 ? "RETRIEVED" : "REMOTE",
+      timeLabel: entry.updatedAt ? new Date(entry.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "LIVE",
+      previewUrl: entry.previewUrl,
+    }));
+  }
   if (hasTransfers.value) {
     return normalizedTransfers.value.filter((entry) => entry.kind === "file");
   }
@@ -100,11 +115,25 @@ const fileItems = computed(() => {
 });
 
 const imageItems = computed(() => {
+  if (hasBackendImages.value) {
+    return filesStore.imageRegistry.map((entry) => ({
+      id: entry.id,
+      name: entry.name,
+      kind: "image" as const,
+      mimeType: entry.mimeType || "image/png",
+      sizeLabel: entry.sizeBytes ? `${Math.max(1, Math.round(entry.sizeBytes / 1024))} KB` : "0 KB",
+      state: entry.dataBase64 ? "RETRIEVED" : "REMOTE",
+      timeLabel: entry.updatedAt ? new Date(entry.updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "LIVE",
+      previewUrl: entry.previewUrl,
+    }));
+  }
   if (hasTransfers.value) {
     return normalizedTransfers.value.filter((entry) => entry.kind === "image");
   }
   return FALLBACK_ITEMS.filter((entry) => entry.kind === "image");
 });
+
+const selectedPreview = computed(() => filesStore.registryById[selectedRegistryId.value]);
 
 watch(
   () => props.initialTab,
@@ -123,6 +152,8 @@ watch(activeTab, (value) => {
 function openPicker(): void {
   fileInput.value?.click();
 }
+
+void filesStore.wire().catch(() => undefined);
 
 async function stageTransfer(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
@@ -150,6 +181,20 @@ function stateClass(state: string): string {
     return "live";
   }
   return "archived";
+}
+
+async function refreshRegistry(): Promise<void> {
+  await Promise.allSettled([filesStore.listFiles(), filesStore.listImages()]);
+}
+
+async function openFileRecord(id: string): Promise<void> {
+  selectedRegistryId.value = id;
+  await filesStore.retrieveFile(id).catch(() => undefined);
+}
+
+async function openImageRecord(id: string): Promise<void> {
+  selectedRegistryId.value = id;
+  await filesStore.retrieveImage(id).catch(() => undefined);
 }
 </script>
 
@@ -191,10 +236,18 @@ function stateClass(state: string): string {
             <option value="download">download</option>
           </select>
         </label>
+        <button type="button" class="registry-screen__refresh-button" @click="refreshRegistry">
+          Refresh
+        </button>
       </section>
 
       <section v-if="activeTab === 'files'" class="registry-screen__files-list">
-        <article v-for="file in fileItems" :key="file.id" class="registry-screen__file-card">
+        <article
+          v-for="file in fileItems"
+          :key="file.id"
+          class="registry-screen__file-card"
+          @click="openFileRecord(file.id)"
+        >
           <div class="registry-screen__file-icon">
             <span class="material-symbols-outlined">draft</span>
           </div>
@@ -213,7 +266,12 @@ function stateClass(state: string): string {
       </section>
 
       <section v-else class="registry-screen__image-grid">
-        <article v-for="image in imageItems" :key="image.id" class="registry-screen__image-card">
+        <article
+          v-for="image in imageItems"
+          :key="image.id"
+          class="registry-screen__image-card"
+          @click="openImageRecord(image.id)"
+        >
           <div class="registry-screen__image-preview" :style="image.previewUrl ? { backgroundImage: `linear-gradient(180deg, rgb(4 18 24 / 18%), rgb(4 18 24 / 36%)), url(${image.previewUrl})` } : undefined">
             <span class="registry-screen__badge" :class="stateClass(image.state)">{{ image.state }}</span>
           </div>
@@ -222,6 +280,19 @@ function stateClass(state: string): string {
             <p>{{ image.sizeLabel }} · {{ image.timeLabel }}</p>
           </div>
         </article>
+      </section>
+
+      <section v-if="selectedPreview" class="registry-screen__preview-card">
+        <div>
+          <span>Selected {{ selectedPreview.kind }}</span>
+          <strong>{{ selectedPreview.name }}</strong>
+          <p>{{ selectedPreview.topicId ? `Topic ${selectedPreview.topicId}` : "Unscoped registry record" }}</p>
+        </div>
+        <img
+          v-if="selectedPreview.previewUrl"
+          :src="selectedPreview.previewUrl"
+          :alt="selectedPreview.name"
+        />
       </section>
     </main>
 
@@ -350,9 +421,22 @@ function stateClass(state: string): string {
   border-radius: 0.9rem;
   display: grid;
   gap: 0.8rem;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   margin-bottom: 1rem;
   padding: 0.9rem;
+}
+.registry-screen__refresh-button {
+  background: rgb(37 209 244 / 12%);
+  border: 1px solid rgb(37 209 244 / 22%);
+  border-radius: 0.7rem;
+  color: #25d1f4;
+  font-family: var(--font-ui);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  min-height: 2.45rem;
+  padding: 0 0.8rem;
+  text-transform: uppercase;
 }
 .registry-screen__channel-bar span {
   color: #8ea5b0;
@@ -383,6 +467,51 @@ function stateClass(state: string): string {
 .registry-screen__files-list {
   display: grid;
   gap: 0.8rem;
+}
+.registry-screen__file-card {
+  cursor: pointer;
+  display: flex;
+  gap: 0.8rem;
+}
+.registry-screen__image-card {
+  cursor: pointer;
+}
+.registry-screen__preview-card {
+  align-items: center;
+  background: rgb(37 209 244 / 5%);
+  border: 1px solid rgb(37 209 244 / 10%);
+  border-radius: 1rem;
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 1rem;
+  padding: 0.9rem;
+}
+.registry-screen__preview-card span {
+  color: #8ea5b0;
+  display: block;
+  font-family: var(--font-ui);
+  font-size: 0.56rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.registry-screen__preview-card strong {
+  color: #f5fbff;
+  display: block;
+  font-size: 0.92rem;
+  margin-top: 0.25rem;
+}
+.registry-screen__preview-card p {
+  color: #9db6bf;
+  font-size: 0.74rem;
+  margin: 0.3rem 0 0;
+}
+.registry-screen__preview-card img {
+  border-radius: 0.8rem;
+  height: 4rem;
+  object-fit: cover;
+  width: 4rem;
 }
 .registry-screen__file-card {
   align-items: center;

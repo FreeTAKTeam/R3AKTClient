@@ -285,14 +285,14 @@ function closeMigration(): void {
             <SettingsActionRow
               icon="image_aspect_ratio"
               title="Image Compression"
-              :description="`Current: ${compressionMode}`"
+              :description="`Current: ${compressionMode} (local preview preference)`"
               trailing-label="Cycle"
               @select="cycleCompressionMode"
             />
             <SettingsActionRow
               icon="palette"
               title="Theme"
-              :description="`Current: ${themeName} (Custom)`"
+              :description="`Current: ${themeName} (local preview only)`"
               trailing-label="Cycle"
               @select="cycleTheme"
             />

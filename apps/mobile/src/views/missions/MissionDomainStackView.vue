@@ -1,48 +1,53 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { RouterLink } from "vue-router";
+import { RouterLink, useRouter } from "vue-router";
 
-import FeatureFamilyShell from "../../components/shells/FeatureFamilyShell.vue";
+import { useMissionDomainData } from "../../composables/useMissionDomainData";
 import MissionWorkspaceOverview from "./MissionWorkspaceOverview.vue";
-import { useAssetsAssignmentsStore } from "../../stores/assetsAssignmentsStore";
-import { useChecklistsStore } from "../../stores/checklistsStore";
-import { useMapMarkersZonesStore } from "../../stores/mapMarkersZonesStore";
-import { useMissionCoreStore } from "../../stores/missionCoreStore";
-import { useTeamsSkillsStore } from "../../stores/teamsSkillsStore";
-import { useTopicsStore } from "../../stores/topicsStore";
 
 const props = defineProps<{
   missionUid: string;
   domainKind: string;
 }>();
 
-const missionCore = useMissionCoreStore();
-const topics = useTopicsStore();
-const checklists = useChecklistsStore();
-const teamsSkills = useTeamsSkillsStore();
-const assetsAssignments = useAssetsAssignmentsStore();
-const mapMarkersZones = useMapMarkersZonesStore();
+const router = useRouter();
+const {
+  busy,
+  errorMessage,
+  mission,
+  missionTopic,
+  missionChecklists,
+  missionTeams,
+  missionTeamMembers,
+  missionAssets,
+  missionAssignments,
+  missionZones,
+  missionMarkers,
+  missionLogEntries,
+  missionChanges,
+  missionChannelKey,
+  refreshMissionBundle,
+  subscribeMissionTopic,
+  createMissionChecklist,
+  createMissionTeam,
+  createMissionAsset,
+  createMissionZone,
+  createMissionLogEntry,
+  patchMissionSummary,
+  deleteCurrentMission,
+  removeZone,
+  setActiveChannel,
+} = useMissionDomainData(props.missionUid);
 
 const domainTitleMap: Record<string, string> = {
   overview: "Mission Overview",
   mission: "Mission",
   topic: "Mission Topic",
   checklists: "Mission Checklists",
-  "checklist-tasks": "Checklist Tasks",
-  "checklist-templates": "Checklist Templates",
   teams: "Mission Teams",
-  "team-members": "Team Members",
-  skills: "Skills",
-  "team-member-skills": "Team Member Skills",
-  "task-skill-requirements": "Task Skill Requirements",
-  assets: "Assets",
-  assignments: "Assignments",
+  assets: "Assets & Assignments",
   zones: "Mission Zones",
-  "domain-events": "Domain Events",
-  "mission-changes": "Mission Changes",
-  "log-entries": "Mission Log Entries",
-  snapshots: "Snapshots",
-  "audit-events": "Audit Events",
+  "log-entries": "Mission Logs",
 };
 
 const workspaceLinks = [
@@ -56,145 +61,421 @@ const workspaceLinks = [
   ["log-entries", "Logs"],
 ] as const;
 
-const storeByDomain = computed(() => {
-  if (props.domainKind === "topic") {
-    return topics;
-  }
-
-  if (
-    props.domainKind === "checklists" ||
-    props.domainKind === "checklist-tasks" ||
-    props.domainKind === "checklist-templates"
-  ) {
-    return checklists;
-  }
-
-  if (
-    props.domainKind === "teams" ||
-    props.domainKind === "team-members" ||
-    props.domainKind === "skills" ||
-    props.domainKind === "team-member-skills" ||
-    props.domainKind === "task-skill-requirements"
-  ) {
-    return teamsSkills;
-  }
-
-  if (props.domainKind === "assets" || props.domainKind === "assignments") {
-    return assetsAssignments;
-  }
-
-  if (props.domainKind === "zones") {
-    return mapMarkersZones;
-  }
-
-  return missionCore;
-});
-
 const title = computed(() => domainTitleMap[props.domainKind] ?? "Mission Domain");
 const isOverview = computed(() => props.domainKind === "overview");
 
-function execute(operation: string, payloadJson: string): void {
-  storeByDomain.value.executeFromJson(operation, payloadJson).catch(() => undefined);
+async function openMissionChat(): Promise<void> {
+  setActiveChannel(missionChannelKey.value);
+  await router.push("/comms/chat");
 }
 </script>
 
 <template>
   <MissionWorkspaceOverview v-if="isOverview" :mission-uid="missionUid" />
 
-  <section v-else class="tab-view">
-    <header class="tab-header">
+  <section v-else class="mission-domain">
+    <header class="mission-domain__header">
       <div>
-        <p class="eyebrow">Mission Domain</p>
+        <p>Mission Workspace</p>
         <h1>{{ title }}</h1>
-        <p>Mission UID: {{ missionUid }}</p>
       </div>
-      <nav class="domain-nav">
-        <RouterLink
-          v-for="[key, label] in workspaceLinks"
-          :key="key"
-          :to="`/missions/${missionUid}/${key}`"
-          class="domain-link"
-          :class="{ active: key === domainKind }"
-        >
-          {{ label }}
-        </RouterLink>
-      </nav>
+      <button type="button" :disabled="busy" @click="refreshMissionBundle">Refresh</button>
     </header>
 
-    <FeatureFamilyShell
-      :title="title"
-      subtitle="Mission stack deep-link route shell."
-      :operations="storeByDomain.operations"
-      :wired="storeByDomain.wired"
-      :busy="storeByDomain.busy"
-      :last-operation="storeByDomain.lastOperation"
-      :last-response-json="storeByDomain.lastResponseJson"
-      :last-error="storeByDomain.lastError"
-      @wire="storeByDomain.wire().catch(() => undefined)"
-      @execute="execute"
-    />
+    <nav class="mission-domain__nav">
+      <RouterLink
+        v-for="[slug, label] in workspaceLinks"
+        :key="slug"
+        :to="`/missions/${missionUid}/${slug}`"
+        class="mission-domain__nav-link"
+        :class="{ active: domainKind === slug }"
+      >
+        {{ label }}
+      </RouterLink>
+    </nav>
+
+    <section class="mission-domain__hero">
+      <div>
+        <span>Mission UID</span>
+        <strong>{{ mission?.uid ?? missionUid }}</strong>
+      </div>
+      <div>
+        <span>Status</span>
+        <strong>{{ mission?.missionStatus ?? "UNSCOPED" }}</strong>
+      </div>
+      <div>
+        <span>Topic</span>
+        <strong>{{ mission?.topicId ?? "UNASSIGNED" }}</strong>
+      </div>
+    </section>
+
+    <main class="mission-domain__body">
+      <section v-if="domainKind === 'mission'" class="mission-domain__section">
+        <div class="mission-domain__section-head">
+          <h2>Mission Summary</h2>
+          <button type="button" :disabled="busy" @click="patchMissionSummary">Update</button>
+        </div>
+        <article class="mission-domain__card">
+          <h3>{{ mission?.name ?? missionUid }}</h3>
+          <p>{{ mission?.description ?? "Mission metadata is still loading from the registry." }}</p>
+          <dl class="mission-domain__facts">
+            <div>
+              <dt>Path</dt>
+              <dd>{{ mission?.path ?? "Not set" }}</dd>
+            </div>
+            <div>
+              <dt>Classification</dt>
+              <dd>{{ mission?.classification ?? "Unclassified" }}</dd>
+            </div>
+            <div>
+              <dt>Zones</dt>
+              <dd>{{ missionZones.length }}</dd>
+            </div>
+            <div>
+              <dt>Changes</dt>
+              <dd>{{ missionChanges.length }}</dd>
+            </div>
+          </dl>
+          <button type="button" class="danger" :disabled="busy" @click="deleteCurrentMission">
+            Delete Mission
+          </button>
+        </article>
+      </section>
+
+      <section v-else-if="domainKind === 'topic'" class="mission-domain__section">
+        <div class="mission-domain__section-head">
+          <h2>Mission Topic</h2>
+          <button type="button" :disabled="busy" @click="subscribeMissionTopic">Subscribe</button>
+        </div>
+        <article class="mission-domain__card">
+          <h3>{{ missionTopic?.topicName ?? mission?.topicId ?? "No topic assigned" }}</h3>
+          <p>{{ missionTopic?.topicDescription ?? "This mission has not exposed topic metadata yet." }}</p>
+          <dl class="mission-domain__facts">
+            <div>
+              <dt>Topic ID</dt>
+              <dd>{{ mission?.topicId ?? "None" }}</dd>
+            </div>
+            <div>
+              <dt>Path</dt>
+              <dd>{{ missionTopic?.topicPath ?? "None" }}</dd>
+            </div>
+            <div>
+              <dt>Subscribers</dt>
+              <dd>{{ missionTopic?.subscriberCount ?? 0 }}</dd>
+            </div>
+          </dl>
+          <button type="button" @click="openMissionChat">Open Chat Channel</button>
+        </article>
+      </section>
+
+      <section v-else-if="domainKind === 'checklists'" class="mission-domain__section">
+        <div class="mission-domain__section-head">
+          <h2>Mission Checklists</h2>
+          <button type="button" :disabled="busy" @click="createMissionChecklist">Create</button>
+        </div>
+        <div class="mission-domain__list">
+          <RouterLink
+            v-for="checklist in missionChecklists"
+            :key="checklist.checklistId"
+            :to="`/checklists/${checklist.checklistId}`"
+            class="mission-domain__row"
+          >
+            <div>
+              <strong>{{ checklist.title }}</strong>
+              <span>{{ checklist.taskCount }} tasks · {{ checklist.status ?? "READY" }}</span>
+            </div>
+            <span class="material-symbols-outlined">chevron_right</span>
+          </RouterLink>
+          <article v-if="missionChecklists.length === 0" class="mission-domain__card mission-domain__card--empty">
+            <p>No mission-scoped checklists yet.</p>
+          </article>
+        </div>
+      </section>
+
+      <section v-else-if="domainKind === 'teams'" class="mission-domain__section">
+        <div class="mission-domain__section-head">
+          <h2>Teams &amp; Members</h2>
+          <button type="button" :disabled="busy" @click="createMissionTeam">Create</button>
+        </div>
+        <div class="mission-domain__list">
+          <article v-for="team in missionTeams" :key="team.uid" class="mission-domain__card">
+            <h3>{{ team.name }}</h3>
+            <p>{{ team.description ?? "Mission-linked response team." }}</p>
+            <span>{{ missionTeamMembers.filter((member) => member.teamUid === team.uid).length }} members</span>
+          </article>
+          <article v-if="missionTeams.length === 0" class="mission-domain__card mission-domain__card--empty">
+            <p>No teams linked to this mission yet.</p>
+          </article>
+        </div>
+      </section>
+
+      <section v-else-if="domainKind === 'assets'" class="mission-domain__section">
+        <div class="mission-domain__section-head">
+          <h2>Assets &amp; Assignments</h2>
+          <button type="button" :disabled="busy" @click="createMissionAsset">Create</button>
+        </div>
+        <div class="mission-domain__list mission-domain__list--two">
+          <article class="mission-domain__card">
+            <h3>Assets</h3>
+            <ul>
+              <li v-for="asset in missionAssets" :key="asset.uid">
+                {{ asset.name }} <span>{{ asset.type ?? "equipment" }}</span>
+              </li>
+            </ul>
+          </article>
+          <article class="mission-domain__card">
+            <h3>Assignments</h3>
+            <ul>
+              <li v-for="assignment in missionAssignments" :key="assignment.uid">
+                {{ assignment.name }} <span>{{ assignment.assetIds.length }} assets</span>
+              </li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section v-else-if="domainKind === 'zones'" class="mission-domain__section">
+        <div class="mission-domain__section-head">
+          <h2>Zones &amp; Markers</h2>
+          <button type="button" :disabled="busy" @click="createMissionZone">Create</button>
+        </div>
+        <div class="mission-domain__list mission-domain__list--two">
+          <article class="mission-domain__card">
+            <h3>Zones</h3>
+            <ul>
+              <li v-for="zone in missionZones" :key="zone.zoneId">
+                <button type="button" class="danger-link" :disabled="busy" @click="removeZone(zone.zoneId)">Delete</button>
+                {{ zone.name }} <span>{{ zone.points.length }} points</span>
+              </li>
+            </ul>
+          </article>
+          <article class="mission-domain__card">
+            <h3>Markers</h3>
+            <ul>
+              <li v-for="marker in missionMarkers" :key="marker.markerId">
+                {{ marker.name }} <span>{{ marker.lat ?? "?" }}, {{ marker.lon ?? "?" }}</span>
+              </li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section v-else-if="domainKind === 'log-entries'" class="mission-domain__section">
+        <div class="mission-domain__section-head">
+          <h2>Logs &amp; Changes</h2>
+          <button type="button" :disabled="busy" @click="createMissionLogEntry">Post Update</button>
+        </div>
+        <div class="mission-domain__list mission-domain__list--two">
+          <article class="mission-domain__card">
+            <h3>Log Entries</h3>
+            <ul>
+              <li v-for="entry in missionLogEntries" :key="entry.uid">
+                {{ entry.content }} <span>{{ entry.updatedAt ?? entry.serverTime ?? entry.createdAt ?? "now" }}</span>
+              </li>
+            </ul>
+          </article>
+          <article class="mission-domain__card">
+            <h3>Mission Changes</h3>
+            <ul>
+              <li v-for="change in missionChanges" :key="change.uid">
+                {{ change.summary }} <span>{{ change.changeType ?? "change" }}</span>
+              </li>
+            </ul>
+          </article>
+        </div>
+      </section>
+    </main>
+
+    <p v-if="errorMessage" class="mission-domain__error">{{ errorMessage }}</p>
   </section>
 </template>
 
 <style scoped>
-.tab-view {
+.mission-domain {
+  background: linear-gradient(180deg, #04151a, #061d23 100%);
+  color: #f2fbff;
   display: grid;
-  gap: 0.9rem;
+  gap: 1rem;
+  min-height: 100%;
+  padding: 1rem;
 }
 
-.tab-header {
-  display: grid;
-  gap: 0.9rem;
+.mission-domain__header,
+.mission-domain__section-head,
+.mission-domain__hero {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
 }
 
-.eyebrow {
-  color: #7fc3ff;
+.mission-domain__header p,
+.mission-domain__hero span,
+.mission-domain__facts dt,
+.mission-domain__card span,
+.mission-domain__nav-link {
+  color: #89aebb;
   font-family: var(--font-ui);
-  font-size: 0.68rem;
-  letter-spacing: 0.12em;
-  margin: 0;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
-.tab-header h1 {
-  font-family: var(--font-headline);
-  font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+.mission-domain__header h1,
+.mission-domain__card h3,
+.mission-domain__section-head h2 {
+  margin: 0;
+}
+
+.mission-domain__header h1 {
+  font-family: var(--font-ui);
+  font-size: 1.1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mission-domain__header button,
+.mission-domain__section-head button,
+.mission-domain__card button,
+.danger-link {
+  background: rgb(37 209 244 / 12%);
+  border: 1px solid rgb(37 209 244 / 22%);
+  border-radius: 0.8rem;
+  color: #25d1f4;
+  font-family: var(--font-ui);
+  font-size: 0.68rem;
+  font-weight: 800;
+  min-height: 2.3rem;
+  padding: 0 0.9rem;
+  text-transform: uppercase;
+}
+
+.mission-domain__card button.danger,
+.danger-link {
+  background: rgb(251 113 133 / 10%);
+  border-color: rgb(251 113 133 / 24%);
+  color: #fda4af;
+}
+
+.danger-link {
+  margin-right: 0.75rem;
+  min-height: unset;
+  padding: 0.2rem 0.45rem;
+}
+
+.mission-domain__nav {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.mission-domain__nav-link {
+  background: rgb(37 209 244 / 6%);
+  border: 1px solid rgb(37 209 244 / 14%);
+  border-radius: 999px;
+  padding: 0.55rem 0.8rem;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mission-domain__nav-link.active {
+  background: rgb(37 209 244 / 16%);
+  border-color: rgb(37 209 244 / 28%);
+  color: #25d1f4;
+}
+
+.mission-domain__hero {
+  background: rgb(37 209 244 / 5%);
+  border: 1px solid rgb(37 209 244 / 10%);
+  border-radius: 1rem;
+  gap: 0.8rem;
+  padding: 0.95rem 1rem;
+}
+
+.mission-domain__hero div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.mission-domain__hero strong {
+  color: #f5fbff;
+  font-size: 0.8rem;
+}
+
+.mission-domain__body,
+.mission-domain__section,
+.mission-domain__list {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.mission-domain__list--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mission-domain__card,
+.mission-domain__row {
+  background: rgb(37 209 244 / 5%);
+  border: 1px solid rgb(37 209 244 / 10%);
+  border-radius: 1rem;
+  color: inherit;
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem;
+  text-decoration: none;
+}
+
+.mission-domain__card p,
+.mission-domain__row span,
+.mission-domain__card li span {
+  color: #9cbac4;
+  margin: 0;
+}
+
+.mission-domain__facts {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.mission-domain__facts div,
+.mission-domain__row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.mission-domain__facts dd {
+  color: #f5fbff;
   margin: 0.2rem 0 0;
 }
 
-.tab-header p:last-child {
-  color: #90afd9;
-  font-family: var(--font-body);
-  margin: 0.28rem 0 0;
+.mission-domain__card ul {
+  display: grid;
+  gap: 0.55rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
-.domain-nav {
-  display: flex;
-  gap: 0.6rem;
-  overflow-x: auto;
-  scrollbar-width: none;
+.mission-domain__card li {
+  border-top: 1px solid rgb(37 209 244 / 10%);
+  color: #f5fbff;
+  padding-top: 0.55rem;
 }
 
-.domain-nav::-webkit-scrollbar {
-  display: none;
+.mission-domain__card li:first-child {
+  border-top: 0;
+  padding-top: 0;
 }
 
-.domain-link {
-  background: rgb(9 21 48 / 84%);
-  border: 1px solid rgb(82 126 188 / 35%);
-  border-radius: 12px;
-  color: #9ed8ff;
-  flex: none;
-  font-family: var(--font-ui);
-  font-size: 0.72rem;
-  letter-spacing: 0.09em;
-  padding: 0.55rem 0.7rem;
-  text-decoration: none;
-  text-transform: uppercase;
-}
-
-.domain-link.active {
-  border-color: rgb(99 190 255 / 75%);
-  color: #d8f2ff;
+.mission-domain__error {
+  background: rgb(251 113 133 / 10%);
+  border: 1px solid rgb(251 113 133 / 20%);
+  border-radius: 1rem;
+  color: #fda4af;
+  margin: 0;
+  padding: 0.9rem 1rem;
 }
 </style>

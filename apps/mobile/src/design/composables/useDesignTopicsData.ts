@@ -153,12 +153,12 @@ export function useDesignTopicsData() {
     }
 
     errorMessage.value = "";
-    topicsStore.rememberTopic(topicId, {
-      topicDescription: "Subscribed from the redesigned topic registry.",
-      topicPath: topicId.replaceAll(".", "/"),
-    });
-
-    await topicsStore.subscribeTopic(topicId).catch((error: unknown) => {
+    await topicsStore.createTopic({
+      topic_id: topicId,
+      topic_name: titleCase(topicId),
+      topic_description: "Subscribed from the redesigned topic registry.",
+      topic_path: topicId.replaceAll(".", "/"),
+    }).catch((error: unknown) => {
       errorMessage.value = toErrorMessage(error);
     });
     searchTerm.value = "";
@@ -166,13 +166,17 @@ export function useDesignTopicsData() {
 
   async function editTopic(topicId: string) {
     errorMessage.value = "";
-    await topicsStore.subscribeTopic(topicId).catch((error: unknown) => {
+    await topicsStore.patchTopic(topicId, {
+      topic_description: "Updated from the redesigned topic registry.",
+    }).catch((error: unknown) => {
       errorMessage.value = toErrorMessage(error);
     });
   }
 
-  function deleteTopic(topicId: string) {
-    topicsStore.clearSubscription(topicId);
+  async function deleteTopic(topicId: string) {
+    await topicsStore.deleteTopic(topicId).catch((error: unknown) => {
+      errorMessage.value = toErrorMessage(error);
+    });
   }
 
   return {

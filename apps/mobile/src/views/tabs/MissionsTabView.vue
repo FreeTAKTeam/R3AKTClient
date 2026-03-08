@@ -6,99 +6,6 @@ import { useNavigationDrawer } from "../../composables/useNavigationDrawer";
 import { useDesignMissionsData } from "../../design/composables/useDesignMissionsData";
 import { useNodeStore } from "../../stores/nodeStore";
 
-interface FallbackTimelineItem {
-  id: string;
-  time: string;
-  tone: "muted" | "primary";
-  value: string;
-}
-
-interface FallbackMissionDirectoryItem {
-  id: string;
-  missionId: string;
-  status: string;
-  subtitle: string;
-  title: string;
-  timeline: FallbackTimelineItem[];
-}
-
-interface FallbackMissionCard {
-  actionIcon: string;
-  actionLabel: string;
-  actionStyle: "ghost" | "primary";
-  id: string;
-  imageUrl: string;
-  priority: "high" | "medium" | "low";
-  subtitle: string;
-  title: string;
-}
-
-const FALLBACK_DIRECTORY: FallbackMissionDirectoryItem[] = [
-  {
-    id: "fallback-nightfall",
-    missionId: "MS-2024-0892",
-    status: "UNSCOPED",
-    subtitle: "Infiltration Phase - Sector 7",
-    title: "Operation Nightfall",
-    timeline: [
-      { id: "a", time: "2M AGO", tone: "primary", value: "System: Mission initialized by Admin" },
-      { id: "b", time: "14M AGO", tone: "muted", value: "User: Asset drone-43 deployed" },
-    ],
-  },
-  {
-    id: "fallback-sigma",
-    missionId: "MS-2024-0711",
-    status: "ACTIVE",
-    subtitle: "Arctic Survey - Northern corridor",
-    title: "Arctic Survey Sigma",
-    timeline: [{ id: "c", time: "28M AGO", tone: "primary", value: "System: Ice telemetry synchronized." }],
-  },
-  {
-    id: "fallback-grid",
-    missionId: "MS-2024-0654",
-    status: "PAUSED",
-    subtitle: "Urban Grid Recovery - downtown sweep",
-    title: "Urban Grid Recovery",
-    timeline: [{ id: "d", time: "41M AGO", tone: "muted", value: "User: Relay team staged in sector blue." }],
-  },
-];
-
-const FALLBACK_CARDS: FallbackMissionCard[] = [
-  {
-    actionIcon: "chevron_right",
-    actionLabel: "Deploy",
-    actionStyle: "primary",
-    id: "card-nightfall",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuANYbNg0gTOaZR-pMk63ufflF4PXURdeZ6E7EVdoKEyM6KEFVDIA-LL3YVarggfMJQJj3e1sshKN3SObs8IVZ_wOGEKNvS09658I86T9kWW_fAfUynR__UEn3GyQvIzbzvKzRzge5V0s8g-oS3-GPbyhtyGQ2lDGb24enNox9J9XSmCg_lgABstWLM4Vx8smyK5XZtA3RkO66E_aUsECaFyTI3YeVoaRQ3LNQ8WVI5j4r3OJVOQsuBqmXxww5BTsBqV7xbyYHCDHw",
-    priority: "high",
-    subtitle: "Infiltration Phase - Sector 7",
-    title: "Operation Nightfall",
-  },
-  {
-    actionIcon: "play_arrow",
-    actionLabel: "Resume",
-    actionStyle: "ghost",
-    id: "card-ghost",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuAn_Muvtw9AlD-Dxdy0NiWR7xMsS5PFB3JkXAH-jFYbPoNI8JcTgOuKW9AvrpjvliXkViHU-sQVIbXcvf9R_dnyC7N-T8om4acCpJew7r-keXXl1BdeOBYOeby_GR7Mt6pcNznHRNUlgs-t2iqBopiJ1qdv9MMEyVQu-7EnN4Qk6A6XFOBdMvU_H9kPBRugicBucUZDxkpRiba_60kTJzCupBJtTJ42WhB1_Z7hVUpeOMiCfQ64OqhW80-HnQLb5EE1cUeWZl4Mhg",
-    priority: "medium",
-    subtitle: "Data Extraction - Research Lab",
-    title: "Ghost Protocol",
-  },
-  {
-    actionIcon: "settings_suggest",
-    actionLabel: "Initialize",
-    actionStyle: "ghost",
-    id: "card-scan",
-    imageUrl:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuCp8130RaRpeS-nvGINBZkIYKQbKnS145ESraRACenhPLz1o9AUWJ3sjJibMqnLdTKJtnJmgn3YDgd1cFRsQ50FsfGSEJaxgJ35Cbd1BhNKfkSU6CoYie2U3GTefHE1lj5gg2fRKFcTp3x_oDrDJawLDdZI-1F3d47w2lE9NNIOv6civjwJIaHZpx1SZOWGnWzYIGqxw6fB2QTu25TNp0-YCxA096g4I_06ZfBXV-AGLvRZXOGqvQ-T1VSgxOjdj0MDO7qJopV_fA",
-    priority: "low",
-    subtitle: "Environmental Analysis - Outer Rim",
-    title: "Deep Scan",
-  },
-];
-
 const { toggleNavigationDrawer } = useNavigationDrawer();
 const nodeStore = useNodeStore();
 const {
@@ -110,6 +17,7 @@ const {
   missionCards,
   missionDirectory,
   refreshMission,
+  refreshMissionRegistry,
   selectMission,
   selectedMission,
   selectedMissionId,
@@ -119,31 +27,18 @@ const {
 const livePill = computed(() => (nodeStore.status.running ? "LIVE" : "IDLE"));
 const onlinePill = computed(() => (nodeStore.status.running ? "ONLINE" : "OFFLINE"));
 const hasLiveMissions = computed(() => missionDirectory.value.length > 0);
-const displayStatCards = computed(() => {
-  if (hasLiveMissions.value) {
-    return statCards.value;
-  }
-  return [
-    { label: "Total", value: "12", delta: "+2%" },
-    { label: "Active", value: "4", delta: "+5%" },
-    { label: "Checklists", value: "8", delta: "-1%" },
-    { label: "Assets", value: "24", delta: "0%" },
-  ];
-});
-const displaySelectedMission = computed(() => selectedMission.value ?? FALLBACK_DIRECTORY[0]);
-const primaryMissionCards = computed(() => (missionCards.value.length > 0 ? missionCards.value.slice(0, 3) : FALLBACK_CARDS));
-const secondaryMissions = computed(() => {
-  if (hasLiveMissions.value) {
-    return missionDirectory.value.filter((mission) => mission.id !== selectedMissionId.value).slice(0, 4);
-  }
-  return FALLBACK_DIRECTORY.slice(1);
-});
+const displayStatCards = computed(() => statCards.value);
+const displaySelectedMission = computed(() => selectedMission.value ?? null);
+const primaryMissionCards = computed(() => missionCards.value.slice(0, 3));
+const secondaryMissions = computed(() =>
+  missionDirectory.value.filter((mission) => mission.id !== selectedMissionId.value).slice(0, 4),
+);
 const statusLabel = computed(() => displaySelectedMission.value?.status ?? "UNSCOPED");
 const mapPreviewLabel = computed(() => {
   if (displaySelectedMission.value) {
     return `${displaySelectedMission.value.title.toUpperCase()} GRID`;
   }
-  return "LIVE AREA MAP PREVIEW";
+  return "AWAITING LXMF MISSION REGISTRY";
 });
 
 function chooseMission(id: string): void {
@@ -267,13 +162,21 @@ async function handleEditMission(): Promise<void> {
           </div>
 
           <RouterLink
-            :to="hasLiveMissions ? `/missions/${displaySelectedMission.id}/overview` : '/missions/demo-mission/overview'"
+            :to="`/missions/${displaySelectedMission.id}/overview`"
             class="missions-screen__workspace-link"
           >
             <span>Open Workspace</span>
             <span class="material-symbols-outlined">chevron_right</span>
           </RouterLink>
         </div>
+      </section>
+
+      <section v-else class="missions-screen__empty-state">
+        <h3>No missions received</h3>
+        <p>The client is waiting for `mission.registry.mission.list` over LXMF.</p>
+        <button type="button" class="missions-screen__empty-action" :disabled="busy || !nodeStore.status.running" @click="refreshMissionRegistry">
+          Refresh Registry
+        </button>
       </section>
 
       <section v-if="secondaryMissions.length > 0" class="missions-screen__directory-list">
@@ -296,14 +199,15 @@ async function handleEditMission(): Promise<void> {
         <div class="missions-screen__ops-header">
           <h2>Active Operations</h2>
           <RouterLink
-            :to="hasLiveMissions && displaySelectedMission ? `/missions/${displaySelectedMission.id}/mission` : '/missions/demo-mission/mission'"
+            v-if="displaySelectedMission"
+            :to="`/missions/${displaySelectedMission.id}/mission`"
             class="missions-screen__view-all"
           >
             View All
           </RouterLink>
         </div>
 
-        <div class="missions-screen__ops-list">
+        <div v-if="primaryMissionCards.length > 0" class="missions-screen__ops-list">
           <article v-for="mission in primaryMissionCards" :key="mission.id" class="missions-screen__ops-card">
             <div class="missions-screen__ops-copy">
               <div class="missions-screen__priority" :class="mission.priority">
@@ -320,6 +224,9 @@ async function handleEditMission(): Promise<void> {
             <div class="missions-screen__ops-preview" :style="{ backgroundImage: `linear-gradient(180deg, rgb(4 18 24 / 30%), rgb(4 18 24 / 55%)), url(${mission.imageUrl})` }" />
           </article>
         </div>
+        <article v-else class="missions-screen__ops-empty">
+          <p>No live missions available yet.</p>
+        </article>
       </section>
 
       <section class="missions-screen__map-preview">
@@ -552,6 +459,44 @@ async function handleEditMission(): Promise<void> {
   overflow: hidden;
   padding: 1rem;
   position: relative;
+}
+
+.missions-screen__empty-state,
+.missions-screen__ops-empty {
+  background: rgb(37 209 244 / 5%);
+  border: 1px solid rgb(37 209 244 / 10%);
+  border-radius: 1rem;
+  margin: 0 1rem 0.95rem;
+  padding: 1rem;
+}
+
+.missions-screen__empty-state h3,
+.missions-screen__ops-empty p {
+  color: #f5fbff;
+  font-family: var(--font-ui);
+  margin: 0;
+}
+
+.missions-screen__empty-state p {
+  color: #9eb0ba;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  margin: 0.45rem 0 0;
+}
+
+.missions-screen__empty-action {
+  background: rgb(37 209 244 / 12%);
+  border: 1px solid rgb(37 209 244 / 24%);
+  border-radius: 0.75rem;
+  color: #25d1f4;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-top: 0.9rem;
+  min-height: 2.6rem;
+  padding: 0 0.9rem;
+  text-transform: uppercase;
 }
 
 .missions-screen__selected-badge {

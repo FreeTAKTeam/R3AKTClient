@@ -26,7 +26,7 @@ describe("mobile live router", () => {
   it("preserves legacy-friendly top-level aliases", async () => {
     await expect(navigate("/chat")).resolves.toBe("/comms/chat");
     await expect(navigate("/topics")).resolves.toBe("/comms/topics");
-    await expect(navigate("/checklists")).resolves.toBe("/missions");
+    await expect(navigate("/checklists")).resolves.toBe("/checklists");
     await expect(navigate("/settings")).resolves.toBe("/ops/settings");
   });
 

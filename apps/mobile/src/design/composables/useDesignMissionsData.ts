@@ -1,5 +1,6 @@
 import { computed, onMounted, shallowRef, watch } from "vue";
 
+import { useAssetsAssignmentsStore } from "../../stores/assetsAssignmentsStore";
 import { useChecklistsStore } from "../../stores/checklistsStore";
 import { useMissionCoreStore } from "../../stores/missionCoreStore";
 import { useNodeStore } from "../../stores/nodeStore";
@@ -115,6 +116,7 @@ export function useDesignMissionsData() {
   const nodeStore = useNodeStore();
   const missionCoreStore = useMissionCoreStore();
   const checklistsStore = useChecklistsStore();
+  const assetsAssignmentsStore = useAssetsAssignmentsStore();
 
   const busy = shallowRef(false);
   const errorMessage = shallowRef("");
@@ -129,6 +131,9 @@ export function useDesignMissionsData() {
       errorMessage.value = toErrorMessage(error);
     });
     await checklistsStore.wire().catch((error: unknown) => {
+      errorMessage.value = toErrorMessage(error);
+    });
+    await assetsAssignmentsStore.wire().catch((error: unknown) => {
       errorMessage.value = toErrorMessage(error);
     });
   }
@@ -247,9 +252,9 @@ export function useDesignMissionsData() {
       { delta: `${activeCount}`, label: "Active", value: `${activeCount}` },
       { delta: `${checklistsStore.checklists.length}`, label: "Checklists", value: `${checklistsStore.checklists.length}` },
       {
-        delta: `${missionCoreStore.missionLogEntries.length}`,
+        delta: `${assetsAssignmentsStore.assets.length}`,
         label: "Assets",
-        value: `${missionCoreStore.missionLogEntries.length}`,
+        value: `${assetsAssignmentsStore.assets.length}`,
       },
     ];
   });
@@ -276,13 +281,13 @@ export function useDesignMissionsData() {
   }
 
   async function refreshMission() {
-    if (!selectedMission.value) {
-      return;
-    }
-
     busy.value = true;
     errorMessage.value = "";
     try {
+      await missionCoreStore.listMissions();
+      if (!selectedMission.value) {
+        return;
+      }
       await missionCoreStore.getMission(selectedMission.value.id, {
         expand: ["log_entries", "checklists"],
       });
@@ -292,6 +297,22 @@ export function useDesignMissionsData() {
     } finally {
       busy.value = false;
     }
+  }
+
+  async function refreshMissionRegistry() {
+    if (!selectedMission.value) {
+      busy.value = true;
+      errorMessage.value = "";
+      try {
+        await missionCoreStore.listMissions();
+      } catch (error: unknown) {
+        errorMessage.value = toErrorMessage(error);
+      } finally {
+        busy.value = false;
+      }
+      return;
+    }
+    await refreshMission();
   }
 
   async function broadcastMissionUpdate() {
@@ -350,6 +371,7 @@ export function useDesignMissionsData() {
     missionCards,
     missionDirectory,
     refreshMission,
+    refreshMissionRegistry,
     broadcastMissionUpdate,
     selectMission,
     selectedMission,

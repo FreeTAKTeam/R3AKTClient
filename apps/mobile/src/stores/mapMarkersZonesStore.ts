@@ -23,6 +23,7 @@ const MARKER_POSITION_PATCH_OPERATION: MapOperation = "mission.marker.position.p
 const ZONE_LIST_OPERATION: MapOperation = "mission.zone.list";
 const ZONE_CREATE_OPERATION: MapOperation = "mission.zone.create";
 const ZONE_PATCH_OPERATION: MapOperation = "mission.zone.patch";
+const ZONE_DELETE_OPERATION: MapOperation = "mission.zone.delete";
 
 export interface MapPointRecord {
   lat: number;
@@ -208,6 +209,14 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
           ...zone,
         };
       }
+      return;
+    }
+
+    if (operation === ZONE_DELETE_OPERATION) {
+      const zoneId = readString(value, ["zone_id", "zoneId"]);
+      if (zoneId) {
+        delete zonesById[zoneId];
+      }
     }
   }
 
@@ -310,6 +319,15 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
     });
   }
 
+  async function deleteZone(zoneId: string): Promise<void> {
+    const normalizedZoneId = zoneId.trim();
+    if (!normalizedZoneId) {
+      return;
+    }
+    await execute(ZONE_DELETE_OPERATION, { zone_id: normalizedZoneId });
+    delete zonesById[normalizedZoneId];
+  }
+
   async function wire(): Promise<void> {
     if (wired.value) {
       return;
@@ -360,6 +378,7 @@ export const useMapMarkersZonesStore = defineStore("rch-map-markers-zones", () =
     updateMarkerPosition,
     createZone,
     updateZone,
+    deleteZone,
     wire,
   };
 });

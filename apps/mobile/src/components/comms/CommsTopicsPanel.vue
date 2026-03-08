@@ -59,7 +59,6 @@ const { toggleNavigationDrawer } = useNavigationDrawer();
 
 const filterQuery = ref("");
 const selectedBranch = ref("environment");
-const hiddenTopicIds = ref<string[]>([]);
 const editorOpen = ref(false);
 const editorMode = ref<"create" | "edit">("edit");
 const editorTopicId = ref("");
@@ -68,6 +67,7 @@ const editorPath = ref("");
 const editorDescription = ref("");
 const subscribeDestination = ref("");
 const editorBusy = ref(false);
+const editorError = ref("");
 
 onMounted(() => {
   topicsStore.wire().catch(() => undefined);
@@ -129,7 +129,7 @@ const topicCards = computed<TopicCardViewModel[]>(() => {
   const source = liveTopicCards.value.length > 0
     ? liveTopicCards.value
     : FALLBACK_TOPICS.map(createViewModel);
-  return source.filter((topic) => !hiddenTopicIds.value.includes(topic.topicId));
+  return source;
 });
 
 const availableBranches = computed<TopicBranchChip[]>(() => {
@@ -195,6 +195,7 @@ async function refreshTopics(): Promise<void> {
 function openCreateDialog(): void {
   editorMode.value = "create";
   editorOpen.value = true;
+  editorError.value = "";
   editorTopicId.value = `RCH-${String(Date.now()).slice(-6)}`;
   editorName.value = "";
   editorPath.value = `${selectedBranchValue.value}/`;
@@ -205,6 +206,7 @@ function openCreateDialog(): void {
 function openEditDialog(topic: TopicCardViewModel): void {
   editorMode.value = "edit";
   editorOpen.value = true;
+  editorError.value = "";
   editorTopicId.value = topic.topicId;
   editorName.value = titleCase(topic.topicName);
   editorPath.value = `${topic.branch}/${topic.topicName.toLowerCase()}`;
@@ -215,39 +217,59 @@ function openEditDialog(topic: TopicCardViewModel): void {
 function closeEditor(): void {
   editorOpen.value = false;
   editorBusy.value = false;
+  editorError.value = "";
 }
 
 async function saveEditor(): Promise<void> {
   const topicId = editorTopicId.value.trim();
   if (!topicId) {
+    editorError.value = "Topic ID is required.";
     return;
   }
   editorBusy.value = true;
-  topicsStore.rememberTopic(topicId, {
-    topicName: editorName.value.trim() || undefined,
-    topicPath: editorPath.value.trim() || undefined,
-    topicDescription: editorDescription.value.trim() || undefined,
-  });
-  if (!hiddenTopicIds.value.includes(topicId)) {
-    hiddenTopicIds.value = hiddenTopicIds.value.filter((value) => value !== topicId);
+  editorError.value = "";
+  try {
+    if (editorMode.value === "create") {
+      await topicsStore.createTopic({
+        topic_id: topicId,
+        topic_name: editorName.value.trim() || undefined,
+        topic_path: editorPath.value.trim() || undefined,
+        topic_description: editorDescription.value.trim() || undefined,
+      });
+    } else {
+      await topicsStore.patchTopic(topicId, {
+        topic_name: editorName.value.trim() || undefined,
+        topic_path: editorPath.value.trim() || undefined,
+        topic_description: editorDescription.value.trim() || undefined,
+      });
+    }
+    closeEditor();
+  } catch (error: unknown) {
+    editorError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    editorBusy.value = false;
   }
-  editorBusy.value = false;
-  closeEditor();
 }
 
 async function subscribeToTopic(topic: TopicCardViewModel): Promise<void> {
   editorBusy.value = true;
-  await topicsStore
-    .subscribeTopic(topic.topicId, subscribeDestination.value.trim() || undefined)
-    .catch(() => undefined);
-  editorBusy.value = false;
+  editorError.value = "";
+  try {
+    await topicsStore.subscribeTopic(topic.topicId, subscribeDestination.value.trim() || undefined);
+  } catch (error: unknown) {
+    editorError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    editorBusy.value = false;
+  }
 }
 
-function removeTopic(topic: TopicCardViewModel): void {
-  if (hiddenTopicIds.value.includes(topic.topicId)) {
-    return;
+async function removeTopic(topic: TopicCardViewModel): Promise<void> {
+  editorError.value = "";
+  try {
+    await topicsStore.deleteTopic(topic.topicId);
+  } catch (error: unknown) {
+    editorError.value = error instanceof Error ? error.message : String(error);
   }
-  hiddenTopicIds.value = [...hiddenTopicIds.value, topic.topicId];
 }
 </script>
 
@@ -317,7 +339,7 @@ function removeTopic(topic: TopicCardViewModel): void {
           :key="topic.topicId"
           :topic="topic"
           @edit="openEditDialog(topic)"
-          @delete="removeTopic(topic)"
+          @delete="void removeTopic(topic)"
         />
 
         <article v-if="filteredTopics.length === 0" class="topics-screen__empty">
@@ -367,12 +389,14 @@ function removeTopic(topic: TopicCardViewModel): void {
 
           <div class="topics-screen__editor-actions">
             <button type="button" class="secondary" :disabled="editorBusy" @click="saveEditor">
-              {{ editorMode === "create" ? "Save Draft" : "Update View" }}
+              {{ editorMode === "create" ? "Create Topic" : "Update Topic" }}
             </button>
             <button type="button" class="primary" :disabled="editorBusy" @click="subscribeToTopic({ topicId: editorTopicId, topicName: editorName.toUpperCase(), topicDescription: editorDescription, subscriberLabel: `${selectedBranchCount} Subscribers`, state: 'active', branch: selectedBranchValue })">
               Subscribe
             </button>
           </div>
+
+          <p v-if="editorError" class="topics-screen__editor-error">{{ editorError }}</p>
         </section>
       </div>
     </transition>
@@ -754,6 +778,17 @@ function removeTopic(topic: TopicCardViewModel): void {
   background: #25d1f4;
   border: 1px solid transparent;
   color: #04161d;
+}
+
+.topics-screen__editor-error {
+  background: rgb(251 113 133 / 10%);
+  border: 1px solid rgb(251 113 133 / 20%);
+  border-radius: 0.85rem;
+  color: #fda4af;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  margin: 0;
+  padding: 0.8rem 0.9rem;
 }
 
 .topics-editor-fade-enter-active,

@@ -1,9 +1,8 @@
 import { computed, onMounted, shallowRef, watch } from "vue";
 
-import type { EamStatus } from "../../types/domain";
-import { FEATURE_WIRE_ORDER, useFeatureBootstrapStore } from "../../stores/featureBootstrapStore";
-import { useEventsStore } from "../../stores/eventsStore";
-import { useMessagesStore } from "../../stores/messagesStore";
+import { useFeatureBootstrapStore, FEATURE_WIRE_ORDER } from "../../stores/featureBootstrapStore";
+import { useFilesMediaStore } from "../../stores/filesMediaStore";
+import { useMissionCoreStore } from "../../stores/missionCoreStore";
 import { useNodeStore } from "../../stores/nodeStore";
 import { useTelemetryStore } from "../../stores/telemetryStore";
 import { useTopicsStore } from "../../stores/topicsStore";
@@ -20,13 +19,6 @@ interface DashboardFeedItem {
   tone: "primary" | "warning";
   title: string;
 }
-
-const STATUS_SCORES: Record<EamStatus, number> = {
-  Green: 100,
-  Yellow: 50,
-  Red: 25,
-  Unknown: 0,
-};
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -46,31 +38,13 @@ function formatAgo(timestamp: number): string {
   return `${deltaMinutes} MIN AGO`;
 }
 
-function statusScore(messagesStore: ReturnType<typeof useMessagesStore>) {
-  const messages = messagesStore.messages;
-  if (messages.length === 0) {
-    return 0;
-  }
-
-  const total = messages.reduce((sum, message) => {
-    return (
-      sum +
-      STATUS_SCORES[message.securityStatus] +
-      STATUS_SCORES[message.commsStatus] +
-      STATUS_SCORES[message.mobilityStatus]
-    );
-  }, 0);
-
-  return Math.round(total / (messages.length * 3));
-}
-
 export function useDesignDashboardData() {
   const featureBootstrap = useFeatureBootstrapStore();
   const nodeStore = useNodeStore();
-  const messagesStore = useMessagesStore();
-  const eventsStore = useEventsStore();
+  const missionCoreStore = useMissionCoreStore();
   const topicsStore = useTopicsStore();
   const telemetryStore = useTelemetryStore();
+  const filesMediaStore = useFilesMediaStore();
 
   const runtimeBusy = shallowRef(false);
   const runtimeError = shallowRef("");
@@ -81,18 +55,12 @@ export function useDesignDashboardData() {
     }
 
     runtimeError.value = "";
-
-    if (!topicsStore.wired) {
-      await topicsStore.wire().catch((error: unknown) => {
-        runtimeError.value = toErrorMessage(error);
-      });
-    }
-
-    if (!telemetryStore.wired) {
-      await telemetryStore.wire().catch((error: unknown) => {
-        runtimeError.value = toErrorMessage(error);
-      });
-    }
+    await Promise.allSettled([
+      missionCoreStore.wire(),
+      topicsStore.wire(),
+      telemetryStore.wire(),
+      filesMediaStore.wire(),
+    ]);
 
     await featureBootstrap.wireInOrder().catch((error: unknown) => {
       runtimeError.value = toErrorMessage(error);
@@ -101,10 +69,6 @@ export function useDesignDashboardData() {
 
   onMounted(() => {
     nodeStore.init().catch(() => undefined);
-    messagesStore.init();
-    messagesStore.initReplication();
-    eventsStore.init();
-    eventsStore.initReplication();
     void wireLiveFeatures();
   });
 
@@ -124,31 +88,42 @@ export function useDesignDashboardData() {
     return `${wiredCount}/${FEATURE_WIRE_ORDER.length}`;
   });
 
-  const telemetryScore = computed(() => statusScore(messagesStore));
-
   const metricCards = computed<DashboardMetricCard[]>(() => [
-    { label: "USERS", value: `${nodeStore.connectedDestinations.length}` },
-    { label: "TOPICS", value: `${topicsStore.topics.length}` },
-    { label: "ACTIVE", value: `${messagesStore.activeCount}` },
-    { label: "Tasks", value: `${eventsStore.records.length}` },
-    { label: "Mission", value: `${telemetryScore.value}%` },
-    { label: "Files", value: bootstrapSummary.value },
+    { label: "Peers", value: `${nodeStore.connectedDestinations.length}` },
+    { label: "Topics", value: `${topicsStore.topics.length}` },
+    { label: "Missions", value: `${missionCoreStore.missions.length}` },
+    { label: "Logs", value: `${missionCoreStore.missionLogEntries.length}` },
+    {
+      label: "Files",
+      value: `${filesMediaStore.fileRegistry.length + filesMediaStore.imageRegistry.length}`,
+    },
+    { label: "Wire", value: bootstrapSummary.value },
   ]);
 
   const activityLog = computed<DashboardFeedItem[]>(() => {
-    if (eventsStore.records.length > 0) {
-      return eventsStore.records.slice(0, 4).map((event) => ({
-        id: event.uid,
-        icon: event.type.toLowerCase().includes("incident") ? "warning" : "check_circle",
-        meta: `${event.callsign.toUpperCase()} - ${formatAgo(event.updatedAt)}`,
-        tone: event.type.toLowerCase().includes("incident") ? "warning" : "primary",
-        title: event.summary,
+    if (missionCoreStore.missionChanges.length > 0) {
+      return missionCoreStore.missionChanges.slice(0, 4).map((change) => ({
+        id: change.uid,
+        icon: "event_note",
+        meta: `${change.changeType ?? "CHANGE"} - ${change.createdAt ?? "recent"}`,
+        tone: "primary",
+        title: change.summary,
+      }));
+    }
+
+    if (missionCoreStore.missionLogEntries.length > 0) {
+      return missionCoreStore.missionLogEntries.slice(0, 4).map((entry) => ({
+        id: entry.uid,
+        icon: "notes",
+        meta: `${entry.missionUid ?? "mission"} - ${entry.updatedAt ?? entry.createdAt ?? "recent"}`,
+        tone: "primary",
+        title: entry.content,
       }));
     }
 
     return nodeStore.logs.slice(0, 4).map((entry) => ({
       id: `${entry.at}-${entry.message}`,
-      icon: entry.level === "Error" ? "sensors" : "router",
+      icon: entry.level === "Error" ? "warning" : "router",
       meta: `${entry.level.toUpperCase()} - ${formatAgo(entry.at)}`,
       tone: entry.level === "Error" ? "warning" : "primary",
       title: entry.message,
@@ -175,7 +150,7 @@ export function useDesignDashboardData() {
       return `SYSTEM STATUS: ${featureBootstrap.lastError}`;
     }
     if (streamActive.value) {
-      return `SYSTEM STATUS: ${nodeStore.connectedDestinations.length} PEERS CONNECTED`;
+      return `SYSTEM STATUS: ${nodeStore.connectedDestinations.length} PEERS · ${missionCoreStore.missions.length} MISSIONS`;
     }
     return "SYSTEM STATUS: OFFLINE";
   });
