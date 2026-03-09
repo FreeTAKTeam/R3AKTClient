@@ -1,20 +1,21 @@
 {
-    "name":  "reticulum_mobile_emergency_management",
-    "private":  true,
-    "version":  "0.1.0",
-    "workspaces":  [
-                       "apps/*",
-                       "packages/*"
-                   ],
-    "scripts":  {
-                    "web:dev":  "npm --workspace apps/mobile run dev:web",
-                    "web:build":  "npm --workspace apps/mobile run build:web",
-                    "mobile:dev":  "npm --workspace apps/mobile run dev:mobile",
-                    "mobile:build":  "npm --workspace apps/mobile run build:mobile",
-                    "node-client:build":  "npm --workspace packages/node-client run build",
-                    "codegen:client-operations":  "node tools/codegen/generate-client-operation-catalog.mjs",
-                    "check:client-operations":  "node tools/codegen/check-client-operation-coverage.mjs",
-                    "test:mobile":  "npm --workspace apps/mobile run test",
-                    "test:node-client":  "npm --workspace packages/node-client run test"
-                }
+    "name": "reticulum_mobile_emergency_management",
+    "private": true,
+    "version": "0.1.0",
+    "workspaces": [
+        "apps/*",
+        "packages/*"
+    ],
+    "scripts": {
+        "web:dev": "npm --workspace apps/mobile run dev:web",
+        "web:build": "npm --workspace apps/mobile run build:web",
+        "mobile:dev": "npm --workspace apps/mobile run dev:mobile",
+        "mobile:build": "npm --workspace apps/mobile run build:mobile",
+        "node-client:build": "npm --workspace packages/node-client run build",
+        "codegen:client-operations": "node tools/codegen/generate-client-operation-catalog.mjs",
+        "check:client-operations": "node tools/codegen/check-client-operation-coverage.mjs",
+        "test:mobile": "npm --workspace apps/mobile run test",
+        "test:node-client": "npm --workspace packages/node-client run test",
+        "validate:mobile:ci": "cargo check -p reticulum_mobile --locked && npm run node-client:build && npm run mobile:build"
+    }
 }

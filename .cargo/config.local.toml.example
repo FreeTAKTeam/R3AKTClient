@@ -1,0 +1,7 @@
+# Optional developer override for iterating against a local LXMF-rs checkout.
+# Usage from repository root:
+#   cargo --config .cargo/config.local.toml.example check -p reticulum_mobile
+[patch."https://github.com/FreeTAKTeam/LXMF-rs"]
+reticulum = { path = "../LXMF-rs/crates/internal/reticulum-legacy" }
+lxmf = { path = "../LXMF-rs/crates/internal/lxmf-legacy" }
+lxmf-sdk = { path = "../LXMF-rs/crates/libs/lxmf-sdk" }

@@ -58,20 +58,29 @@ separate app.
 
 ## Local development
 
-Rust runtime dependencies for this app are sourced from the sibling consolidated
-`LXMF-rs` checkout (`../LXMF-rs`) and validated against commit
-`0052218f1247c68f8c925988299d33d0678d81b4`.
+Rust runtime dependencies default to pinned git sources from
+`https://github.com/FreeTAKTeam/LXMF-rs` at commit
+`87c71c94d1e76cb1acf33642dc6e02f36142c2e8`, so a sibling `../LXMF-rs`
+checkout is no longer required for standard builds.
 
 From repo root:
 
 1. Install dependencies (once): `npm install`
 2. Start app dev server: `npm run mobile:dev`
 
-Validation gates from repo root:
+CI-friendly validation gate from repo root:
 
-1. `cargo check -p reticulum_mobile`
+1. `npm run validate:mobile:ci`
+
+Individual validation gates from repo root:
+
+1. `cargo check -p reticulum_mobile --locked`
 2. `npm run node-client:build`
 3. `npm run mobile:build`
+
+Optional local `LXMF-rs` override (opt-in, for SDK development):
+
+- `cargo --config .cargo/config.local.toml.example check -p reticulum_mobile`
 
 Or from `apps/mobile` directly:
 
