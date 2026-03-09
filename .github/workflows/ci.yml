@@ -19,6 +19,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout LXMF-rs
+        uses: actions/checkout@v4
+        with:
+          repository: FreeTAKTeam/LXMF-rs
+          ref: 0052218f1247c68f8c925988299d33d0678d81b4
+          path: LXMF-rs
+
+      - name: Link LXMF-rs sibling path
+        run: ln -sfn "$GITHUB_WORKSPACE/LXMF-rs" "$GITHUB_WORKSPACE/../LXMF-rs"
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
