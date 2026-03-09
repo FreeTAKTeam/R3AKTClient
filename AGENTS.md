@@ -20,15 +20,29 @@ This repository is not:
 - a REST server implementation
 - a place to redesign the repo structure
 
+## Current baseline
+
+As of March 9, 2026, the repository already has:
+
+- a validated 115-operation southbound command allowlist and coverage artifact
+- generated Rust and TypeScript operation catalogs aligned to that allowlist
+- green validation for Rust, node-client, and mobile build/test/typecheck flows
+- a live mobile shell with primary feature routes and stores already present
+
+Do not plan or describe this repository as if it is still at the initial starter-slice stage.
+
 ## Source of truth
 
 Use these files in this priority order:
 
 1. `docs/R3AKTClient/R3AKT_client_CODEX_Implementation_plan.md`
 2. `docs/R3AKTClient/APIANnalysis_clientImplementationSet.md`
-3. `API/ReticulumCommunityHub-Messages.yaml`
-4. `docs/R3AKTClient/ImplementationGapAnalysis.md`
-5. `README.md`
+3. `API/ReticulumCommunityHub-SouthboundCommands.json`
+4. `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+5. `docs/R3AKTClient/generated/client-operation-coverage.json`
+6. `API/ReticulumCommunityHub-Messages.yaml` as a historical starter reference unless a task explicitly refreshes it
+7. `docs/R3AKTClient/ImplementationGapAnalysis.md`
+8. `README.md`
 
 If there is ambiguity, obey the higher item in this list.
 
@@ -47,7 +61,12 @@ If there is ambiguity, obey the higher item in this list.
 
 ## Scope rules
 
-Implement only operations classified as `client`.
+Implement only the allowed mobile client surface defined by the current allowlist sources.
+
+Allowed:
+
+- operations classified as `client`
+- the explicitly widened `Hub Admin and Legacy Command Parity` group already present in the implementation set and southbound command catalog
 
 Do not implement:
 
@@ -94,8 +113,9 @@ Before editing:
 
 1. Read `AGENTS.md`
 2. Read `PLANS.md`
-3. Read the current section of `DOCUMENTATION.md`
-4. Read the relevant spec files for the assigned milestone
+3. Read `IMPLEMENT.md`
+4. Read the current section of `DOCUMENTATION.md`
+5. Read the relevant spec files for the assigned milestone
 
 During work:
 
@@ -117,9 +137,17 @@ At minimum, use the commands relevant to the current slice.
 
 Primary validation commands from repo root:
 
+- `npm run check:client-operations`
 - `cargo check -p reticulum_mobile`
 - `npm run node-client:build`
 - `npm run mobile:build`
+
+Run `npm run check:client-operations` whenever a task changes or makes claims about:
+
+- `API/ReticulumCommunityHub-SouthboundCommands.json`
+- generated operation catalogs or coverage artifacts
+- bridge/wrapper operation parity
+- milestone status tied to command coverage parity
 
 When TS/Vue surface changes are involved, also run if available:
 
@@ -136,7 +164,7 @@ For every milestone-sized task, update:
 - `PLANS.md`
 - `DOCUMENTATION.md`
 
-If you changed behavior, contracts, or sequencing, update the relevant file under `docs/R3AKTClient` too.
+If you changed behavior, contracts, sequencing, or parity assumptions, update the relevant file under `docs/R3AKTClient` too.
 
 ## Parallel work policy
 

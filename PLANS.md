@@ -13,177 +13,98 @@ Rule: only one milestone may be `in_progress` at a time unless the task explicit
 
 ---
 
-## M0 - Repository operating scaffolding
-Status: pending
+## P0 - Operating docs realignment
+Status: done
 
 Goal:
-Add and stabilize agent operating files for long-run Codex work.
+Realign root operating docs with the repository state that actually exists on March 9, 2026.
 
 Deliverables:
-- `AGENTS.md`
-- `PLANS.md`
-- `IMPLEMENT.md`
-- `DOCUMENTATION.md`
+- updated `AGENTS.md`
+- updated `PLANS.md`
+- updated `DOCUMENTATION.md`
 
 Acceptance criteria:
-- all four files exist at repo root
-- each file reflects current repository constraints
-- no code behavior changes are introduced
+- root operating docs no longer describe the repo as pre-parity or pre-live-shell
+- source-of-truth ordering matches the real codegen and validation pipeline
+- current focus is moved to the next incomplete milestone
 
 Validation:
-- no build required
-- manual review for consistency with repo docs
+- `npm run check:client-operations`
+- manual review for consistency with repo docs and current repo behavior
 
 Notes:
-This milestone exists to reduce drift before deeper implementation work.
+This milestone is documentation-only and does not change runtime behavior.
 
 ---
 
-## M1 - Freeze client-safe message catalog
-Status: pending
+## P1 - Southbound command parity baseline
+Status: done
 
 Goal:
-Make `API/ReticulumCommunityHub-Messages.yaml` the clean client-safe contract surface for the first implementation slice.
+Maintain the validated 115-operation southbound allowlist as the parity baseline for mobile client execution.
 
 Deliverables:
-- client-only operation mapping
-- explicit `Query`, `Command`, and `Event` message classification
-- removal or exclusion of out-of-scope `server-only` and `unknown` entries from the implementation slice
+- `API/ReticulumCommunityHub-SouthboundCommands.json`
+- generated operation catalogs under `docs/R3AKTClient/generated`
+- coverage artifact proving Rust and TypeScript parity against the allowlist
 
 Acceptance criteria:
-- first feature slice is represented in the canonical message catalog
-- no server-only operation is accidentally pulled into client scope
-- contract naming is stable enough for Rust and TS typing work
+- allowlist contains 115 documented southbound operations
+- `docs/R3AKTClient/generated/client-operation-coverage.json` reports `expected_operation_count: 115`
+- coverage artifact reports `passed: true`
+- no HTTP-shaped public operation names leak into the public parity surface
 
 Validation:
 - `npm run check:client-operations`
 
 Depends on:
-- M0
+- P0
 
 ---
 
-## M2 - Rust contract layer for first slice
-Status: pending
+## P2 - Rust/native/TypeScript parity baseline
+Status: done
 
 Goal:
-Implement typed Rust-side message contract models and codec support for the first slice.
-
-Suggested first slice:
-- discovery/session
-- one telemetry read path
-- one message send/receive path
+Keep Rust runtime, native bridge, and `packages/node-client` aligned to the current southbound parity baseline.
 
 Deliverables:
-- contract module(s) under `crates/reticulum_mobile`
-- serialization/deserialization support
-- validation or mapping helpers
-- unit tests where practical
+- Rust-side generated operation catalog and runtime dispatch support
+- native bridge exposure for the operation execution surface
+- typed TypeScript wrapper support for grouped feature execution
 
 Acceptance criteria:
-- Rust contract types compile cleanly
-- contract layer matches the frozen message catalog
-- no UI-facing bridge changes yet unless required for compile health
+- Rust runtime/catalog support covers the allowlisted operation set
+- native bridge exposes the parity surface without requiring raw UI-side packet work
+- `packages/node-client` exposes typed grouped execution APIs aligned to the allowlist
+- node-client build/tests pass
 
 Validation:
 - `cargo check -p reticulum_mobile`
-
-Depends on:
-- M1
-
----
-
-## M3 - Rust runtime dispatch for first slice
-Status: pending
-
-Goal:
-Add runtime handling for the first contract slice inside the local Reticulum/LXMF client.
-
-Deliverables:
-- outbound command/query dispatch
-- inbound decode -> validate -> dispatch path
-- correlation/request tracking where needed
-- persistence touchpoints only if required by the slice
-
-Acceptance criteria:
-- the first slice can move through the Rust runtime boundary
-- southbound transport remains Reticulum/LXMF only
-- no REST feature path is introduced
-
-Validation:
-- `cargo check -p reticulum_mobile`
-
-Depends on:
-- M2
-
----
-
-## M4 - Native bridge exposure for first slice
-Status: pending
-
-Goal:
-Expose the first slice through the existing native plugin surface.
-
-Deliverables:
-- Capacitor bridge methods/events
-- UniFFI or native binding updates if required
-- bridge-safe payload mappings
-
-Acceptance criteria:
-- the app can call or subscribe to the first slice through the existing bridge model
-- bridge changes do not break current node lifecycle behavior
-
-Validation:
-- `cargo check -p reticulum_mobile`
-- `npm run node-client:build`
-
-Depends on:
-- M3
-
----
-
-## M5 - TypeScript wrapper for first slice
-Status: pending
-
-Goal:
-Extend `packages/node-client` with typed APIs for the first slice.
-
-Deliverables:
-- typed wrapper methods/events
-- payload models
-- adapter logic for native bridge responses/events
-- tests where available
-
-Acceptance criteria:
-- TS consumers can use the first slice without raw plugin calls
-- API names are stable and consistent with the message catalog
-- package builds cleanly
-
-Validation:
 - `npm run node-client:build`
 - `npm run test:node-client`
 
 Depends on:
-- M4
+- P1
 
 ---
 
-## M6 - Vue integration for first slice
-Status: pending
+## P3 - Mobile live shell and primary feature-store wiring
+Status: done
 
 Goal:
-Integrate the first slice into the mobile app UI.
+Keep the live mobile shell, feature stores, and primary routes aligned to the current wrapper/runtime baseline.
 
 Deliverables:
-- Pinia store changes
-- view/component updates
-- loading/error state handling
-- offline-friendly UX behavior
+- live mobile shell route structure
+- primary feature stores for comms, missions, map, teams, assets, and checklists
+- buildable/typecheckable Vue integration over the typed wrapper
 
 Acceptance criteria:
-- one end-to-end slice works from UI -> TS wrapper -> native bridge -> Rust runtime and back
-- no direct feature REST dependency is introduced
-- UI compiles and typechecks cleanly
+- existing live routes and primary stores remain present and wired
+- mobile build, typecheck, and tests pass
+- the app does not regress back to the old legacy-only shell model
 
 Validation:
 - `npm run mobile:build`
@@ -191,71 +112,123 @@ Validation:
 - `npm run test:mobile`
 
 Depends on:
-- M5
+- P2
 
 ---
 
-## M7 - Expand by feature family
-Status: pending
+## P4 - UI action parity backlog
+Status: in_progress
 
 Goal:
-Repeat M1-M6 by feature family in controlled order.
-
-Recommended order:
-1. discovery and session hardening
-2. telemetry
-3. messaging
-4. topics/subscriptions
-5. files/media metadata
-6. map overlays and field objects
-7. missions
-8. teams and skills
-9. assets and assignments
-10. checklists/workflows
-
-Acceptance criteria:
-- each family is delivered as validated thin slices
-- `PLANS.md` and `DOCUMENTATION.md` are updated at each checkpoint
-
-Validation:
-- milestone-specific validation commands per slice
-
-Depends on:
-- M6
-
----
-
-## M8 - Hardening and release-readiness
-Status: pending
-
-Goal:
-Raise confidence for sustained use on Android.
+Close the gap between backend capability parity and first-class mobile UI actions.
 
 Deliverables:
-- error-path cleanup
-- recovery behavior checks
-- performance and battery-impact review for key flows
-- developer documentation refresh
-- CI tightening if required
+- core session/admin parity screens and actions
+- telemetry drill-down panels
+- file/image preview, download, share, and association flows
+- advanced mission, team, asset, assignment, checklist, and map editing actions
+- hub admin and moderation surfaces where explicitly allowed
 
 Acceptance criteria:
-- no known critical gap in the delivered client-safe feature set for the selected release target
+- items listed in `docs/R3AKTClient/UI_BACKEND_BACKLOG.md` are worked down in thin slices
+- newly surfaced UI actions use the existing typed wrapper instead of direct plugin calls
+- `PLANS.md` and `DOCUMENTATION.md` are updated after each completed UI slice
+
+Validation:
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:mobile`
+
+Depends on:
+- P3
+
+---
+
+## P5 - Event/offline/persistence hardening
+Status: pending
+
+Goal:
+Raise confidence in event semantics, offline cache behavior, persistence boundaries, and runtime recovery.
+
+Deliverables:
+- domain-event vocabulary review and gap closure
+- offline cache and persistence verification for key feature families
+- runtime recovery and reconnection behavior checks
+- documentation of failure modes and expected recovery behavior
+
+Acceptance criteria:
+- event vocabulary is sufficient for mobile stores without ad-hoc payload guessing
+- offline-first expectations are validated for key stateful flows
+- recovery behavior is documented and verified for transient connectivity failures
+
+Validation:
+- `cargo check -p reticulum_mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:node-client`
+- `npm run test:mobile`
+
+Depends on:
+- P4
+
+---
+
+## P6 - Spec and documentation reconciliation
+Status: pending
+
+Goal:
+Reconcile stale spec and documentation files that still describe the repo as a starter catalog or first-slice implementation.
+
+Deliverables:
+- refreshed docs under `docs/R3AKTClient`
+- explicit documentation of which files are operative versus historical
+- removal of stale milestone wording that conflicts with the validated baseline
+
+Acceptance criteria:
+- no primary operating doc describes the repo as being before transport, wrapper, or live-shell parity
+- historical/starter references are clearly labeled as such
+- execution docs and product docs agree on the current state and next work
+
+Validation:
+- manual doc review
+- `npm run check:client-operations` when parity claims are updated
+
+Depends on:
+- P5
+
+---
+
+## P7 - Release readiness and device validation
+Status: pending
+
+Goal:
+Prepare the Android-first client for reliable release use with device-level validation and tightened delivery gates.
+
+Deliverables:
+- Android device validation for key flows
+- release-signoff checklist and documentation
+- CI or automation tightening where needed for sustained parity confidence
+- final validation record for selected release scope
+
+Acceptance criteria:
+- Android-first critical flows are validated on-device
 - validation commands pass consistently
-- docs reflect actual behavior
+- release documentation reflects actual behavior and known limits
 
 Validation:
 - all relevant repo validation commands
-- any release-specific checks added during implementation
+- device-specific checks added during hardening
 
 Depends on:
-- M7
+- P6
 
 ---
 
 ## Current focus
-Current milestone: M0
+Current milestone: P4
 Owner: Codex / agent
-Last updated: YYYY-MM-DD
+Last updated: 2026-03-09
 
 ## Rules for updating this file
 

@@ -18,12 +18,15 @@ Architecture constraints:
 - keep Reticulum running locally on the phone
 - use Reticulum/LXMF southbound
 - expose features northbound via native bridge -> TS wrapper -> Vue
-- implement only `client`-scoped operations unless scope is explicitly widened
+- implement only `client`-scoped operations plus explicitly widened allowlist groups already documented for the mobile client
 
 Primary source files:
 - `docs/R3AKTClient/R3AKT_client_CODEX_Implementation_plan.md`
 - `docs/R3AKTClient/APIANnalysis_clientImplementationSet.md`
-- `API/ReticulumCommunityHub-Messages.yaml`
+- `API/ReticulumCommunityHub-SouthboundCommands.json`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `docs/R3AKTClient/generated/client-operation-coverage.json`
+- `API/ReticulumCommunityHub-Messages.yaml` (historical starter reference until reconciled)
 - `docs/R3AKTClient/ImplementationGapAnalysis.md`
 
 ---
@@ -31,60 +34,69 @@ Primary source files:
 ## Current status
 
 Current milestone:
-- M0 - Repository operating scaffolding
+- P4 - UI action parity backlog
 
 Overall state:
-- not started
+- foundational parity baseline validated
+- live shell present
+- operating docs aligned to the current-state roadmap
 
 Current blocker:
 - none
 
 Next intended action:
-- add root operating files and align them with current repo constraints
+- work down the UI action backlog from `docs/R3AKTClient/UI_BACKEND_BACKLOG.md` in thin validated slices
 
 Last updated:
-- YYYY-MM-DD
+- 2026-03-09
 
 ---
 
 ## Session log
 
-### YYYY-MM-DD - Session 001
+### 2026-03-09 - Session 001
 Milestone:
-- M0 - Repository operating scaffolding
+- P0 - Operating docs realignment
 
 Objective:
-- establish durable agent operating files for long-run Codex work
+- realign root operating docs with the current validated implementation baseline and replace the stale starter roadmap
 
 Planned changes:
-- add `AGENTS.md`
-- add `PLANS.md`
-- add `IMPLEMENT.md`
-- add `DOCUMENTATION.md`
+- update `AGENTS.md` source-of-truth, scope, process, and baseline guidance
+- replace the starter milestone board in `PLANS.md` with a current-state roadmap
+- sync `DOCUMENTATION.md` current status, validation history, and next steps
 
 Files touched:
 - `AGENTS.md`
 - `PLANS.md`
-- `IMPLEMENT.md`
 - `DOCUMENTATION.md`
+- `docs/R3AKTClient/generated/client-operation-coverage.json`
 
 Validation run:
-- manual consistency review against repo docs and current implementation plan
+- `npm run check:client-operations`
+- `cargo check -p reticulum_mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
 
 Validation result:
-- pending
+- pass
 
 Outcome:
-- pending
+- complete
 
 Notes:
-- this milestone should be completed before implementation-heavy slices to reduce drift and improve repeatability
+- the repo already had a validated 115-operation parity baseline and a live mobile shell before this doc rewrite
+- this task intentionally left runtime, TypeScript, and Vue code unchanged
+- the coverage check refreshed the generated parity report timestamp while confirming the allowlist remained at 115 operations
 
 Open issues:
-- none
+- several docs under `docs/R3AKTClient` still use starter-catalog or first-slice wording and need a later reconciliation pass
 
 Next recommended step:
-- mark M0 done after review, then begin M1 to freeze the first client-safe message slice
+- continue P4 by selecting the next thin UI action slice from `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
 
 ---
 
@@ -92,41 +104,44 @@ Next recommended step:
 
 ### D-001
 Date:
-- YYYY-MM-DD
+- 2026-03-09
 
 Decision:
-- use root operating files to constrain long-run agent behavior
+- treat the current-state roadmap as authoritative for milestone tracking instead of the older starter-slice milestone board
 
 Reason:
-- the repository already has product and architecture docs, but not a small execution control layer for milestone tracking and live session memory
+- the codebase already demonstrates validated transport, wrapper, and live-shell parity that the old plan did not acknowledge
 
 Impact:
-- lower drift risk
-- better handoff between Codex sessions
-- cleaner audit trail for partial or blocked work
+- future work can target the real remaining gaps: UI action parity, hardening, doc reconciliation, and release validation
+- agent instructions now match the real codegen and validation pipeline
 
 Status:
-- proposed
+- accepted
 
 ---
 
 ## Validation history
 
-### Entry template
-Date:
-- YYYY-MM-DD
-
+### 2026-03-09
 Milestone:
-- Mx
+- P0 - Operating docs realignment
 
 Commands:
-- `command here`
+- `npm run check:client-operations`
+- `cargo check -p reticulum_mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
 
 Result:
-- pass | fail | blocked | not run
+- pass
 
 Notes:
-- short factual note
+- coverage artifact reported `expected_operation_count: 115` and `passed: true`
+- Rust, node-client, and mobile validation remained green during the doc realignment task
 
 ---
 
@@ -158,15 +173,10 @@ Status:
 
 ## Next milestones queue
 
-1. M0 - Repository operating scaffolding
-2. M1 - Freeze client-safe message catalog
-3. M2 - Rust contract layer for first slice
-4. M3 - Rust runtime dispatch for first slice
-5. M4 - Native bridge exposure for first slice
-6. M5 - TypeScript wrapper for first slice
-7. M6 - Vue integration for first slice
-8. M7 - Expand by feature family
-9. M8 - Hardening and release-readiness
+1. P4 - UI action parity backlog
+2. P5 - Event/offline/persistence hardening
+3. P6 - Spec and documentation reconciliation
+4. P7 - Release readiness and device validation
 
 ---
 
