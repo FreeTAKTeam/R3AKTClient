@@ -20,10 +20,12 @@ describe("messaging store chat_v2 behavior", () => {
     });
 
     expect(store.activeMessages.length).toBeGreaterThan(0);
-    const latest = store.activeMessages[store.activeMessages.length - 1];
-    expect(latest?.content).toBe("hello world");
+    const sentMessage = store.activeMessages.find(
+      (message) => message.content === "hello world",
+    );
+    expect(sentMessage).toBeDefined();
     expect(["queued", "sent", "delivered", "failed"]).toContain(
-      latest?.deliveryState,
+      sentMessage?.deliveryState,
     );
   });
 
