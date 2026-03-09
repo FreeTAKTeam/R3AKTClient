@@ -13,8 +13,17 @@ function execute(operation: string, payloadJson: string): void {
   <section class="tab-view">
     <header class="tab-header">
       <h1>Map</h1>
-      <p>Marker and zone operations for mobile map-state parity shells.</p>
+      <p>Live map view powered by OpenFreeMap.</p>
     </header>
+
+    <section class="map-frame" aria-label="OpenFreeMap">
+      <iframe
+        src="https://map.openfreemap.org/#map=3/20/0"
+        title="OpenFreeMap"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+      />
+    </section>
 
     <FeatureFamilyShell
       title="Map, Markers, and Zones"
@@ -47,5 +56,19 @@ function execute(operation: string, payloadJson: string): void {
   color: #8eaad4;
   font-family: var(--font-body);
   margin: 0.3rem 0 0;
+}
+
+.map-frame {
+  border: 1px solid rgba(142, 170, 212, 0.35);
+  border-radius: 0.9rem;
+  min-height: 16rem;
+  overflow: hidden;
+}
+
+.map-frame iframe {
+  border: 0;
+  display: block;
+  height: clamp(16rem, 42vh, 24rem);
+  width: 100%;
 }
 </style>
