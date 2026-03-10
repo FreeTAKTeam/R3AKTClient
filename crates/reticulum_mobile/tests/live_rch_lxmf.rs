@@ -11,7 +11,7 @@ use reticulum_mobile::{EventSubscription, HubMode, Node, NodeConfig, NodeError, 
 use rmpv::Value as RmpValue;
 use serde_json::{json, Value};
 
-const DEFAULT_HUB_IDENTITY_HASH: &str = "c4de028671f01d9649aabb85e73b50a4";
+const DEFAULT_HUB_IDENTITY_HASH: &str = "af1ec9121da534836e6a39b7d261fa65";
 const DEFAULT_TCP_CLIENT: &str = "134.122.46.48:4242";
 const NETWORK_TIMEOUT: Duration = Duration::from_secs(45);
 const PROBE_ANNOUNCE_INTERVAL_SECONDS: u32 = 5;
@@ -595,6 +595,41 @@ fn drain_and_log_events(events: &Arc<EventSubscription>, duration: Duration) {
             other => eprintln!("[buffered-event] {:?}", other),
         }
     }
+}
+
+#[test]
+#[ignore = "requires network access and a live RCH hub"]
+fn live_rch_lxmf_get_app_info_probe() {
+    let hub_identity_hash = std::env::var("RCH_LIVE_HUB_IDENTITY_HASH")
+        .unwrap_or_else(|_| DEFAULT_HUB_IDENTITY_HASH.to_string());
+    let tcp_client =
+        std::env::var("RCH_LIVE_TCP_CLIENT").unwrap_or_else(|_| DEFAULT_TCP_CLIENT.to_string());
+
+    assert_valid_hash("RCH hub hash", &hub_identity_hash);
+
+    eprintln!("[probe:get-app-info] hub={} tcp={}", hub_identity_hash, tcp_client);
+
+    let (node, events) = start_probe_node("get-app-info", &hub_identity_hash, &tcp_client);
+    let _guard = NodeStopGuard { node: &node };
+
+    let response = execute_and_parse(&node, "getAppInfo", json!({}));
+    eprintln!("[get-app-info] {response}");
+    drain_and_log_events(&events, Duration::from_secs(2));
+
+    assert_ne!(
+        response["kind"],
+        json!("error"),
+        "getAppInfo returned an error envelope: {response}"
+    );
+
+    let payload = response
+        .get("payload")
+        .and_then(Value::as_object)
+        .expect("getAppInfo payload should be an object");
+    assert!(
+        !payload.is_empty(),
+        "getAppInfo payload should not be empty: {response}"
+    );
 }
 
 #[test]

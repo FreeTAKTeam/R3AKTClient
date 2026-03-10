@@ -166,7 +166,11 @@ export function useHubDashboard() {
   const hubAnnounced = computed(
     () => Boolean(configuredHubPeer.value?.sources.includes("announce")),
   );
-  const appInfoSummary = computed(() => summarizeAppInfo(appInfoResponse.value));
+  const appInfoSummary = computed(() =>
+    appInfoResponse.value
+      ? summarizeAppInfo(appInfoResponse.value)
+      : discoverySession.appInfoSummary,
+  );
 
   async function requestAppInfo(): Promise<void> {
     if (
@@ -190,7 +194,7 @@ export function useHubDashboard() {
     );
 
     try {
-      const response = await discoverySession.execute("getAppInfo", {});
+      const response = await discoverySession.loadAppInfo({});
       appInfoResponse.value = response;
       appInfoReceivedAt.value = Date.now();
       phase.value = "ready";

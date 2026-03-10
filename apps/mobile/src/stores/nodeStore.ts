@@ -16,6 +16,7 @@ import { Capacitor } from "@capacitor/core";
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { createAppPersistenceNamespace } from "../persistence/appPersistence";
 import type {
   DiscoveredPeer,
   NodeUiSettings,
@@ -34,6 +35,7 @@ import { runtimeProfile } from "../utils/runtimeProfile";
 
 const SETTINGS_STORAGE_KEY = "reticulum.mobile.settings.v1";
 const SAVED_STORAGE_KEY = "reticulum.mobile.savedPeers.v1";
+const nodePersistence = createAppPersistenceNamespace("node");
 
 const EMPTY_STATUS: NodeStatus = {
   running: false,
@@ -52,8 +54,8 @@ const DEFAULT_SETTINGS: NodeUiSettings = {
   announceIntervalSeconds: DEFAULT_NODE_CONFIG.announceIntervalSeconds,
   showOnlyCapabilityVerified: true,
   hub: {
-    mode: "Disabled",
-    identityHash: "",
+    mode: "RchLxmf",
+    identityHash: "af1ec9121da534836e6a39b7d261fa65",
     refreshIntervalSeconds: 300,
   },
 };
@@ -94,61 +96,56 @@ function normalizeClientMode(value: unknown): NodeUiSettings["clientMode"] {
   return requested;
 }
 
-function loadStoredSettings(): NodeUiSettings {
-  try {
-    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
-    if (!raw) {
-      return { ...DEFAULT_SETTINGS, hub: { ...DEFAULT_SETTINGS.hub } };
-    }
-    const parsed = JSON.parse(raw) as Partial<NodeUiSettings>;
-    return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-      hub: {
-        ...DEFAULT_SETTINGS.hub,
-        ...(parsed.hub ?? {}),
-      },
-      clientMode: normalizeClientMode(parsed.clientMode),
-      tcpClients: Array.isArray(parsed.tcpClients)
-        ? parsed.tcpClients.filter((item): item is string => typeof item === "string")
-        : [...DEFAULT_SETTINGS.tcpClients],
-    };
-  } catch {
-    return { ...DEFAULT_SETTINGS, hub: { ...DEFAULT_SETTINGS.hub } };
-  }
+function normalizeStoredSettings(parsed: Partial<NodeUiSettings> | null | undefined): NodeUiSettings {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(parsed ?? {}),
+    hub: {
+      ...DEFAULT_SETTINGS.hub,
+      ...(parsed?.hub ?? {}),
+    },
+    clientMode: normalizeClientMode(parsed?.clientMode),
+    tcpClients: Array.isArray(parsed?.tcpClients)
+      ? parsed.tcpClients.filter((item): item is string => typeof item === "string")
+      : [...DEFAULT_SETTINGS.tcpClients],
+  };
+}
+
+async function loadStoredSettings(): Promise<NodeUiSettings> {
+  const parsed = await nodePersistence.getJson<Partial<NodeUiSettings> | null>(
+    SETTINGS_STORAGE_KEY,
+    null,
+  );
+  return normalizeStoredSettings(parsed);
 }
 
 function saveSettings(settings: NodeUiSettings): void {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  void nodePersistence.setJson(SETTINGS_STORAGE_KEY, settings);
 }
 
-function loadSavedPeers(): Record<string, SavedPeer> {
-  try {
-    const raw = localStorage.getItem(SAVED_STORAGE_KEY);
-    if (!raw) {
-      return {};
+function normalizeSavedPeers(parsed: SavedPeer[] | null | undefined): Record<string, SavedPeer> {
+  const out: Record<string, SavedPeer> = {};
+  for (const peer of parsed ?? []) {
+    const destination = normalizeDestinationHex(peer.destination ?? "");
+    if (!isValidDestinationHex(destination)) {
+      continue;
     }
-    const parsed = JSON.parse(raw) as SavedPeer[];
-    const out: Record<string, SavedPeer> = {};
-    for (const peer of parsed) {
-      const destination = normalizeDestinationHex(peer.destination ?? "");
-      if (!isValidDestinationHex(destination)) {
-        continue;
-      }
-      out[destination] = {
-        destination,
-        label: peer.label?.trim() || undefined,
-        savedAt: Number(peer.savedAt ?? nowMs()),
-      };
-    }
-    return out;
-  } catch {
-    return {};
+    out[destination] = {
+      destination,
+      label: peer.label?.trim() || undefined,
+      savedAt: Number(peer.savedAt ?? nowMs()),
+    };
   }
+  return out;
+}
+
+async function loadSavedPeers(): Promise<Record<string, SavedPeer>> {
+  const parsed = await nodePersistence.getJson<SavedPeer[] | null>(SAVED_STORAGE_KEY, null);
+  return normalizeSavedPeers(parsed);
 }
 
 function saveSavedPeers(savedPeers: Record<string, SavedPeer>): void {
-  localStorage.setItem(SAVED_STORAGE_KEY, JSON.stringify(Object.values(savedPeers)));
+  void nodePersistence.setJson(SAVED_STORAGE_KEY, Object.values(savedPeers));
 }
 
 function toNodeConfig(settings: NodeUiSettings): NodeConfig {
@@ -166,16 +163,22 @@ function toNodeConfig(settings: NodeUiSettings): NodeConfig {
 }
 
 export const useNodeStore = defineStore("node", () => {
-  const settings = reactive<NodeUiSettings>(loadStoredSettings());
+  const settings = reactive<NodeUiSettings>({
+    ...DEFAULT_SETTINGS,
+    hub: {
+      ...DEFAULT_SETTINGS.hub,
+    },
+  });
   const status = ref<NodeStatus>({ ...EMPTY_STATUS });
   const discoveredByDestination = reactive<Record<string, DiscoveredPeer>>({});
-  const savedByDestination = reactive<Record<string, SavedPeer>>(loadSavedPeers());
+  const savedByDestination = reactive<Record<string, SavedPeer>>({});
   const logs = ref<UiLogLine[]>([]);
   const lastError = ref<string>("");
   const lastHubRefreshAt = ref<number>(0);
   const initialized = ref(false);
 
   const client = shallowRef<ReticulumNodeClient | null>(null);
+  const initPromise = shallowRef<Promise<void> | null>(null);
   const startPromise = shallowRef<Promise<void> | null>(null);
   const unsubscribeClientEvents = ref<Array<() => void>>([]);
   const packetListeners = new Set<PacketListener>();
@@ -377,24 +380,47 @@ export const useNodeStore = defineStore("node", () => {
     if (initialized.value) {
       return;
     }
-    initialized.value = true;
-
-    client.value = buildClient();
-    bindClientEvents(client.value);
-
-    for (const savedPeer of Object.values(savedByDestination)) {
-      upsertDiscovered(
-        savedPeer.destination,
-        {
-          label: savedPeer.label,
-          verifiedCapability: false,
-          lastSeenAt: savedPeer.savedAt,
-        },
-        "import",
-      );
+    if (initPromise.value) {
+      await initPromise.value;
+      return;
     }
 
-    await refreshStatusSnapshot();
+    const pending = (async () => {
+      const [loadedSettings, loadedSavedPeers] = await Promise.all([
+        loadStoredSettings(),
+        loadSavedPeers(),
+      ]);
+      Object.assign(settings, loadedSettings);
+      for (const key of Object.keys(savedByDestination)) {
+        delete savedByDestination[key];
+      }
+      for (const [destination, value] of Object.entries(loadedSavedPeers)) {
+        savedByDestination[destination] = value;
+      }
+
+      client.value = buildClient();
+      bindClientEvents(client.value);
+
+      for (const savedPeer of Object.values(savedByDestination)) {
+        upsertDiscovered(
+          savedPeer.destination,
+          {
+            label: savedPeer.label,
+            verifiedCapability: false,
+            lastSeenAt: savedPeer.savedAt,
+          },
+          "import",
+        );
+      }
+
+      await refreshStatusSnapshot();
+      initialized.value = true;
+    })().finally(() => {
+      initPromise.value = null;
+    });
+
+    initPromise.value = pending;
+    await pending;
   }
 
   async function startNodeCore(): Promise<void> {

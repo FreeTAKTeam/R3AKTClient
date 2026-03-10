@@ -11,6 +11,7 @@ import {
   createReticulumNodeClient,
   createRchClient,
   type DomainEventPayload,
+  normalizeDomainEventPayload,
   type LogLevel,
   type NodeClientEvents,
   type NodeConfig,
@@ -336,6 +337,43 @@ describe("RchClient grouped feature API", () => {
     expect(stopped.running).toBe(false);
 
     unsubscribe();
+  });
+
+  it("normalizes domain events with derived event id and occurrence time", () => {
+    const normalized = normalizeDomainEventPayload(
+      {
+        eventType: "mission.change.received",
+        payloadJson:
+          "{\"event_id\":\"evt-42\",\"issued_at\":\"2026-03-10T10:30:00Z\",\"mission_uid\":\"mission-1\"}",
+        correlationId: "corr-42",
+      },
+      1234,
+    );
+
+    expect(normalized.eventType).toBe("mission.change.received");
+    expect(normalized.eventId).toBe("evt-42");
+    expect(normalized.occurredAt).toBe("2026-03-10T10:30:00Z");
+    expect(normalized.receivedAtMs).toBe(1234);
+    expect(normalized.dedupeKey).toBe("evt-42");
+    expect(normalized.payload).toMatchObject({
+      mission_uid: "mission-1",
+    });
+  });
+
+  it("falls back to correlation and payload content when domain events lack ids", () => {
+    const normalized = normalizeDomainEventPayload(
+      {
+        eventType: "rch.telemetry.response",
+        payloadJson: "{\"status\":\"ok\"}",
+        correlationId: "corr-fallback-1",
+      },
+      4567,
+    );
+
+    expect(normalized.eventId).toBeUndefined();
+    expect(normalized.occurredAt).toBeUndefined();
+    expect(normalized.dedupeKey).toBe("corr-fallback-1");
+    expect(normalized.receivedAtMs).toBe(4567);
   });
 
   it("routes public chat sends through the native sender instead of executeEnvelope", async () => {

@@ -9,7 +9,7 @@ use lxmf::message::Message as LxmfMessage;
 use rand_core::OsRng;
 use regex::Regex;
 use reticulum::delivery::{send_via_link, strip_destination_prefix};
-use reticulum::destination::link::LinkEvent;
+use reticulum::destination::link::{LinkEvent, LinkStatus};
 use reticulum::destination::{DestinationDesc, DestinationName, SingleOutputDestination};
 use reticulum::hash::AddressHash;
 use reticulum::identity::PrivateIdentity;
@@ -46,22 +46,22 @@ const LXMF_FIELD_RENDERER: i64 = 0x0F;
 
 const DEFAULT_IDENTITY_WAIT_TIMEOUT: Duration = Duration::from_secs(12);
 
-fn hub_announce_wait_timeout() -> Duration {
-    std::env::var("RCH_HUB_ANNOUNCE_WAIT_SECONDS")
+fn hub_reply_confirm_grace_timeout() -> Duration {
+    std::env::var("RCH_HUB_REPLY_CONFIRM_GRACE_SECONDS")
         .ok()
         .and_then(|value| value.trim().parse::<u64>().ok())
         .map(Duration::from_secs)
         .filter(|value| !value.is_zero())
-        .unwrap_or(Duration::from_secs(300))
+        .unwrap_or(Duration::from_secs(2))
 }
 
-fn lxmf_link_send_timeout() -> Duration {
-    std::env::var("RCH_LXMF_LINK_SEND_TIMEOUT_SECONDS")
+fn lxmf_link_retry_timeout() -> Duration {
+    std::env::var("RCH_LXMF_LINK_RETRY_TIMEOUT_SECONDS")
         .ok()
         .and_then(|value| value.trim().parse::<u64>().ok())
         .map(Duration::from_secs)
         .filter(|value| !value.is_zero())
-        .unwrap_or(Duration::from_secs(20))
+        .unwrap_or(Duration::from_secs(2))
 }
 
 #[derive(Debug, Clone)]
@@ -1254,45 +1254,140 @@ async fn send_lxmf_request_message(
         );
     }
 
-    match send_via_link(
-        state.transport.as_ref(),
-        hub,
-        &wire,
-        lxmf_link_send_timeout(),
-    )
-    .await
-    {
-        Ok(_) => {
-            bus.emit(NodeEvent::PacketSent {
-                destination_hex: address_hash_to_hex(&hub.address_hash),
-                bytes: wire,
-                outcome: SendOutcome::SentDirect {},
-            });
-            Ok(())
-        }
-        Err(_) => {
-            let packet_payload = strip_destination_prefix(&wire, &destination).to_vec();
-            let outcome = send_transport_packet_with_path_retry(
-                &state.transport,
-                hub.address_hash,
-                packet_payload.as_slice(),
-            )
-            .await;
-            bus.emit(NodeEvent::PacketSent {
-                destination_hex: address_hash_to_hex(&hub.address_hash),
-                bytes: packet_payload,
-                outcome: send_outcome_to_udl(outcome),
-            });
-            if matches!(
-                outcome,
-                RnsSendOutcome::SentDirect | RnsSendOutcome::SentBroadcast
-            ) {
+    const LINK_RETRY_ATTEMPTS: usize = 3;
+    const LINK_RETRY_DELAY: Duration = Duration::from_millis(350);
+
+    for attempt in 0..LINK_RETRY_ATTEMPTS {
+        match send_via_link(
+            state.transport.as_ref(),
+            hub,
+            &wire,
+            lxmf_link_retry_timeout(),
+        )
+        .await
+        {
+            Ok(_) => {
+                bus.emit(NodeEvent::PacketSent {
+                    destination_hex: address_hash_to_hex(&hub.address_hash),
+                    bytes: wire,
+                    outcome: SendOutcome::SentDirect {},
+                });
                 return Ok(());
             }
-
-            Err(NodeError::NetworkError {})
+            Err(error) => {
+                log::warn!(
+                    "lxmf link send failed for {} on attempt {}/{}: {}",
+                    address_hash_to_hex(&hub.address_hash),
+                    attempt + 1,
+                    LINK_RETRY_ATTEMPTS,
+                    error
+                );
+                state.transport.request_path(&hub.address_hash, None, None).await;
+                if attempt + 1 < LINK_RETRY_ATTEMPTS {
+                    tokio::time::sleep(LINK_RETRY_DELAY).await;
+                }
+            }
         }
     }
+
+    let packet_payload = strip_destination_prefix(&wire, &destination).to_vec();
+    let outcome = send_transport_packet_with_path_retry(
+        &state.transport,
+        hub.address_hash,
+        packet_payload.as_slice(),
+    )
+    .await;
+    bus.emit(NodeEvent::PacketSent {
+        destination_hex: address_hash_to_hex(&hub.address_hash),
+        bytes: packet_payload,
+        outcome: send_outcome_to_udl(outcome),
+    });
+    if matches!(
+        outcome,
+        RnsSendOutcome::SentDirect | RnsSendOutcome::SentBroadcast
+    ) {
+        return Ok(());
+    }
+
+    Err(NodeError::NetworkError {})
+}
+
+async fn prime_destination_link(state: &NodeRuntimeState, destination: DestinationDesc) {
+    let link = state.transport.link(destination).await;
+    let status = link.lock().await.status();
+    if status != LinkStatus::Active {
+        log::info!(
+            "prewarming outbound link for {} (status: {:?})",
+            address_hash_to_hex(&destination.address_hash),
+            status
+        );
+    }
+}
+
+async fn resolve_lxmf_destination_desc(
+    state: &NodeRuntimeState,
+    destination: AddressHash,
+) -> Result<DestinationDesc, NodeError> {
+    let destination_name = DestinationName::new(LXMF_DELIVERY_NAME.0, LXMF_DELIVERY_NAME.1);
+    ensure_destination_desc(state, destination, Some(destination_name)).await
+}
+
+async fn send_chat_message_wire(
+    state: &NodeRuntimeState,
+    destination_desc: DestinationDesc,
+    wire: &[u8],
+) -> Result<SendOutcome, NodeError> {
+    const LINK_RETRY_ATTEMPTS: usize = 3;
+    const LINK_RETRY_DELAY: Duration = Duration::from_millis(350);
+
+    for attempt in 0..LINK_RETRY_ATTEMPTS {
+        match send_via_link(
+            state.transport.as_ref(),
+            destination_desc,
+            wire,
+            lxmf_link_retry_timeout(),
+        )
+        .await
+        {
+            Ok(_) => {
+                return Ok(SendOutcome::SentDirect {});
+            }
+            Err(error) => {
+                log::warn!(
+                    "chat link send failed for {} on attempt {}/{}: {}",
+                    address_hash_to_hex(&destination_desc.address_hash),
+                    attempt + 1,
+                    LINK_RETRY_ATTEMPTS,
+                    error
+                );
+                state
+                    .transport
+                    .request_path(&destination_desc.address_hash, None, None)
+                    .await;
+                if attempt + 1 < LINK_RETRY_ATTEMPTS {
+                    tokio::time::sleep(LINK_RETRY_DELAY).await;
+                }
+            }
+        }
+    }
+
+    let mut destination_hash = [0u8; 16];
+    destination_hash.copy_from_slice(destination_desc.address_hash.as_slice());
+    let packet_payload = strip_destination_prefix(wire, &destination_hash).to_vec();
+    let outcome = send_transport_packet_with_path_retry(
+        &state.transport,
+        destination_desc.address_hash,
+        packet_payload.as_slice(),
+    )
+    .await;
+    if matches!(
+        outcome,
+        RnsSendOutcome::SentDirect | RnsSendOutcome::SentBroadcast
+    ) {
+        return Ok(send_outcome_to_udl(outcome));
+    }
+
+    Err(NodeError::NetworkError {})
 }
 
 fn node_error_from_response_envelope(response: &MessageEnvelope) -> NodeError {
@@ -1395,6 +1490,7 @@ async fn send_chat_message_over_lxmf(
     ensure_hub_joined_for_chat(config, state, bus, &destination_hex).await?;
 
     let destination = parse_address_hash(&destination_hex)?;
+    let destination_desc = resolve_lxmf_destination_desc(state, destination).await?;
     let mut source_hash = [0u8; 16];
     source_hash.copy_from_slice(
         state
@@ -1431,21 +1527,12 @@ async fn send_chat_message_over_lxmf(
     let wire = message
         .to_wire(Some(&state.identity))
         .map_err(|_| NodeError::InternalError {})?;
-    let packet_payload = strip_destination_prefix(&wire, &destination_hash).to_vec();
-    let outcome =
-        send_transport_packet_with_path_retry(&state.transport, destination, &packet_payload).await;
+    let outcome = send_chat_message_wire(state, destination_desc, &wire).await?;
     bus.emit(NodeEvent::PacketSent {
         destination_hex: destination_hex.clone(),
-        bytes: packet_payload,
-        outcome: send_outcome_to_udl(outcome),
-    });
-
-    if !matches!(
+        bytes: wire.clone(),
         outcome,
-        RnsSendOutcome::SentDirect | RnsSendOutcome::SentBroadcast
-    ) {
-        return Err(NodeError::NetworkError {});
-    }
+    });
 
     emit_domain_event(
         bus,
@@ -2015,12 +2102,24 @@ async fn ensure_hub_can_reply(state: &NodeRuntimeState, hub: AddressHash) -> Res
         .send_announce(&state.lxmf_destination, None)
         .await;
 
-    let deadline = tokio::time::Instant::now() + hub_announce_wait_timeout();
+    let deadline = tokio::time::Instant::now() + hub_reply_confirm_grace_timeout();
     let mut last_reannounce = tokio::time::Instant::now();
     loop {
+        if state.seen_announces.lock().await.contains(&hub)
+            || state.transport.destination_identity(&hub).await.is_some()
+        {
+            *announced = true;
+            return Ok(());
+        }
+
         let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
         if remaining.is_zero() {
-            return Err(NodeError::Timeout {});
+            log::warn!(
+                "hub reply readiness was not confirmed for {} within {:?}; proceeding with best-effort request delivery",
+                address_hash_to_hex(&hub),
+                hub_reply_confirm_grace_timeout()
+            );
+            return Ok(());
         }
 
         let wait_slice = remaining.min(Duration::from_millis(500));
@@ -2042,8 +2141,6 @@ async fn ensure_hub_can_reply(state: &NodeRuntimeState, hub: AddressHash) -> Res
         if saw_hub_announce {
             state.seen_announces.lock().await.insert(hub);
             *announced = true;
-            drop(announced);
-            tokio::time::sleep(Duration::from_secs(1)).await;
             return Ok(());
         }
 
@@ -2207,6 +2304,11 @@ pub async fn run_node(
     let transport = Arc::new(transport);
 
     let announce_capabilities = Arc::new(TokioMutex::new(config.announce_capabilities.clone()));
+    let configured_hub = config
+        .hub_identity_hash
+        .as_deref()
+        .and_then(normalize_hex_32)
+        .and_then(|value| AddressHash::new_from_hex_string(&value).ok());
     let known_destinations: Arc<TokioMutex<HashMap<AddressHash, DestinationDesc>>> =
         Arc::new(TokioMutex::new(HashMap::new()));
     let seen_announces: Arc<TokioMutex<HashSet<AddressHash>>> =
@@ -2259,8 +2361,10 @@ pub async fn run_node(
     {
         let transport = transport.clone();
         let bus = bus.clone();
+        let configured_hub = configured_hub;
         let known_destinations = known_destinations.clone();
         let seen_announces = seen_announces.clone();
+        let state = state.clone();
         tokio::spawn(async move {
             let mut rx = transport.recv_announces().await;
             loop {
@@ -2272,6 +2376,22 @@ pub async fn run_node(
                             .lock()
                             .await
                             .insert(desc.address_hash, desc);
+                        if let Some(hub) = configured_hub {
+                            if desc.address_hash == hub {
+                                let hub_desc = destination_desc_for_expected_name(
+                                    desc,
+                                    Some(DestinationName::new(
+                                        LXMF_DELIVERY_NAME.0,
+                                        LXMF_DELIVERY_NAME.1,
+                                    )),
+                                );
+                                known_destinations
+                                    .lock()
+                                    .await
+                                    .insert(hub_desc.address_hash, hub_desc);
+                                prime_destination_link(&state, hub_desc).await;
+                            }
+                        }
                         let destination_hex = address_hash_to_hex(&desc.address_hash);
                         let app_data = String::from_utf8(event.app_data.as_slice().to_vec())
                             .unwrap_or_else(|_| hex::encode(event.app_data.as_slice()));

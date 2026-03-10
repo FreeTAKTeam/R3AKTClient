@@ -1,52 +1,106 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { onMounted, watch } from "vue";
 
+import DashboardControlStrip from "../../components/dashboard/DashboardControlStrip.vue";
+import DashboardEventFeed from "../../components/dashboard/DashboardEventFeed.vue";
+import DashboardMetricGrid from "../../components/dashboard/DashboardMetricGrid.vue";
+import SessionParityPanel from "../../components/parity/SessionParityPanel.vue";
+import TelemetryDrilldownPanel from "../../components/parity/TelemetryDrilldownPanel.vue";
 import { useNavigationDrawer } from "../../composables/useNavigationDrawer";
-import { useDesignDashboardData } from "../../design/composables/useDesignDashboardData";
-
-interface DashboardMetricTile {
-  label: string;
-  value: string;
-}
+import { useHubDashboard } from "../../composables/useHubDashboard";
+import { useDiscoverySessionStore } from "../../stores/discoverySessionStore";
+import { useNodeStore } from "../../stores/nodeStore";
+import { useTelemetryStore } from "../../stores/telemetryStore";
 
 const { toggleNavigationDrawer } = useNavigationDrawer();
+const nodeStore = useNodeStore();
+const discoverySessionStore = useDiscoverySessionStore();
+const telemetryStore = useTelemetryStore();
 const {
-  activityLog,
-  backendStatus,
-  metricCards,
-  runtimeBusy,
-  startRuntime,
+  busy,
+  feedItems,
+  headerPillLabel,
+  hubCaption,
+  metrics,
+  reconnect,
+  startFromConfig,
+  statusLabel,
+  statusTone,
   stopRuntime,
-  streamActive,
-  streamDelta,
-  streamLabel,
-} = useDesignDashboardData();
+} = useHubDashboard();
 
-const metricTiles = computed<DashboardMetricTile[]>(() => metricCards.value.slice(0, 6));
-const liveLabel = computed(() => (streamActive.value ? "LIVE" : "IDLE"));
-const streamMeta = computed(() => {
-  if (streamDelta.value === "STANDBY") {
-    return "REAL-TIME +0.0%";
+async function syncParityStores(): Promise<void> {
+  await discoverySessionStore.wire();
+  if (nodeStore.status.running && !telemetryStore.wired) {
+    await telemetryStore.wire();
   }
-  if (streamDelta.value === "DEGRADED") {
-    return "REAL-TIME -0.8%";
-  }
-  return streamDelta.value;
-});
-const backendStatusLabel = computed(() => {
-  if (backendStatus.value.length <= 40) {
-    return backendStatus.value;
-  }
-  return `${backendStatus.value.slice(0, 40)}...`;
-});
-
-async function handleStart(): Promise<void> {
-  await startRuntime();
 }
 
-async function handleStop(): Promise<void> {
-  await stopRuntime();
+function runSessionAction(action: Parameters<typeof handleSessionAction>[0]): void {
+  void handleSessionAction(action).catch(() => undefined);
 }
+
+async function handleSessionAction(
+  action: "help" | "examples" | "join" | "leave" | "app-info" | "list-clients",
+): Promise<void> {
+  if (action === "help") {
+    await discoverySessionStore.loadHelp();
+    return;
+  }
+  if (action === "examples") {
+    await discoverySessionStore.loadExamples();
+    return;
+  }
+  if (action === "join") {
+    await discoverySessionStore.joinHub();
+    return;
+  }
+  if (action === "leave") {
+    await discoverySessionStore.leaveHub();
+    return;
+  }
+  if (action === "app-info") {
+    await discoverySessionStore.loadAppInfo();
+    return;
+  }
+  await discoverySessionStore.loadClients();
+}
+
+function handleTelemetryRequest(payloadJson: string): void {
+  void telemetryStore.requestTelemetryFromJson(payloadJson).catch(() => undefined);
+}
+
+function handleStart(): void {
+  void startFromConfig()
+    .then(syncParityStores)
+    .catch(() => undefined);
+}
+
+function handleReconnect(): void {
+  void reconnect()
+    .then(syncParityStores)
+    .catch(() => undefined);
+}
+
+function handleStop(): void {
+  void stopRuntime().catch(() => undefined);
+}
+
+onMounted(() => {
+  void nodeStore.init().catch(() => undefined);
+  void syncParityStores().catch(() => undefined);
+});
+
+watch(
+  () => nodeStore.status.running,
+  (running) => {
+    if (!running) {
+      return;
+    }
+    void syncParityStores().catch(() => undefined);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -65,79 +119,63 @@ async function handleStop(): Promise<void> {
 
       <div class="dashboard-screen__header-copy">
         <h1 class="dashboard-screen__title">DASHBOARD</h1>
+        <p class="dashboard-screen__subtitle">{{ hubCaption }}</p>
       </div>
 
       <div class="dashboard-screen__header-side dashboard-screen__header-side--end">
-        <div class="dashboard-screen__live-pill" :class="{ idle: !streamActive }">
-          <span>{{ liveLabel }}</span>
+        <div class="dashboard-screen__live-pill" :class="{ idle: headerPillLabel !== 'LIVE' }">
+          <span>{{ headerPillLabel }}</span>
         </div>
       </div>
     </header>
 
     <main class="dashboard-screen__body">
-      <section class="dashboard-screen__section">
+      <DashboardMetricGrid :metrics="metrics" />
+      <DashboardEventFeed :items="feedItems" />
+      <DashboardControlStrip
+        :busy="busy"
+        :can-start="!busy && !nodeStore.status.running"
+        :can-stop="!busy && nodeStore.status.running"
+        :status-label="statusLabel"
+        :status-tone="statusTone"
+        @start="handleStart"
+        @stop="handleStop"
+      />
+
+      <section class="dashboard-screen__panel-section">
         <div class="dashboard-screen__section-header">
-          <h2>Global Telemetry Stream</h2>
-          <span>{{ streamMeta }}</span>
-        </div>
-        <div class="dashboard-screen__stream-card">
-          <p>{{ streamLabel }}</p>
-        </div>
-      </section>
-
-      <section class="dashboard-screen__metrics">
-        <article v-for="metric in metricTiles" :key="metric.label" class="dashboard-screen__metric-card">
-          <span>{{ metric.label }}</span>
-          <strong>{{ metric.value }}</strong>
-        </article>
-      </section>
-
-      <section class="dashboard-screen__section dashboard-screen__section--feed">
-        <h2>Event Feed</h2>
-        <div class="dashboard-screen__feed-list">
-          <article
-            v-for="event in activityLog"
-            :key="event.id"
-            class="dashboard-screen__feed-card"
-          >
-            <span
-              class="material-symbols-outlined dashboard-screen__feed-icon"
-              :class="{ warning: event.tone === 'warning' }"
-            >
-              {{ event.icon }}
-            </span>
-            <div>
-              <p>{{ event.title }}</p>
-              <span>{{ event.meta }}</span>
-            </div>
-          </article>
-
-          <article v-if="activityLog.length === 0" class="dashboard-screen__feed-card dashboard-screen__feed-card--empty">
-            <span class="material-symbols-outlined dashboard-screen__feed-icon">sensors</span>
-            <div>
-              <p>Awaiting live events</p>
-              <span>Telemetry, peer, and hub activity will appear here.</span>
-            </div>
-          </article>
-        </div>
-      </section>
-
-      <section class="dashboard-screen__section dashboard-screen__section--controls">
-        <h2>Backend Control</h2>
-        <div class="dashboard-screen__control-grid">
-          <button type="button" :disabled="runtimeBusy" class="dashboard-screen__control dashboard-screen__control--primary" @click="handleStart">
-            <span class="material-symbols-outlined">play_arrow</span>
-            <span>Start</span>
-          </button>
-          <button type="button" :disabled="runtimeBusy" class="dashboard-screen__control dashboard-screen__control--secondary" @click="handleStop">
-            <span class="material-symbols-outlined">stop</span>
-            <span>Stop</span>
-          </button>
-          <button type="button" disabled class="dashboard-screen__control dashboard-screen__control--status">
-            <span class="material-symbols-outlined">info</span>
-            <span>{{ backendStatusLabel }}</span>
+          <h2>Session Controls</h2>
+          <button type="button" class="dashboard-screen__inline-action" @click="handleReconnect">
+            Resync
           </button>
         </div>
+        <SessionParityPanel
+          :busy="discoverySessionStore.busy"
+          :status-label="discoverySessionStore.sessionStatusLabel"
+          :app-info-summary="discoverySessionStore.appInfoSummary"
+          :client-count-label="discoverySessionStore.clientCountLabel"
+          :clients="discoverySessionStore.clients"
+          :history="discoverySessionStore.responseHistory"
+          :last-response-json="discoverySessionStore.lastResponseJson"
+          variant="dashboard"
+          @run="runSessionAction"
+        />
+      </section>
+
+      <section class="dashboard-screen__panel-section">
+        <div class="dashboard-screen__section-header">
+          <h2>Telemetry Drill-Down</h2>
+        </div>
+        <TelemetryDrilldownPanel
+          :busy="telemetryStore.busy"
+          :summary="telemetryStore.latestSummary"
+          :snapshots="telemetryStore.snapshots"
+          :history="telemetryStore.history"
+          :last-response-json="telemetryStore.lastResponseJson"
+          :last-request-payload-json="telemetryStore.lastRequestPayloadJson"
+          variant="dashboard"
+          @request="handleTelemetryRequest"
+        />
       </section>
     </main>
   </section>
@@ -211,8 +249,9 @@ async function handleStop(): Promise<void> {
 }
 
 .dashboard-screen__header-copy {
-  display: flex;
-  justify-content: center;
+  display: grid;
+  gap: 0.2rem;
+  justify-items: center;
 }
 
 .dashboard-screen__title {
@@ -224,6 +263,15 @@ async function handleStop(): Promise<void> {
   margin: 0;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.dashboard-screen__subtitle {
+  color: #88adc0;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  margin: 0;
+  text-transform: uppercase;
 }
 
 .dashboard-screen__live-pill {
@@ -249,28 +297,21 @@ async function handleStop(): Promise<void> {
 }
 
 .dashboard-screen__body {
+  display: grid;
+  gap: 1rem;
   min-height: 0;
   overflow-y: auto;
-  padding: 0.2rem 0 1.6rem;
+  padding: 0.3rem 0 1.6rem;
 }
 
 .dashboard-screen__body::-webkit-scrollbar {
   display: none;
 }
 
-.dashboard-screen__section {
-  padding: 1rem;
-}
-
-.dashboard-screen__section-header,
-.dashboard-screen__section h2 {
-  color: #94a4ae;
-  font-family: var(--font-ui);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  margin: 0 0 0.75rem;
-  text-transform: uppercase;
+.dashboard-screen__panel-section {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0 1rem;
 }
 
 .dashboard-screen__section-header {
@@ -279,164 +320,22 @@ async function handleStop(): Promise<void> {
   justify-content: space-between;
 }
 
-.dashboard-screen__section-header span {
-  color: #25d1f4;
-  font-size: 0.62rem;
-}
-
-.dashboard-screen__stream-card,
-.dashboard-screen__metric-card,
-.dashboard-screen__feed-card,
-.dashboard-screen__control--status {
-  background: rgb(37 209 244 / 5%);
-  border: 1px solid rgb(37 209 244 / 10%);
-}
-
-.dashboard-screen__stream-card {
-  border-radius: 1rem;
-  min-height: 6rem;
-  padding: 1rem;
-}
-
-.dashboard-screen__stream-card p {
-  color: #f5fbff;
+.dashboard-screen__section-header h2 {
+  color: #86a9c2;
   font-family: var(--font-ui);
-  font-size: 1.7rem;
-  font-weight: 800;
-  margin: 0;
-}
-
-.dashboard-screen__metrics {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  padding: 0 1rem 0.5rem;
-}
-
-.dashboard-screen__metric-card {
-  align-items: center;
-  border-radius: 1rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-height: 5.2rem;
-  padding: 0.8rem 0.55rem;
-  text-align: center;
-}
-
-.dashboard-screen__metric-card span {
-  color: #94a4ae;
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  margin-bottom: 0.35rem;
-}
-
-.dashboard-screen__metric-card strong {
-  color: #f5fbff;
-  font-family: var(--font-ui);
-  font-size: 1.25rem;
-  font-weight: 800;
-}
-
-.dashboard-screen__section--feed,
-.dashboard-screen__section--controls {
-  padding-top: 0.9rem;
-}
-
-.dashboard-screen__feed-list {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.dashboard-screen__feed-card {
-  align-items: flex-start;
-  border-radius: 0.8rem;
-  display: flex;
-  gap: 0.7rem;
-  padding: 0.85rem;
-}
-
-.dashboard-screen__feed-card p,
-.dashboard-screen__feed-card span {
-  margin: 0;
-}
-
-.dashboard-screen__feed-card p {
-  color: #f0fbff;
-  font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 600;
-  line-height: 1.25;
-}
-
-.dashboard-screen__feed-card div > span {
-  color: #8fa1ab;
-  display: inline-block;
-  font-family: var(--font-ui);
-  font-size: 0.58rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  margin-top: 0.35rem;
-  text-transform: uppercase;
-}
-
-.dashboard-screen__feed-card--empty p {
-  font-weight: 700;
-}
-
-.dashboard-screen__feed-icon {
-  color: #25d1f4;
-  font-size: 1.2rem;
-  margin-top: 0.05rem;
-}
-
-.dashboard-screen__feed-icon.warning {
-  color: #f59e0b;
-}
-
-.dashboard-screen__control-grid {
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.dashboard-screen__control {
-  align-items: center;
-  border-radius: 0.8rem;
-  display: inline-flex;
-  font-family: var(--font-ui);
-  font-size: 0.76rem;
-  font-weight: 800;
-  gap: 0.38rem;
-  justify-content: center;
+  font-size: 0.96rem;
   letter-spacing: 0.12em;
-  min-height: 3rem;
+  margin: 0;
   text-transform: uppercase;
 }
 
-.dashboard-screen__control .material-symbols-outlined {
-  font-size: 1rem;
-}
-
-.dashboard-screen__control--primary {
-  background: #25d1f4;
-  border: 1px solid transparent;
-  color: #07161d;
-}
-
-.dashboard-screen__control--secondary {
-  background: rgb(226 232 240 / 92%);
-  border: 1px solid transparent;
-  color: #0f172a;
-}
-
-.dashboard-screen__control--status {
+.dashboard-screen__inline-action {
+  background: transparent;
+  border: 0;
   color: #25d1f4;
-  grid-column: 1 / -1;
-  padding: 0 0.9rem;
-}
-
-.dashboard-screen__control:disabled {
-  opacity: 0.7;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 </style>

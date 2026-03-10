@@ -28,6 +28,8 @@ describe("live shell wiring", () => {
     expect(wrapper.text()).toContain("DASHBOARD");
     expect(wrapper.text()).toContain("Backend Control");
     expect(wrapper.text()).toContain("Event Feed");
+    expect(wrapper.text()).toContain("Session Controls");
+    expect(wrapper.text()).toContain("Telemetry Drill-Down");
   });
 
   it("renders mission routes inside the live shell", async () => {
@@ -57,6 +59,8 @@ describe("live shell wiring", () => {
     const settings = await mountWithRoute(App, "/ops/settings");
     expect(settings.text()).toContain("Settings");
     expect(settings.text()).toContain("Application Hub");
+    expect(settings.text()).toContain("Hub Session Parity");
+    expect(settings.text()).toContain("Telemetry Drill-Down");
   });
 
   it("renders ops routing surfaces", async () => {

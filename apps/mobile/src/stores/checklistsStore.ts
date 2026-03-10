@@ -6,6 +6,8 @@ import {
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { createAppPersistenceNamespace } from "../persistence/appPersistence";
+import { useProjectionStore } from "./projectionStore";
 import { useRchClientStore } from "./rchClientStore";
 import {
   asArray,
@@ -27,6 +29,7 @@ const CHECKLIST_UPDATE_OPERATION: ChecklistOperation = "checklist.update";
 const CHECKLIST_TASK_ADD_OPERATION: ChecklistOperation = "checklist.task.row.add";
 const CHECKLIST_TASK_STATUS_OPERATION: ChecklistOperation = "checklist.task.status.set";
 const CHECKLIST_TASK_ROW_STYLE_OPERATION: ChecklistOperation = "checklist.task.row.style.set";
+const checklistPersistence = createAppPersistenceNamespace("rch-checklists");
 
 export interface ChecklistTaskRecord {
   taskId: string;
@@ -180,21 +183,52 @@ function sortChecklists(left: ChecklistRecord, right: ChecklistRecord): number {
 
 export const useChecklistsStore = defineStore("rch-checklists", () => {
   const rchClientStore = useRchClientStore();
+  const projectionStore = useProjectionStore();
 
   const feature = "checklists" as const;
   const operations = CHECKLISTS_OPERATIONS;
   const wired = ref(false);
   const busy = ref(false);
+  const hydrated = ref(false);
   const lastError = ref("");
   const lastOperation = shallowRef<ChecklistOperation | null>(null);
   const lastResponse = shallowRef<RchEnvelopeResponse<unknown> | null>(null);
 
   const checklistsById = reactive<Record<string, ChecklistRecord>>({});
+  let hydratePromise: Promise<void> | null = null;
+
+  function persistState(): void {
+    void checklistPersistence.setJson("checklists", Object.values(checklistsById));
+  }
+
+  async function hydrate(): Promise<void> {
+    if (hydrated.value) {
+      return;
+    }
+    if (hydratePromise) {
+      await hydratePromise;
+      return;
+    }
+
+    hydratePromise = (async () => {
+      const storedChecklists = await checklistPersistence.getJson<ChecklistRecord[] | null>(
+        "checklists",
+        null,
+      );
+      replaceRecordMap(checklistsById, storedChecklists ?? [], "checklistId");
+      hydrated.value = true;
+    })().finally(() => {
+      hydratePromise = null;
+    });
+
+    await hydratePromise;
+  }
 
   function upsertChecklistRecord(checklist: ChecklistRecord): void {
     const existing = checklistsById[checklist.checklistId];
     if (!existing) {
       checklistsById[checklist.checklistId] = checklist;
+      persistState();
       return;
     }
 
@@ -204,6 +238,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
       tasks: checklist.tasks.length > 0 ? checklist.tasks : existing.tasks,
       taskCount: checklist.taskCount || checklist.tasks.length || existing.taskCount,
     };
+    persistState();
   }
 
   function applyTaskMutation(
@@ -224,6 +259,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
       tasks: nextTasks,
       taskCount: Math.max(checklist.taskCount, nextTasks.length),
     };
+    persistState();
   }
 
   function applyResponseCache(
@@ -242,6 +278,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
         .map(normalizeChecklistRecord)
         .filter((entry): entry is ChecklistRecord => Boolean(entry));
       replaceRecordMap(checklistsById, entries, "checklistId");
+      persistState();
       return;
     }
 
@@ -277,6 +314,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
           tasks: [task, ...existing.tasks.filter((entry) => entry.taskId !== task.taskId)],
           taskCount: Math.max(existing.taskCount + 1, existing.tasks.length + 1),
         };
+        persistState();
       }
       return;
     }
@@ -306,15 +344,38 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
   ): Promise<RchEnvelopeResponse<unknown>> {
     busy.value = true;
     lastError.value = "";
+    await hydrate();
+    const conversationId = options?.correlationId ?? options?.messageId ?? crypto.randomUUID?.() ?? operation;
+    const isMutation = operation !== CHECKLIST_LIST_OPERATION && operation !== CHECKLIST_GET_OPERATION;
+    if (isMutation) {
+      await projectionStore.recordCommandRequest(operation, payload, {
+        conversationId,
+        feature: "checklists",
+        requestSummary: operation,
+      });
+    }
     try {
       const client = await rchClientStore.requireClient();
-      const response = await client.checklists.execute(operation, payload, options);
+      const response = await client.checklists.execute(operation, payload, {
+        ...options,
+        correlationId: conversationId,
+      });
       lastOperation.value = operation;
       lastResponse.value = response;
       applyResponseCache(operation, response.payload);
+      if (isMutation) {
+        await projectionStore.recordCommandResponse(operation, response, {
+          conversationId,
+          feature: "checklists",
+          requestSummary: operation,
+        });
+      }
       return response;
     } catch (error: unknown) {
       lastError.value = toErrorMessage(error);
+      if (isMutation) {
+        await projectionStore.recordCommandFailure(conversationId, lastError.value);
+      }
       throw error;
     } finally {
       busy.value = false;
@@ -404,6 +465,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
     if (wired.value) {
       return;
     }
+    await hydrate();
     try {
       await listChecklists();
     } catch (error: unknown) {

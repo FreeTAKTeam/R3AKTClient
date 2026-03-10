@@ -1,6 +1,7 @@
 import {
   CHAT_TOPIC_LIST_OPERATION,
   CHAT_TOPIC_SUBSCRIBE_OPERATION,
+  CHAT_MESSAGE_SEND_OPERATION,
   MESSAGES_OPERATIONS,
   type ChatEvent,
   type ChatMessage,
@@ -10,11 +11,16 @@ import {
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { createAppPersistenceNamespace } from "../persistence/appPersistence";
 import { useNodeStore } from "./nodeStore";
 import { useFilesMediaStore } from "./filesMediaStore";
+import { useProjectionStore } from "./projectionStore";
 import { useRchClientStore } from "./rchClientStore";
 
 const CHAT_DRAFT_STORAGE_KEY = "reticulum.mobile.chat.drafts.v3";
+const CHAT_MESSAGES_STORAGE_KEY = "reticulum.mobile.chat.messages.v1";
+const CHAT_CHANNELS_STORAGE_KEY = "reticulum.mobile.chat.channels.v1";
+const messagingPersistence = createAppPersistenceNamespace("rch-messaging");
 const GLOBAL_CHANNEL_KEY = "hub:global";
 const REQUIRED_CHAT_OPERATIONS = [
   CHAT_TOPIC_LIST_OPERATION,
@@ -127,34 +133,35 @@ export function describeChannelKey(channelKey: string): {
   return {};
 }
 
-function parseStoredDrafts(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(CHAT_DRAFT_STORAGE_KEY);
-    if (!raw) {
-      return {};
+function normalizeStoredDrafts(parsed: Record<string, unknown> | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(parsed ?? {})) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      out[key] = value;
     }
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const out: Record<string, string> = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      if (typeof value === "string" && value.trim().length > 0) {
-        out[key] = value;
-      }
-    }
-    return out;
-  } catch {
-    return {};
   }
+  return out;
+}
+
+async function loadStoredDrafts(): Promise<Record<string, string>> {
+  const parsed = await messagingPersistence.getJson<Record<string, unknown> | null>(
+    CHAT_DRAFT_STORAGE_KEY,
+    null,
+  );
+  return normalizeStoredDrafts(parsed);
 }
 
 export const useMessagingStore = defineStore("rch-messaging", () => {
   const nodeStore = useNodeStore();
   const filesMediaStore = useFilesMediaStore();
+  const projectionStore = useProjectionStore();
   const rchClientStore = useRchClientStore();
 
   const operations = MESSAGES_OPERATIONS;
   const wired = ref(false);
   const busy = ref(false);
   const lastError = ref("");
+  const hydrated = ref(false);
   const lastOperation = shallowRef<MessagingOperation | null>(null);
   const lastResponse = shallowRef<RchEnvelopeResponse<unknown> | null>(null);
   const activeChannelKey = ref(GLOBAL_CHANNEL_KEY);
@@ -173,12 +180,101 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
       messageIds: [],
     },
   });
-  const draftsByChannel = reactive<Record<string, string>>(parseStoredDrafts());
+  const draftsByChannel = reactive<Record<string, string>>({});
 
+  let hydratePromise: Promise<void> | null = null;
   let unsubscribeChatEvents: (() => void) | null = null;
 
   function persistDrafts(): void {
-    localStorage.setItem(CHAT_DRAFT_STORAGE_KEY, JSON.stringify(draftsByChannel));
+    void messagingPersistence.setJson(CHAT_DRAFT_STORAGE_KEY, draftsByChannel);
+  }
+
+  function persistChannelsAndMessages(): void {
+    void Promise.all([
+      messagingPersistence.setJson(
+        CHAT_CHANNELS_STORAGE_KEY,
+        Object.values(channelsByKey),
+      ),
+      messagingPersistence.setJson(
+        CHAT_MESSAGES_STORAGE_KEY,
+        Object.values(messagesByLocalId),
+      ),
+    ]);
+  }
+
+  async function hydrate(): Promise<void> {
+    if (hydrated.value) {
+      return;
+    }
+    if (hydratePromise) {
+      await hydratePromise;
+      return;
+    }
+
+    hydratePromise = (async () => {
+      const [storedDrafts, storedChannels, storedMessages] = await Promise.all([
+        loadStoredDrafts(),
+        messagingPersistence.getJson<MessagingChannelRecord[] | null>(
+          CHAT_CHANNELS_STORAGE_KEY,
+          null,
+        ),
+        messagingPersistence.getJson<MessagingMessageRecord[] | null>(
+          CHAT_MESSAGES_STORAGE_KEY,
+          null,
+        ),
+      ]);
+
+      for (const key of Object.keys(draftsByChannel)) {
+        delete draftsByChannel[key];
+      }
+      Object.assign(draftsByChannel, storedDrafts);
+
+      for (const key of Object.keys(channelsByKey)) {
+        delete channelsByKey[key];
+      }
+      channelsByKey[GLOBAL_CHANNEL_KEY] = {
+        channelKey: GLOBAL_CHANNEL_KEY,
+        title: channelTitle(),
+        updatedAtMs: Date.now(),
+        messageIds: [],
+      };
+      for (const record of storedChannels ?? []) {
+        if (!record.channelKey?.trim()) {
+          continue;
+        }
+        channelsByKey[record.channelKey] = {
+          ...record,
+          messageIds: Array.isArray(record.messageIds) ? [...record.messageIds] : [],
+        };
+      }
+
+      for (const key of Object.keys(messagesByLocalId)) {
+        delete messagesByLocalId[key];
+      }
+      for (const record of storedMessages ?? []) {
+        if (!record.localMessageId?.trim()) {
+          continue;
+        }
+        messagesByLocalId[record.localMessageId] = {
+          ...record,
+        };
+        ensureChannel(record.channelKey, {
+          destination: record.destination,
+          topicId: record.topicId,
+          updatedAtMs: Date.parse(record.issuedAt) || Date.now(),
+        });
+        const channel = channelsByKey[record.channelKey];
+        if (!channel.messageIds.includes(record.localMessageId)) {
+          channel.messageIds.push(record.localMessageId);
+        }
+      }
+
+      hydrated.value = true;
+    })().finally(() => {
+      hydratePromise = null;
+    });
+
+    await hydratePromise;
   }
 
   function ensureChannel(
@@ -202,6 +298,7 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
     channel.topicId = normalizeTopicId(patch.topicId ?? channel.topicId);
     channel.title = patch.title ?? channelTitle(channel.topicId, channel.destination);
     channel.updatedAtMs = patch.updatedAtMs ?? channel.updatedAtMs;
+    persistChannelsAndMessages();
     return channel;
   }
 
@@ -211,6 +308,7 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
       return;
     }
     channel.messageIds = channel.messageIds.filter((entry) => entry !== localMessageId);
+    persistChannelsAndMessages();
   }
 
   function upsertMessage(
@@ -261,6 +359,7 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
       channel.updatedAtMs,
       Number.isFinite(issuedAtMs) ? issuedAtMs : Date.now(),
     );
+    persistChannelsAndMessages();
 
     return record;
   }
@@ -285,6 +384,16 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
   function handleChatEvent(event: ChatEvent): void {
     if (event.type === "message.receive") {
       upsertMessage(event.message, { deliveryState: "sent" });
+      filesMediaStore.markTransfers(
+        Object.values(filesMediaStore.transfersById)
+          .filter((entry) => entry.messageLocalId === event.message.localMessageId)
+          .map((entry) => entry.id),
+        {
+          state: "completed",
+          progressPct: 100,
+          messageLocalId: event.message.localMessageId,
+        },
+      );
       return;
     }
 
@@ -359,6 +468,8 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
       return;
     }
 
+    await hydrate();
+    await projectionStore.init();
     lastError.value = "";
     await refreshCapabilities();
     const readyNow =
@@ -433,6 +544,21 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
       channelKey,
       deliveryState: "queued",
     });
+    await projectionStore.recordCommandRequest(
+      CHAT_MESSAGE_SEND_OPERATION,
+      optimisticMessage,
+      {
+        conversationId: localMessageId,
+        feature: "messages",
+        aggregateRef: {
+          feature: "messages",
+          entityType: "channel",
+          entityId: channelKey,
+          channelKey,
+        },
+        requestSummary: draft,
+      },
+    );
     filesMediaStore.markTransfers(pendingUploads.transferIds, {
       state: "in_progress",
       progressPct: 35,
@@ -451,6 +577,21 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
         fileAttachments: pendingUploads.fileAttachments,
         image: pendingUploads.image,
       });
+      await projectionStore.recordCommandResponse(
+        CHAT_MESSAGE_SEND_OPERATION,
+        response,
+        {
+          conversationId: localMessageId,
+          feature: "messages",
+          aggregateRef: {
+            feature: "messages",
+            entityType: "channel",
+            entityId: channelKey,
+            channelKey,
+          },
+          requestSummary: draft,
+        },
+      );
       upsertMessage(
         {
           localMessageId: response.payload.localMessageId,
@@ -464,17 +605,23 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
         },
         {
           channelKey,
-          deliveryState: response.payload.sent ? "sent" : "failed",
+          deliveryState:
+            response.payload.sent && messagesByLocalId[response.payload.localMessageId]?.deliveryState === "sent"
+              ? "sent"
+              : response.payload.sent
+                ? "queued"
+                : "failed",
         },
       );
       filesMediaStore.markTransfers(pendingUploads.transferIds, {
-        state: response.payload.sent ? "completed" : "failed",
-        progressPct: response.payload.sent ? 100 : 35,
+        state: response.payload.sent ? "in_progress" : "failed",
+        progressPct: response.payload.sent ? 75 : 35,
         messageLocalId: response.payload.localMessageId,
         error: response.payload.sent ? undefined : "Attachment send was rejected.",
       });
     } catch (error: unknown) {
       applyMessageState(localMessageId, "failed", toErrorMessage(error));
+      await projectionStore.recordCommandFailure(localMessageId, toErrorMessage(error));
       filesMediaStore.markTransfers(pendingUploads.transferIds, {
         state: "failed",
         progressPct: 35,

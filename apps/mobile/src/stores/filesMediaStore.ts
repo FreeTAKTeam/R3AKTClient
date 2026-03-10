@@ -9,6 +9,7 @@ import {
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { createAppPersistenceNamespace } from "../persistence/appPersistence";
 import { useRchClientStore } from "./rchClientStore";
 import { asArray, asRecord, readNumber, readString } from "./rchPayloadUtils";
 
@@ -18,6 +19,9 @@ const LIST_FILES_OPERATION: FilesMediaOperation = "ListFiles";
 const LIST_IMAGES_OPERATION: FilesMediaOperation = "ListImages";
 const RETRIEVE_FILE_OPERATION: FilesMediaOperation = "RetrieveFile";
 const RETRIEVE_IMAGE_OPERATION: FilesMediaOperation = "RetrieveImage";
+const TRANSFERS_STORAGE_KEY = "transfers.v1";
+const REGISTRY_STORAGE_KEY = "registry.v1";
+const filesMediaPersistence = createAppPersistenceNamespace("rch-files-media");
 
 export interface FileTransferRecord {
   id: string;
@@ -130,6 +134,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
   const operations = FILES_MEDIA_OPERATIONS;
   const wired = ref(false);
   const busy = ref(false);
+  const hydrated = ref(false);
   const lastError = ref("");
   const lastOperation = shallowRef<FilesMediaOperation | null>(null);
   const lastResponse = shallowRef<RchEnvelopeResponse<unknown> | null>(null);
@@ -137,12 +142,63 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
   const transfersById = reactive<Record<string, FileTransferRecord>>({});
   const registryById = reactive<Record<string, MediaRegistryRecord>>({});
 
+  let hydratePromise: Promise<void> | null = null;
+
+  function persistState(): void {
+    void Promise.all([
+      filesMediaPersistence.setJson(TRANSFERS_STORAGE_KEY, Object.values(transfersById)),
+      filesMediaPersistence.setJson(REGISTRY_STORAGE_KEY, Object.values(registryById)),
+    ]);
+  }
+
+  async function hydrate(): Promise<void> {
+    if (hydrated.value) {
+      return;
+    }
+    if (hydratePromise) {
+      await hydratePromise;
+      return;
+    }
+
+    hydratePromise = (async () => {
+      const [storedTransfers, storedRegistry] = await Promise.all([
+        filesMediaPersistence.getJson<FileTransferRecord[] | null>(TRANSFERS_STORAGE_KEY, null),
+        filesMediaPersistence.getJson<MediaRegistryRecord[] | null>(REGISTRY_STORAGE_KEY, null),
+      ]);
+
+      for (const key of Object.keys(transfersById)) {
+        delete transfersById[key];
+      }
+      for (const transfer of storedTransfers ?? []) {
+        if (transfer.id?.trim()) {
+          transfersById[transfer.id] = transfer;
+        }
+      }
+
+      for (const key of Object.keys(registryById)) {
+        delete registryById[key];
+      }
+      for (const record of storedRegistry ?? []) {
+        if (record.id?.trim()) {
+          registryById[record.id] = record;
+        }
+      }
+
+      hydrated.value = true;
+    })().finally(() => {
+      hydratePromise = null;
+    });
+
+    await hydratePromise;
+  }
+
   function upsertRegistryRecord(record: MediaRegistryRecord): void {
     registryById[record.id] = {
       ...(registryById[record.id] ?? {}),
       ...record,
       raw: record.raw,
     };
+    persistState();
   }
 
   function replaceRegistry(kind: "file" | "image", records: readonly MediaRegistryRecord[]): void {
@@ -155,6 +211,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
         delete registryById[existingId];
       }
     }
+    persistState();
   }
 
   function applyResponseCache(operation: FilesMediaOperation, payload: unknown): void {
@@ -250,6 +307,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
       url: undefined,
       dataBase64: undefined,
     };
+    persistState();
     return id;
   }
 
@@ -274,6 +332,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
         url: file.type.startsWith("image/") ? URL.createObjectURL(file) : undefined,
         dataBase64: await fileToDataBase64(file),
       };
+      persistState();
       created.push(transferId);
     }
     return created;
@@ -300,6 +359,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
       messageLocalId: next.messageLocalId ?? current.messageLocalId,
       updatedAtMs: Date.now(),
     };
+    persistState();
   }
 
   function getQueuedUploads(channelKey: string): {
@@ -384,6 +444,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     if (wired.value) {
       return;
     }
+    await hydrate();
     await rchClientStore.requireClient();
     await Promise.allSettled([listFiles(), listImages()]);
     wired.value = true;

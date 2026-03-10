@@ -1,16 +1,22 @@
 ﻿<script setup lang="ts">
-import { computed, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
+import SessionParityPanel from "../components/parity/SessionParityPanel.vue";
+import TelemetryDrilldownPanel from "../components/parity/TelemetryDrilldownPanel.vue";
 import SettingsActionRow from "../components/settings/SettingsActionRow.vue";
 import SettingsToggleRow from "../components/settings/SettingsToggleRow.vue";
 import { useNavigationDrawer } from "../composables/useNavigationDrawer";
 import { copyToClipboard, shareText } from "../services/peerExchange";
+import { useDiscoverySessionStore } from "../stores/discoverySessionStore";
 import { useNodeStore } from "../stores/nodeStore";
+import { useTelemetryStore } from "../stores/telemetryStore";
 
 type HubModeForm = "Disabled" | "RchLxmf";
 
 const nodeStore = useNodeStore();
+const discoverySessionStore = useDiscoverySessionStore();
+const telemetryStore = useTelemetryStore();
 const router = useRouter();
 const { toggleNavigationDrawer } = useNavigationDrawer();
 
@@ -66,6 +72,13 @@ const instanceLabel = computed(() => {
   const source = nodeStore.status.identityHex || nodeStore.status.lxmfDestinationHex || "UNSET";
   return `Encrypted Instance: ${source.slice(0, 12)}`;
 });
+
+async function syncParityStores(): Promise<void> {
+  await discoverySessionStore.wire();
+  if (nodeStore.status.running && !telemetryStore.wired) {
+    await telemetryStore.wire();
+  }
+}
 
 function applySettings(feedback = "Settings saved."): void {
   nodeStore.updateSettings({
@@ -185,6 +198,58 @@ function openMigration(): void {
 function closeMigration(): void {
   viewState.value = "settings";
 }
+
+function runSessionAction(action: Parameters<typeof handleSessionAction>[0]): void {
+  void handleSessionAction(action).catch(() => undefined);
+}
+
+async function handleSessionAction(
+  action: "help" | "examples" | "join" | "leave" | "app-info" | "list-clients",
+): Promise<void> {
+  if (action === "help") {
+    await discoverySessionStore.loadHelp();
+    return;
+  }
+  if (action === "examples") {
+    await discoverySessionStore.loadExamples();
+    return;
+  }
+  if (action === "join") {
+    await discoverySessionStore.joinHub();
+    runtimeFeedback.value = "Join command issued through the session wrapper.";
+    return;
+  }
+  if (action === "leave") {
+    await discoverySessionStore.leaveHub();
+    runtimeFeedback.value = "Leave command issued through the session wrapper.";
+    return;
+  }
+  if (action === "app-info") {
+    await discoverySessionStore.loadAppInfo();
+    return;
+  }
+  await discoverySessionStore.loadClients();
+}
+
+function handleTelemetryRequest(payloadJson: string): void {
+  void telemetryStore.requestTelemetryFromJson(payloadJson).catch(() => undefined);
+}
+
+onMounted(() => {
+  void nodeStore.init().catch(() => undefined);
+  void syncParityStores().catch(() => undefined);
+});
+
+watch(
+  () => nodeStore.status.running,
+  (running) => {
+    if (!running) {
+      return;
+    }
+    void syncParityStores().catch(() => undefined);
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -315,6 +380,35 @@ function closeMigration(): void {
               @select="openMigration"
             />
           </div>
+        </section>
+
+        <section class="settings-screen__section">
+          <h3>Hub Session Parity</h3>
+          <SessionParityPanel
+            :busy="discoverySessionStore.busy"
+            :status-label="discoverySessionStore.sessionStatusLabel"
+            :app-info-summary="discoverySessionStore.appInfoSummary"
+            :client-count-label="discoverySessionStore.clientCountLabel"
+            :clients="discoverySessionStore.clients"
+            :history="discoverySessionStore.responseHistory"
+            :last-response-json="discoverySessionStore.lastResponseJson"
+            variant="settings"
+            @run="runSessionAction"
+          />
+        </section>
+
+        <section class="settings-screen__section">
+          <h3>Telemetry Drill-Down</h3>
+          <TelemetryDrilldownPanel
+            :busy="telemetryStore.busy"
+            :summary="telemetryStore.latestSummary"
+            :snapshots="telemetryStore.snapshots"
+            :history="telemetryStore.history"
+            :last-response-json="telemetryStore.lastResponseJson"
+            :last-request-payload-json="telemetryStore.lastRequestPayloadJson"
+            variant="settings"
+            @request="handleTelemetryRequest"
+          />
         </section>
 
         <section class="settings-screen__utility-panel">

@@ -15,7 +15,8 @@
     "codegen:client-operations": "node tools/codegen/generate-client-operation-catalog.mjs",
     "check:client-operations": "node tools/codegen/check-client-operation-coverage.mjs",
     "test:mobile": "npm --workspace apps/mobile run test",
-    "test:node-client": "npm --workspace packages/node-client run test"
+    "test:node-client": "npm --workspace packages/node-client run test",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

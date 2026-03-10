@@ -9,6 +9,7 @@ import { useMapMarkersZonesStore } from "./mapMarkersZonesStore";
 import { useMessagingStore } from "./messagingStore";
 import { useMissionCoreStore } from "./missionCoreStore";
 import { useNodeStore } from "./nodeStore";
+import { useProjectionStore } from "./projectionStore";
 import { useTeamsSkillsStore } from "./teamsSkillsStore";
 import { useTelemetryStore } from "./telemetryStore";
 import { useTopicsStore } from "./topicsStore";
@@ -54,6 +55,7 @@ export const useFeatureBootstrapStore = defineStore("feature-bootstrap", () => {
     const telemetry = useTelemetryStore();
     const messaging = useMessagingStore();
     const nodeStore = useNodeStore();
+    const projectionStore = useProjectionStore();
     const topics = useTopicsStore();
     const filesMedia = useFilesMediaStore();
     const mapMarkersZones = useMapMarkersZonesStore();
@@ -80,6 +82,7 @@ export const useFeatureBootstrapStore = defineStore("feature-bootstrap", () => {
 
     lastError.value = "";
     try {
+      await projectionStore.init();
       await nodeStore.ensureNodeStarted();
     } catch (error: unknown) {
       lastError.value = `node/start: ${toErrorMessage(error)}`;

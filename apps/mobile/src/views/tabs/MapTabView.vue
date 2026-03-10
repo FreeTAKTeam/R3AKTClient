@@ -24,7 +24,7 @@ const liveLabel = computed(() => (errorMessage.value ? "FAULT" : "LIVE"));
 </script>
 
 <template>
-  <section class="webmap-screen">
+  <section class="webmap-screen" data-testid="webmap-screen">
     <header class="webmap-screen__header">
       <button class="webmap-screen__menu" type="button" aria-label="Open navigation" @click="toggleNavigationDrawer">
         <span class="material-symbols-outlined">menu</span>

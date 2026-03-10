@@ -15,6 +15,7 @@ use crate::types::{LogLevel, NodeConfig, NodeError, NodeEvent, NodeStatus};
 
 const APP_DESTINATION_NAME: (&str, &str) = ("r3akt", "emergency");
 const LXMF_DELIVERY_NAME: (&str, &str) = ("lxmf", "delivery");
+const EXECUTION_RESPONSE_TIMEOUT: Duration = Duration::from_secs(60);
 
 struct NodeInner {
     bus: EventBus,
@@ -298,7 +299,7 @@ impl Node {
         })
         .map_err(|_| NodeError::NotRunning {})?;
         resp_rx
-            .recv_timeout(Duration::from_secs(30))
+            .recv_timeout(EXECUTION_RESPONSE_TIMEOUT)
             .unwrap_or(Err(NodeError::Timeout {}))
     }
 
@@ -315,7 +316,7 @@ impl Node {
         })
         .map_err(|_| NodeError::NotRunning {})?;
         resp_rx
-            .recv_timeout(Duration::from_secs(30))
+            .recv_timeout(EXECUTION_RESPONSE_TIMEOUT)
             .unwrap_or(Err(NodeError::Timeout {}))
     }
 
@@ -329,7 +330,7 @@ impl Node {
         tx.send(Command::RefreshHubDirectory { resp: resp_tx })
             .map_err(|_| NodeError::NotRunning {})?;
         resp_rx
-            .recv_timeout(Duration::from_secs(30))
+            .recv_timeout(EXECUTION_RESPONSE_TIMEOUT)
             .unwrap_or(Err(NodeError::Timeout {}))
     }
 }

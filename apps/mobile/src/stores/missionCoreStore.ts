@@ -6,6 +6,8 @@ import {
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { createAppPersistenceNamespace } from "../persistence/appPersistence";
+import { useProjectionStore } from "./projectionStore";
 import { useRchClientStore } from "./rchClientStore";
 import {
   asArray,
@@ -33,6 +35,7 @@ const MISSION_LOG_ENTRY_LIST_OPERATION: MissionOperation = "mission.registry.log
 const MISSION_LOG_ENTRY_UPSERT_OPERATION: MissionOperation = "mission.registry.log_entry.upsert";
 const MISSION_ZONE_LINK_OPERATION: MissionOperation = "mission.registry.mission.zone.link";
 const MISSION_ZONE_UNLINK_OPERATION: MissionOperation = "mission.registry.mission.zone.unlink";
+const missionPersistence = createAppPersistenceNamespace("rch-mission-core");
 
 export interface MissionRecord {
   uid: string;
@@ -205,11 +208,13 @@ function sortMissionChanges(left: MissionChangeRecord, right: MissionChangeRecor
 
 export const useMissionCoreStore = defineStore("rch-mission-core", () => {
   const rchClientStore = useRchClientStore();
+  const projectionStore = useProjectionStore();
 
   const feature = "missions" as const;
   const operations = MISSIONS_OPERATIONS;
   const wired = ref(false);
   const busy = ref(false);
+  const hydrated = ref(false);
   const lastError = ref("");
   const lastOperation = shallowRef<MissionOperation | null>(null);
   const lastResponse = shallowRef<RchEnvelopeResponse<unknown> | null>(null);
@@ -217,6 +222,42 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
   const missionsByUid = reactive<Record<string, MissionRecord>>({});
   const missionLogEntriesByUid = reactive<Record<string, MissionLogEntryRecord>>({});
   const missionChangesByUid = reactive<Record<string, MissionChangeRecord>>({});
+  let hydratePromise: Promise<void> | null = null;
+
+  function persistState(): void {
+    void Promise.all([
+      missionPersistence.setJson("missions", Object.values(missionsByUid)),
+      missionPersistence.setJson("logEntries", Object.values(missionLogEntriesByUid)),
+      missionPersistence.setJson("missionChanges", Object.values(missionChangesByUid)),
+    ]);
+  }
+
+  async function hydrate(): Promise<void> {
+    if (hydrated.value) {
+      return;
+    }
+    if (hydratePromise) {
+      await hydratePromise;
+      return;
+    }
+
+    hydratePromise = (async () => {
+      const [storedMissions, storedLogEntries, storedMissionChanges] = await Promise.all([
+        missionPersistence.getJson<MissionRecord[] | null>("missions", null),
+        missionPersistence.getJson<MissionLogEntryRecord[] | null>("logEntries", null),
+        missionPersistence.getJson<MissionChangeRecord[] | null>("missionChanges", null),
+      ]);
+
+      replaceRecordMap(missionsByUid, storedMissions ?? [], "uid");
+      replaceRecordMap(missionLogEntriesByUid, storedLogEntries ?? [], "uid");
+      replaceRecordMap(missionChangesByUid, storedMissionChanges ?? [], "uid");
+      hydrated.value = true;
+    })().finally(() => {
+      hydratePromise = null;
+    });
+
+    await hydratePromise;
+  }
 
   function mergeMissionRecord(record: MissionRecord): void {
     missionsByUid[record.uid] = {
@@ -224,6 +265,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
       ...record,
       raw: record.raw,
     };
+    persistState();
   }
 
   function applyResponseCache(
@@ -237,6 +279,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
         .map(normalizeMissionRecord)
         .filter((entry): entry is MissionRecord => Boolean(entry));
       replaceRecordMap(missionsByUid, missions, "uid");
+      persistState();
       return;
     }
 
@@ -260,6 +303,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
       const missionUid = readString(value, ["mission_uid", "missionUid"]);
       if (missionUid) {
         delete missionsByUid[missionUid];
+        persistState();
       }
       return;
     }
@@ -269,6 +313,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
         .map(normalizeMissionLogEntryRecord)
         .filter((entry): entry is MissionLogEntryRecord => Boolean(entry));
       mergeRecordMap(missionLogEntriesByUid, entries, "uid");
+      persistState();
       return;
     }
 
@@ -276,6 +321,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
       const entry = normalizeMissionLogEntryRecord(value.entry ?? value.log_entry ?? value);
       if (entry) {
         missionLogEntriesByUid[entry.uid] = entry;
+        persistState();
       }
       return;
     }
@@ -285,6 +331,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
         .map(normalizeMissionChangeRecord)
         .filter((entry): entry is MissionChangeRecord => Boolean(entry));
       mergeRecordMap(missionChangesByUid, changes, "uid");
+      persistState();
       return;
     }
 
@@ -292,6 +339,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
       const change = normalizeMissionChangeRecord(value.change ?? value.mission_change ?? value);
       if (change) {
         missionChangesByUid[change.uid] = change;
+        persistState();
       }
     }
   }
@@ -303,15 +351,39 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
   ): Promise<RchEnvelopeResponse<unknown>> {
     busy.value = true;
     lastError.value = "";
+    await hydrate();
+    const conversationId = options?.correlationId ?? options?.messageId ?? crypto.randomUUID?.() ?? operation;
+    const isMutation = operation !== MISSION_LIST_OPERATION && operation !== MISSION_GET_OPERATION
+      && operation !== MISSION_CHANGE_LIST_OPERATION && operation !== MISSION_LOG_ENTRY_LIST_OPERATION;
+    if (isMutation) {
+      await projectionStore.recordCommandRequest(operation, payload, {
+        conversationId,
+        feature: "missions",
+        requestSummary: operation,
+      });
+    }
     try {
       const client = await rchClientStore.requireClient();
-      const response = await client.missions.execute(operation, payload, options);
+      const response = await client.missions.execute(operation, payload, {
+        ...options,
+        correlationId: conversationId,
+      });
       lastOperation.value = operation;
       lastResponse.value = response;
       applyResponseCache(operation, response.payload);
+      if (isMutation) {
+        await projectionStore.recordCommandResponse(operation, response, {
+          conversationId,
+          feature: "missions",
+          requestSummary: operation,
+        });
+      }
       return response;
     } catch (error: unknown) {
       lastError.value = toErrorMessage(error);
+      if (isMutation) {
+        await projectionStore.recordCommandFailure(conversationId, lastError.value);
+      }
       throw error;
     } finally {
       busy.value = false;
@@ -470,6 +542,7 @@ export const useMissionCoreStore = defineStore("rch-mission-core", () => {
     if (wired.value) {
       return;
     }
+    await hydrate();
     try {
       await listMissions();
     } catch (error: unknown) {

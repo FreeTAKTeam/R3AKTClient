@@ -55,6 +55,18 @@ export interface DomainEventPayload {
   correlationId?: string;
 }
 
+export interface NormalizedDomainEvent<
+  TPayload extends Record<string, unknown> = Record<string, unknown>,
+> {
+  eventType: string;
+  payload: TPayload;
+  correlationId?: string;
+  eventId?: string;
+  occurredAt?: string;
+  receivedAtMs: number;
+  dedupeKey: string;
+}
+
 export type SendMethod = "direct" | "opportunistic" | "propagated";
 export type DeliveryState = "queued" | "sent" | "delivered" | "failed";
 export type MessageDirection = "outbound" | "inbound";
@@ -252,6 +264,52 @@ export interface NodeClientEvents {
   domainEvent: DomainEventPayload;
   log: NodeLogEvent;
   error: NodeErrorEvent;
+}
+
+export function normalizeDomainEventPayload<
+  TPayload extends Record<string, unknown> = Record<string, unknown>,
+>(
+  payload: DomainEventPayload,
+  receivedAtMs = Date.now(),
+): NormalizedDomainEvent<TPayload> {
+  const parsedPayload = parsePayloadJson(payload.payloadJson) as TPayload;
+  const eventId = readStringCandidate(parsedPayload, [
+    "eventId",
+    "event_id",
+    "uid",
+    "id",
+    "message_id",
+    "messageId",
+  ]);
+  const occurredAt = readStringCandidate(parsedPayload, [
+    "timestamp",
+    "issued_at",
+    "issuedAt",
+    "updated_at",
+    "updatedAt",
+    "created_at",
+    "createdAt",
+    "received_at",
+    "receivedAt",
+  ]);
+  const dedupeKey =
+    eventId
+    ?? payload.correlationId?.trim()
+    ?? [
+      payload.eventType.trim(),
+      occurredAt ?? "",
+      JSON.stringify(parsedPayload),
+    ].join("|");
+
+  return {
+    eventType: payload.eventType,
+    payload: parsedPayload,
+    correlationId: payload.correlationId,
+    eventId,
+    occurredAt,
+    receivedAtMs,
+    dedupeKey,
+  };
 }
 
 export interface ReticulumNodeClient {

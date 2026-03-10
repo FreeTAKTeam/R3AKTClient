@@ -73,7 +73,7 @@ async function openMissionChat(): Promise<void> {
 <template>
   <MissionWorkspaceOverview v-if="isOverview" :mission-uid="missionUid" />
 
-  <section v-else class="mission-domain">
+  <section v-else class="mission-domain" data-testid="mission-domain-screen">
     <header class="mission-domain__header">
       <div>
         <p>Mission Workspace</p>

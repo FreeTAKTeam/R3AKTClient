@@ -139,14 +139,24 @@ Validation:
 - `npm run mobile:build`
 - `npm --workspace apps/mobile run typecheck`
 - `npm run test:mobile`
+- `npm run test:e2e`
 
 Depends on:
 - P3
 
+Notes:
+- completed sub-slice: Slice A dashboard/settings session parity + telemetry drill-down
+- completed sub-slice: interaction-focused Playwright coverage for drawer navigation, dashboard parity panels, and chat send flow
+- transport support note: session/chat delivery now primes the hub link on announce, uses bounded link retries before raw transport fallback, and no longer fires an eager telemetry request during initial store wiring
+- rust-only live probe note: `cargo test -p reticulum_mobile --test live_rch_lxmf live_rch_lxmf_get_app_info_probe -- --ignored --exact --nocapture` still times out on `getAppInfo` against the configured live hub, so the session query path is not yet trustworthy
+- alternate-target note: retesting the same Rust-only probe against `8f455b1c01a6032f6bd740994686f49f` also timed out, and the runtime did not log that target as a reachable announcing hub during the probe window
+- routes without approved Stitch references remain blocked for net-new UI implementation and must not be guessed in code
+- next candidate sub-slice: files/images workflow completion only after explicit Stitch coverage review confirms existing chat/topics shells are sufficient or new Stitch screens are provided
+
 ---
 
 ## P5 - Event/offline/persistence hardening
-Status: pending
+Status: done
 
 Goal:
 Raise confidence in event semantics, offline cache behavior, persistence boundaries, and runtime recovery.
@@ -171,6 +181,10 @@ Validation:
 
 Depends on:
 - P4
+
+Notes:
+- completed user-directed app-side hardening slice: normalized `domainEvent` ingestion, shared persistence adapter, persisted command ledger/checkpoints, and restart-safe messaging/session/telemetry/mission/checklist store hydration
+- this slice intentionally left Rust-side application persistence out of scope; Rust still persists node identity/transport state only
 
 ---
 
@@ -228,7 +242,7 @@ Depends on:
 ## Current focus
 Current milestone: P4
 Owner: Codex / agent
-Last updated: 2026-03-09
+Last updated: 2026-03-10
 
 ## Rules for updating this file
 
