@@ -8,15 +8,15 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-reticulum = { package = "reticulum", path = "../../../LXMF-rs/crates/internal/reticulum-legacy" }
+reticulum = { package = "reticulum", git = "https://github.com/FreeTAKTeam/LXMF-rs", rev = "87c71c94d1e76cb1acf33642dc6e02f36142c2e8" }
 base64 = "0.22"
 crossbeam-channel = "0.5"
 fs-err = "2.11.0"
 hex = "0.4"
 jni = "0.21"
 log = "0.4"
-lxmf = { path = "../../../LXMF-rs/crates/internal/lxmf-legacy", default-features = false }
-lxmf-sdk = { path = "../../../LXMF-rs/crates/libs/lxmf-sdk", default-features = false, features = ["std"] }
+lxmf = { git = "https://github.com/FreeTAKTeam/LXMF-rs", rev = "87c71c94d1e76cb1acf33642dc6e02f36142c2e8", default-features = false }
+lxmf-sdk = { git = "https://github.com/FreeTAKTeam/LXMF-rs", rev = "87c71c94d1e76cb1acf33642dc6e02f36142c2e8", default-features = false, features = ["std"] }
 rand_core = { version = "0.6.4", features = ["getrandom"] }
 regex = "1.10.6"
 serde = { version = "1", features = ["derive"] }

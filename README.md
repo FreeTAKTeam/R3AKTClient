@@ -31,28 +31,31 @@ The target state extends that scaffold into full `client`-scoped RCH parity.
 
 ## Consolidated LXMF-rs Dependency Model
 
-`R3AKTClient` now consumes the local consolidated `LXMF-rs` checkout instead of
-mixing crates.io and git transport dependencies.
+`crates/reticulum_mobile` now defaults to deterministic, pinned git dependencies
+from the consolidated `LXMF-rs` repository (no sibling checkout required).
 
-Required sibling layout:
+Pinned source:
 
-- `../R3AKTClient`
-- `../LXMF-rs`
+- Repository: `https://github.com/FreeTAKTeam/LXMF-rs`
+- Commit: `87c71c94d1e76cb1acf33642dc6e02f36142c2e8`
+- Crates used: `reticulum`, `lxmf`, and `lxmf-sdk` (`std` feature only)
 
-Pinned and validated against `LXMF-rs` commit:
+### Optional local override (opt-in)
 
-- `0052218f1247c68f8c925988299d33d0678d81b4`
+If you are actively developing `LXMF-rs` and want to test local changes, use the
+included override config from repo root:
 
-Rust dependency sources used by `crates/reticulum_mobile`:
+- `cargo --config .cargo/config.local.toml.example check -p reticulum_mobile`
 
-- `../LXMF-rs/crates/internal/reticulum-legacy` (`reticulum`)
-- `../LXMF-rs/crates/internal/lxmf-legacy` (`lxmf`)
-- `../LXMF-rs/crates/libs/lxmf-sdk` (`lxmf-sdk`, `std` feature only)
+This keeps local path usage explicit and opt-in.
 
 ## Validation Commands
 
 From repo root:
 
-1. `cargo check -p reticulum_mobile`
-2. `npm run node-client:build`
-3. `npm run mobile:build`
+1. CI-friendly clean-checkout validation:
+   - `npm run validate:mobile:ci`
+2. Individual gates:
+   - `cargo check -p reticulum_mobile --locked`
+   - `npm run node-client:build`
+   - `npm run mobile:build`

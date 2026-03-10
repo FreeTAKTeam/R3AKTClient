@@ -7,6 +7,7 @@ import { defineStore } from "pinia";
 import { computed, ref, shallowRef } from "vue";
 
 import { createAppPersistenceNamespace } from "../persistence/appPersistence";
+import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
 import {
   asArray,
   asRecord,
@@ -42,14 +43,6 @@ function toErrorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
-}
-
-function parsePayload(payloadJson: string): unknown {
-  const trimmed = payloadJson.trim();
-  if (!trimmed) {
-    return {};
-  }
-  return JSON.parse(trimmed) as unknown;
 }
 
 function summarizeRecord(value: Record<string, unknown>): string {
@@ -267,9 +260,16 @@ export const useTelemetryStore = defineStore("rch-telemetry", () => {
       throw new Error(`Operation "${operation}" is not allowlisted for ${feature}.`);
     }
 
+    const parsedPayload = tryParsePayload(payloadJson);
+    if (!parsedPayload.ok) {
+      const message = `Invalid JSON payload for ${feature} ${operation}: ${parsedPayload.error.message}`;
+      lastError.value = message;
+      throw new InvalidPayloadJsonError(message);
+    }
+
     await execute(
       operation as TelemetryOperation,
-      asRecord(parsePayload(payloadJson)),
+      asRecord(parsedPayload.value),
       options,
     );
   }
@@ -285,7 +285,14 @@ export const useTelemetryStore = defineStore("rch-telemetry", () => {
     payloadJson = "{}",
     options?: ExecuteEnvelopeOptions,
   ): Promise<void> {
-    await requestTelemetry(asRecord(parsePayload(payloadJson)), options);
+    const parsedPayload = tryParsePayload(payloadJson);
+    if (!parsedPayload.ok) {
+      const message = `Invalid JSON payload for ${feature} ${TELEMETRY_REQUEST_OPERATION}: ${parsedPayload.error.message}`;
+      lastError.value = message;
+      throw new InvalidPayloadJsonError(message);
+    }
+
+    await requestTelemetry(asRecord(parsedPayload.value), options);
   }
 
   async function wire(): Promise<void> {

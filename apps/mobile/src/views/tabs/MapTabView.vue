@@ -237,4 +237,18 @@ const liveLabel = computed(() => (errorMessage.value ? "FAULT" : "LIVE"));
   color: #fda4af;
   padding: 0.85rem 0.9rem;
 }
+
+.map-frame {
+  border: 1px solid rgba(142, 170, 212, 0.35);
+  border-radius: 0.9rem;
+  min-height: 16rem;
+  overflow: hidden;
+}
+
+.map-frame iframe {
+  border: 0;
+  display: block;
+  height: clamp(16rem, 42vh, 24rem);
+  width: 100%;
+}
 </style>

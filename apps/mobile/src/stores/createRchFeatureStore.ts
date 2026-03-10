@@ -8,6 +8,7 @@ import type {
 import { defineStore } from "pinia";
 import { computed, ref, shallowRef } from "vue";
 
+import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
 import { useRchClientStore } from "./rchClientStore";
 
 function toErrorMessage(error: unknown): string {
@@ -20,15 +21,6 @@ function toErrorMessage(error: unknown): string {
 function wrapWireError(context: string, error: unknown): Error {
   return new Error(`${context}: ${toErrorMessage(error)}`);
 }
-
-function parsePayload(payloadJson: string): unknown {
-  const trimmed = payloadJson.trim();
-  if (!trimmed) {
-    return {};
-  }
-  return JSON.parse(trimmed) as unknown;
-}
-
 export function createRchFeatureStore<K extends RchFeatureKey>(
   storeId: string,
   feature: K,
@@ -77,9 +69,16 @@ export function createRchFeatureStore<K extends RchFeatureKey>(
         );
       }
 
+      const parsedPayload = tryParsePayload(payloadJson);
+      if (!parsedPayload.ok) {
+        const message = `Invalid JSON payload for ${String(feature)} ${operation}: ${parsedPayload.error.message}`;
+        lastError.value = message;
+        throw new InvalidPayloadJsonError(message);
+      }
+
       await execute(
         operation as RchFeatureOperationMap[K],
-        parsePayload(payloadJson),
+        parsedPayload.value,
         options,
       );
     }

@@ -147,6 +147,7 @@ Depends on:
 Notes:
 - completed sub-slice: Slice A dashboard/settings session parity + telemetry drill-down
 - completed sub-slice: interaction-focused Playwright coverage for drawer navigation, dashboard parity panels, and chat send flow
+- merge-sync note: resolving the Playwright PR against `codex/r3aktmobile-parity` required keeping the interaction coverage while also standardizing invalid JSON handling through the shared payload parser across the remaining feature stores
 - transport support note: session/chat delivery now primes the hub link on announce, uses bounded link retries before raw transport fallback, and no longer fires an eager telemetry request during initial store wiring
 - rust-only live probe note: `cargo test -p reticulum_mobile --test live_rch_lxmf live_rch_lxmf_get_app_info_probe -- --ignored --exact --nocapture` still times out on `getAppInfo` against the configured live hub, so the session query path is not yet trustworthy
 - alternate-target note: retesting the same Rust-only probe against `8f455b1c01a6032f6bd740994686f49f` also timed out, and the runtime did not log that target as a reachable announcing hub during the probe window

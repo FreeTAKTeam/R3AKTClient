@@ -7,6 +7,7 @@ import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
 import { createAppPersistenceNamespace } from "../persistence/appPersistence";
+import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
 import { useProjectionStore } from "./projectionStore";
 import {
   asArray,
@@ -46,14 +47,6 @@ function toErrorMessage(error: unknown): string {
     return error.message;
   }
   return String(error);
-}
-
-function parsePayload(payloadJson: string): unknown {
-  const trimmed = payloadJson.trim();
-  if (!trimmed) {
-    return {};
-  }
-  return JSON.parse(trimmed) as unknown;
 }
 
 function readStringCandidate(
@@ -348,7 +341,14 @@ export const useDiscoverySessionStore = defineStore("rch-discovery-session", () 
       throw new Error(`Operation "${operation}" is not allowlisted for ${feature}.`);
     }
 
-    await execute(operation as SessionOperation, parsePayload(payloadJson), options);
+    const parsedPayload = tryParsePayload(payloadJson);
+    if (!parsedPayload.ok) {
+      const message = `Invalid JSON payload for ${feature} ${operation}: ${parsedPayload.error.message}`;
+      lastError.value = message;
+      throw new InvalidPayloadJsonError(message);
+    }
+
+    await execute(operation as SessionOperation, parsedPayload.value, options);
   }
 
   async function loadHelp(): Promise<void> {

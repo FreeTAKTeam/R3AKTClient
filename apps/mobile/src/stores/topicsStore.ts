@@ -10,6 +10,7 @@ import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
 import { useMessagingStore } from "./messagingStore";
+import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
 import { useRchClientStore } from "./rchClientStore";
 import { asArray, asRecord, readNumber, readString } from "./rchPayloadUtils";
 
@@ -55,14 +56,6 @@ function toErrorMessage(error: unknown): string {
 
 function wrapWireError(context: string, error: unknown): Error {
   return new Error(`${context}: ${toErrorMessage(error)}`);
-}
-
-function parsePayload(payloadJson: string): unknown {
-  const trimmed = payloadJson.trim();
-  if (!trimmed) {
-    return {};
-  }
-  return JSON.parse(trimmed) as unknown;
 }
 
 function normalizeTopicRecord(raw: unknown): TopicRecord | null {
@@ -240,12 +233,19 @@ export const useTopicsStore = defineStore("rch-topics", () => {
     payloadJson = "{}",
     options?: ExecuteEnvelopeOptions,
   ): Promise<void> {
+    const parsedPayload = tryParsePayload(payloadJson);
+    if (!parsedPayload.ok) {
+      const message = `Invalid JSON payload for topics ${operation}: ${parsedPayload.error.message}`;
+      lastError.value = message;
+      throw new InvalidPayloadJsonError(message);
+    }
+
     if ((operations as readonly string[]).includes(operation)) {
-      await execute(operation as TopicsOperation, parsePayload(payloadJson), options);
+      await execute(operation as TopicsOperation, parsedPayload.value, options);
       return;
     }
     if ((mutationOperations as readonly string[]).includes(operation)) {
-      await executeMutation(operation as TopicMutationOperation, parsePayload(payloadJson), options);
+      await executeMutation(operation as TopicMutationOperation, parsedPayload.value, options);
       return;
     }
     throw new Error(`Operation "${operation}" is not allowlisted for topics.`);

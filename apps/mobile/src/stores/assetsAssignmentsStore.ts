@@ -6,6 +6,7 @@ import {
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
 import { useRchClientStore } from "./rchClientStore";
 import { asArray, asRecord, readString } from "./rchPayloadUtils";
 
@@ -46,14 +47,6 @@ function toErrorMessage(error: unknown): string {
 
 function wrapWireError(context: string, error: unknown): Error {
   return new Error(`${context}: ${toErrorMessage(error)}`);
-}
-
-function parsePayload(payloadJson: string): unknown {
-  const trimmed = payloadJson.trim();
-  if (!trimmed) {
-    return {};
-  }
-  return JSON.parse(trimmed) as unknown;
 }
 
 function normalizeAssetRecord(raw: unknown): AssetRecord | null {
@@ -182,7 +175,15 @@ export const useAssetsAssignmentsStore = defineStore("rch-assets-assignments", (
     if (!(operations as readonly string[]).includes(operation)) {
       throw new Error(`Operation "${operation}" is not allowlisted for ${feature}.`);
     }
-    await execute(operation as AssetsAssignmentsOperation, parsePayload(payloadJson), options);
+
+    const parsedPayload = tryParsePayload(payloadJson);
+    if (!parsedPayload.ok) {
+      const message = `Invalid JSON payload for ${feature} ${operation}: ${parsedPayload.error.message}`;
+      lastError.value = message;
+      throw new InvalidPayloadJsonError(message);
+    }
+
+    await execute(operation as AssetsAssignmentsOperation, parsedPayload.value, options);
   }
 
   async function listAssets(teamMemberUid?: string): Promise<void> {

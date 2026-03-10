@@ -14,6 +14,7 @@ import { computed, reactive, ref, shallowRef } from "vue";
 import { createAppPersistenceNamespace } from "../persistence/appPersistence";
 import { useNodeStore } from "./nodeStore";
 import { useFilesMediaStore } from "./filesMediaStore";
+import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
 import { useProjectionStore } from "./projectionStore";
 import { useRchClientStore } from "./rchClientStore";
 
@@ -63,14 +64,6 @@ function createMessageId(): string {
     return crypto.randomUUID();
   }
   return `chat-${Date.now().toString(36)}-${Math.floor(Math.random() * 1_000_000).toString(36)}`;
-}
-
-function parsePayload(payloadJson: string): unknown {
-  const trimmed = payloadJson.trim();
-  if (!trimmed) {
-    return {};
-  }
-  return JSON.parse(trimmed) as unknown;
 }
 
 function nowIso(): string {
@@ -460,7 +453,15 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
     if (!(operations as readonly string[]).includes(operation)) {
       throw new Error(`Operation "${operation}" is not allowlisted for messages.`);
     }
-    await execute(operation as MessagingOperation, parsePayload(payloadJson), options);
+
+    const parsedPayload = tryParsePayload(payloadJson);
+    if (!parsedPayload.ok) {
+      const message = `Invalid JSON payload for messages ${operation}: ${parsedPayload.error.message}`;
+      lastError.value = message;
+      throw new InvalidPayloadJsonError(message);
+    }
+
+    await execute(operation as MessagingOperation, parsedPayload.value, options);
   }
 
   async function wire(): Promise<void> {

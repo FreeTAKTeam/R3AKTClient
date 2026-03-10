@@ -419,6 +419,70 @@ Notes:
 - selectors were kept route- and panel-level so the tests assert user-visible behavior rather than implementation details
 
 Open issues:
+- the live Rust `getAppInfo` timeout remains the main blocker on trusting live session query UX; this Playwright slice continues to validate the web/mock path only
+
+Next recommended step:
+- continue the next approved P4 UI slice on top of this coverage, using the shared payload-parser contract for any additional feature-store JSON entry points
+
+### 2026-03-10 - Session 009
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- resolve the open PR merge conflicts against `codex/r3aktmobile-parity`, preserve the Playwright/mobile-shell additions on `main`, and validate the merged tree before updating the PR head
+
+Planned changes:
+- reconcile conflicted mobile store/test/view files and keep both the PR interaction coverage and the base branch payload-parser changes where they overlap
+- repair any invalid merged code and make the feature-store JSON entrypoints consistent with the shared `InvalidPayloadJsonError` contract
+- rerun the native, wrapper, mobile, and Playwright validations before pushing the updated branch
+
+Files touched:
+- `apps/mobile/src/commsChatStore.spec.ts`
+- `apps/mobile/src/featureStores.spec.ts`
+- `apps/mobile/src/stores/assetsAssignmentsStore.ts`
+- `apps/mobile/src/stores/checklistsStore.ts`
+- `apps/mobile/src/stores/createRchFeatureStore.ts`
+- `apps/mobile/src/stores/discoverySessionStore.ts`
+- `apps/mobile/src/stores/filesMediaStore.ts`
+- `apps/mobile/src/stores/mapMarkersZonesStore.ts`
+- `apps/mobile/src/stores/messagingStore.ts`
+- `apps/mobile/src/stores/missionCoreStore.ts`
+- `apps/mobile/src/stores/teamsSkillsStore.ts`
+- `apps/mobile/src/stores/telemetryStore.ts`
+- `apps/mobile/src/stores/topicsStore.ts`
+- `apps/mobile/src/views/tabs/MapTabView.vue`
+- `package.json`
+- `package-lock.json`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `cargo check -p reticulum_mobile`
+- `npm run node-client:build`
+- `npm run test:node-client`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:mobile`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- the merge kept the PR's interaction-focused Playwright coverage and webmap shell changes while pulling in the base branch's shared payload-parser work
+- `topicsStore` had a malformed merged helper block that broke both `vue-tsc` and Vitest; fixing that exposed several other feature stores still throwing raw `SyntaxError` on invalid JSON
+- the remaining feature stores in the contract test now raise `InvalidPayloadJsonError` and update `lastError` consistently, so the shared invalid-payload expectation is aligned across the allowlisted mobile feature families
+
+Open issues:
+- this task only resolved the PR merge and validation drift; it did not change the standing live-hub `getAppInfo` timeout blocker
+
+Next recommended step:
+- continue the next approved P4 UI slice from the now-merged branch state, using the green Playwright/mobile validation set as the baseline gate
+
+Open issues:
 - Playwright coverage is still concentrated on the current shell and approved parity surfaces; later P4 slices should extend interaction tests alongside new UI actions instead of relying only on visual captures
 
 Next recommended step:
@@ -544,6 +608,26 @@ Result:
 Notes:
 - Playwright now includes interaction coverage for drawer navigation between primary routes, dashboard session/telemetry requests, and outbound chat send in the web/mock shell
 - the existing Stitch review harness remains in place for approved visual-reference routes, so `npm run test:e2e` now exercises both screenshot review and interactive mobile-shell behavior
+
+### 2026-03-10
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `cargo check -p reticulum_mobile`
+- `npm run node-client:build`
+- `npm run test:node-client`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:mobile`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- resolved the open PR merge against `codex/r3aktmobile-parity` on `main` without dropping the Playwright/mobile-shell additions
+- aligned the remaining feature-store `executeFromJson` entrypoints to the shared `InvalidPayloadJsonError` contract so invalid JSON now fails consistently across the tested feature families
 
 ---
 
