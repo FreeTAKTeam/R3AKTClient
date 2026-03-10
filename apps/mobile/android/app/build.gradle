@@ -29,7 +29,7 @@ android {
     compileSdk rootProject.ext.compileSdkVersion
     ndkVersion rootProject.ext.ndkVersion
     defaultConfig {
-        applicationId "network.reticulum.emergency"
+        applicationId "network.reticulum.r3akt"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode computedVersionCode

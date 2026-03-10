@@ -132,6 +132,96 @@ Event envelope attached to successful results:
 }
 ```
 
+## Messaging And Topic Mission-Sync Contract
+
+The mobile client now treats RCH messaging as mission-sync LXMF traffic.
+`POST /Message`, `GET /Topic`, and `POST /Topic/Subscribe` are client-facing
+operation names that map to mission-sync commands on the wire; they are not a
+separate HTTP/WS chat protocol inside the app runtime.
+
+### Supported command types
+
+| Client operation | `command_type` | `args` payload |
+|---|---|---|
+| `POST /Message` | `mission.message.send` | `content` is required. Optional `local_message_id`, `topic_id`, and `destination`. |
+| `GET /Topic` | `topic.list` | Empty object by default. |
+| `POST /Topic/Subscribe` | `topic.subscribe` | `topic_id` is required. Optional `destination`. |
+
+Example outbound send command:
+
+```json
+[
+  {
+    "command_id": "2f8c6dbcd8f2431fa7469e1f1a4a24a3",
+    "correlation_id": "2f8c6dbcd8f2431fa7469e1f1a4a24a3",
+    "source": {
+      "rns_identity": "0123456789abcdef0123456789abcdef"
+    },
+    "timestamp": "2026-03-06T12:00:00Z",
+    "command_type": "mission.message.send",
+    "args": {
+      "local_message_id": "2f8c6dbcd8f2431fa7469e1f1a4a24a3",
+      "content": "Ingress checkpoint clear.",
+      "topic_id": "ops.alerts"
+    },
+    "topics": []
+  }
+]
+```
+
+Successful send result payload:
+
+```json
+{
+  "command_id": "2f8c6dbcd8f2431fa7469e1f1a4a24a3",
+  "status": "result",
+  "correlation_id": "2f8c6dbcd8f2431fa7469e1f1a4a24a3",
+  "result": {
+    "local_message_id": "2f8c6dbcd8f2431fa7469e1f1a4a24a3",
+    "sent": true,
+    "content": "Ingress checkpoint clear.",
+    "topic_id": "ops.alerts"
+  }
+}
+```
+
+The runtime normalizes successful outbound acknowledgements into
+`mission.message.sent`.
+
+### Inbound relay receive
+
+Inbound chat fanout arrives as a structured `FIELD_EVENT` where
+`event_type = rch.message.relay`. The forwarded payload may also preserve
+`FIELD_THREAD` and `FIELD_GROUP`.
+
+Normalized client event shape:
+
+```json
+{
+  "event_id": "relay-9c02b29e",
+  "event_type": "rch.message.relay",
+  "source_hash": "fedcba9876543210fedcba9876543210",
+  "topic_id": "ops.alerts",
+  "content": "Ingress checkpoint clear.",
+  "issued_at": "2026-03-06T12:00:05Z",
+  "thread_id": "thread-alpha",
+  "group_id": "ops"
+}
+```
+
+Client expectations:
+
+- Deduplicate inbound chat by `event_id` first, then by message identifier, and
+  only then by a deterministic content tuple fallback.
+- Treat `FIELD_RESULTS` as the command result source of truth.
+- Treat missing `FIELD_RESULTS` or `sent = false` as send failure.
+- Keep UI-only channel grouping local to the client:
+  - `topic:<topicId>`
+  - `dm:<destinationHash>`
+  - `hub:global`
+- Do not assume retry, reaction, replay cursor, or transport conversation ID
+  support in the southbound contract.
+
 ## Core R3AKT Command Types
 
 These are the command payloads most relevant to the current client work.

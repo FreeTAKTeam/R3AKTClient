@@ -1,0 +1,31 @@
+﻿{
+  "screenshot": {
+    "name": "projects/4350946208414714711/files/035c182de8254425a2e884d0eef80a74",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AOfcidW8FxS97Nb_gFhaha1FLfNMBxYx-4HNJ5GEodtqKIVPak_DE52LKjdkrkHQhCm4s68xaeAn7oOjVmpz4ImPs5YhpXPiO4zkXlS6MdvJKaIscSMAhfBlK5vlzf7I3hIjZyNB2_aamer6BHPrFPuBreattvTU4rQ3j-pxhBRPeuyIuAZFTnuWsZVuRfdtLy0rZT78JUY8P_vudg1slINZdPHrkBf9ptoASKZIu4gXKkOToCZze5aTGDA_"
+  },
+  "htmlCode": {
+    "name": "projects/4350946208414714711/files/e0599090eafb47d582c48d2028c5809e",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzQ3ODQwMjQ4YzkzMjRhYjVhZmY1YTZiOGMzMTY3NWUzEgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "dbd5605c733f4c0cb8ced306d5f7b0b0",
+  "generatedBy": "HatterAgent",
+  "width": "780",
+  "height": "1768",
+  "title": "Missions Workspace - Clean Header",
+  "prompt": "Update the header: keep the hamburger menu on the far left, center the page title 'MISSIONS', and show only the 'LIVE' indicator badge on the far right. Remove any other buttons (like search) from the header.",
+  "name": "projects/4350946208414714711/screens/dbd5605c733f4c0cb8ced306d5f7b0b0",
+  "theme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#25d1f4",
+    "saturation": 3
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "HATTER_AGENT",
+    "status": "COMPLETE"
+  }
+}

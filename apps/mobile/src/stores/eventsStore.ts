@@ -2,10 +2,12 @@ import { defineStore } from "pinia";
 import { computed, reactive, ref, watch } from "vue";
 import type { PacketReceivedEvent } from "@reticulum/node-client";
 
+import { createAppPersistenceNamespace } from "../persistence/appPersistence";
 import type { EventRecord, ReplicationMessage } from "../types/domain";
 import { useNodeStore } from "./nodeStore";
 
 const EVENT_STORAGE_KEY = "reticulum.mobile.events.v1";
+const eventsPersistence = createAppPersistenceNamespace("legacy-events");
 
 type EventReplicationMessage =
   | {
@@ -45,29 +47,25 @@ function normalizeEvent(entry: EventRecord): EventRecord {
   };
 }
 
-function loadEvents(): Record<string, EventRecord> {
-  try {
-    const raw = localStorage.getItem(EVENT_STORAGE_KEY);
-    if (!raw) {
-      return {};
+function normalizeStoredEvents(parsed: EventRecord[] | null | undefined): Record<string, EventRecord> {
+  const out: Record<string, EventRecord> = {};
+  for (const item of parsed ?? []) {
+    const normalized = normalizeEvent(item);
+    if (!normalized.uid || !normalized.callsign || !normalized.summary) {
+      continue;
     }
-    const parsed = JSON.parse(raw) as EventRecord[];
-    const out: Record<string, EventRecord> = {};
-    for (const item of parsed) {
-      const normalized = normalizeEvent(item);
-      if (!normalized.uid || !normalized.callsign || !normalized.summary) {
-        continue;
-      }
-      out[normalized.uid] = normalized;
-    }
-    return out;
-  } catch {
-    return {};
+    out[normalized.uid] = normalized;
   }
+  return out;
+}
+
+async function loadEvents(): Promise<Record<string, EventRecord>> {
+  const parsed = await eventsPersistence.getJson<EventRecord[] | null>(EVENT_STORAGE_KEY, null);
+  return normalizeStoredEvents(parsed);
 }
 
 function saveEvents(records: Record<string, EventRecord>): void {
-  localStorage.setItem(EVENT_STORAGE_KEY, JSON.stringify(Object.values(records)));
+  void eventsPersistence.setJson(EVENT_STORAGE_KEY, Object.values(records));
 }
 
 function parseEventReplicationMessage(raw: string): EventReplicationMessage | null {
@@ -166,10 +164,11 @@ export const useEventsStore = defineStore("events", () => {
     }
     initialized.value = true;
 
-    const loaded = loadEvents();
-    for (const [uid, entry] of Object.entries(loaded)) {
-      byUid[uid] = entry;
-    }
+    void loadEvents().then((loaded) => {
+      for (const [uid, entry] of Object.entries(loaded)) {
+        byUid[uid] = entry;
+      }
+    });
   }
 
   async function upsertLocal(

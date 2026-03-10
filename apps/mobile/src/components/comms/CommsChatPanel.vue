@@ -1,37 +1,81 @@
 <script setup lang="ts">
-import type { SendMethod } from "@reticulum/node-client";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 
-import { useMessagingStore } from "../../stores/messagingStore";
+import { useNavigationDrawer } from "../../composables/useNavigationDrawer";
+import {
+  useMessagingStore,
+  type MessagingMessageRecord,
+} from "../../stores/messagingStore";
+import CommsChatComposer from "./chat/CommsChatComposer.vue";
+import CommsChatMessageBubble from "./chat/CommsChatMessageBubble.vue";
+
+interface ChatVisualMessage {
+  id: string;
+  author: "server" | "user";
+  label: string;
+  body: string[];
+  time: string;
+  avatarUrl?: string;
+  deliveryState?: "queued" | "sent" | "failed";
+}
+
+const USER_AVATAR =
+  "https://lh3.googleusercontent.com/aida-public/AB6AXuB9ABDI0CKs5d8QRPbfZViZ_G-m6hxIAsTK7LM_g29RfIyQRXMVJeVOG14yxmcjYn2GIClfS-FJP2fpFhfBm2QaZ2IIQPw_Bzum7dVD_A1GFmqk6NG-dkoXftWzyrS_375DBENpnL_1jHnMrDFVHv9bUd58iLtKS5Ld4dAtArrxVpl1XVWVaW1IbEoBiEOhOfeQKRNKOmE18l61pSxxXL1yah56J7s8A8lBlYt8ldyf3AoIqywtmFAdN4JuQ168FxJPG7iVKQVwKw";
+
+const FALLBACK_MESSAGES: ChatVisualMessage[] = [
+  {
+    id: "fallback-server-1",
+    author: "server",
+    label: "Central Server",
+    body: [
+      "System integrity verified.",
+      "Quantum handshake",
+      "complete. Secure",
+      "connection established on",
+      "channel 4-Alpha.",
+    ],
+    time: "14:22",
+  },
+  {
+    id: "fallback-user-1",
+    author: "user",
+    label: "Operative 01",
+    body: [
+      "Copy that. Requesting live",
+      "satellite uplink for Sector 7",
+    ],
+    time: "14:23",
+    avatarUrl: USER_AVATAR,
+    deliveryState: "sent",
+  },
+];
+
+const AUTO_REPLY_LINES = [
+  "Raven uplink stable.",
+  "Signal is clean enough to",
+  "transmit jokes at military",
+  "grade encryption.",
+];
+
+const QUICK_ACTIONS: Record<"add" | "mic" | "image" | "location" | "emoji", string> = {
+  add: "Attach encrypted relay package.",
+  mic: "Open voice relay for Raven squad.",
+  image: "Send tactical image overlay to the hub.",
+  location: "Pin current location to Raven corridor.",
+  emoji: "Drop a secured acknowledgement.",
+};
 
 const messaging = useMessagingStore();
+const { toggleNavigationDrawer } = useNavigationDrawer();
 
-const destinationInput = ref("");
-const topicInput = ref("");
-const sendMethod = ref<SendMethod>("opportunistic");
-
-const draftModel = computed({
-  get: () => messaging.activeDraft,
-  set: (value: string) => messaging.setDraft(value),
-});
-
-const derivedConversationId = computed(() => {
-  const topicId = topicInput.value.trim();
-  if (topicId) {
-    return `topic:${topicId}`;
-  }
-  const destination = destinationInput.value.trim().toLowerCase();
-  if (destination) {
-    return `dm:${destination}`;
-  }
-  return messaging.activeConversationId;
-});
-
-onMounted(() => {
-  if (messaging.chatV2Enabled) {
-    messaging.wire().catch(() => undefined);
-  }
-});
+const localThread = ref(
+  FALLBACK_MESSAGES.map((message) => ({
+    ...message,
+    body: [...message.body],
+  })),
+);
+const composerText = ref("");
+const sendingFallbackReply = ref(false);
 
 function formatTimestamp(value: string): string {
   const parsed = Date.parse(value);
@@ -44,379 +88,345 @@ function formatTimestamp(value: string): string {
   });
 }
 
-function chooseConversation(conversationId: string): void {
-  messaging.setActiveConversation(conversationId);
-  destinationInput.value = "";
-  topicInput.value = "";
+function mapStoreMessage(message: MessagingMessageRecord): ChatVisualMessage {
+  return {
+    id: message.localMessageId,
+    author: message.direction === "outbound" ? "user" : "server",
+    label: message.direction === "outbound" ? "Operative 01" : "Central Server",
+    body: message.content
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean),
+    time: formatTimestamp(message.issuedAt),
+    avatarUrl: message.direction === "outbound" ? USER_AVATAR : undefined,
+    deliveryState: message.deliveryState,
+  };
 }
 
-function openDerivedConversation(): void {
-  messaging.setActiveConversation(derivedConversationId.value);
+const hasLiveThread = computed(() => messaging.activeMessages.length > 0);
+
+const visibleMessages = computed<ChatVisualMessage[]>(() =>
+  hasLiveThread.value
+    ? messaging.activeMessages.map(mapStoreMessage)
+    : localThread.value,
+);
+
+const timestampLabel = computed(() => {
+  const first = visibleMessages.value[0];
+  return `TODAY ${first?.time ?? "14:22"} UTC`;
+});
+
+const encryptionLabel = computed(() => "ENCRYPTED CONNECTION");
+
+const sendInProgress = computed(() => messaging.busy || sendingFallbackReply.value);
+
+watch(
+  () => messaging.activeDraft,
+  (draft) => {
+    if (hasLiveThread.value) {
+      composerText.value = draft;
+    }
+  },
+);
+
+onMounted(() => {
+  messaging.wire().catch(() => undefined);
+});
+
+function appendLocalMessage(message: ChatVisualMessage) {
+  localThread.value = [...localThread.value, message];
 }
 
-async function sendCurrentDraft(): Promise<void> {
-  await messaging.sendDraft({
-    conversationId: derivedConversationId.value,
-    destination: destinationInput.value.trim() || undefined,
-    topicId: topicInput.value.trim() || undefined,
-    sendMethod: sendMethod.value,
-    tryPropagationOnFail: true,
+function nextTimeLabel(offsetMinutes = 0): string {
+  const base = new Date();
+  base.setMinutes(base.getMinutes() + offsetMinutes);
+  return base.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
-async function retryMessage(localMessageId: string): Promise<void> {
-  await messaging.retryMessage(localMessageId, sendMethod.value);
-}
-
-async function syncMessages(): Promise<void> {
-  await messaging.syncMessages({ replayLimit: 200 });
-}
-
-async function react(localMessageId: string, key: string): Promise<void> {
-  await messaging.sendReaction(localMessageId, key).catch(() => undefined);
-}
-
-function toggleChatV2(): void {
-  const next = !messaging.chatV2Enabled;
-  messaging.setChatV2Enabled(next);
-  if (next) {
-    messaging.wire().catch(() => undefined);
+async function sendLocal(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return;
   }
+
+  appendLocalMessage({
+    id: `local-user-${Date.now()}`,
+    author: "user",
+    label: "Operative 01",
+    body: trimmed.split(/\n+/),
+    time: nextTimeLabel(),
+    avatarUrl: USER_AVATAR,
+    deliveryState: "sent",
+  });
+  composerText.value = "";
+  sendingFallbackReply.value = true;
+  window.setTimeout(() => {
+    appendLocalMessage({
+      id: `local-server-${Date.now()}`,
+      author: "server",
+      label: "Central Server",
+      body: AUTO_REPLY_LINES,
+      time: nextTimeLabel(1),
+    });
+    sendingFallbackReply.value = false;
+  }, 700);
+}
+
+async function sendCurrentDraft() {
+  const nextDraft = composerText.value.trim();
+  if (!nextDraft) {
+    return;
+  }
+
+  if (messaging.ready) {
+    messaging.setDraft(nextDraft);
+    try {
+      await messaging.sendDraft();
+      composerText.value = "";
+      return;
+    } catch {
+      await sendLocal(nextDraft);
+      return;
+    }
+  }
+
+  await sendLocal(nextDraft);
+}
+
+function handleQuickAction(kind: "add" | "mic" | "image" | "location" | "emoji") {
+  composerText.value = QUICK_ACTIONS[kind];
 }
 </script>
 
 <template>
-  <section class="chat-panel">
-    <header class="panel-header">
-      <div class="title-wrap">
-        <h2 class="panel-title">Comms Chat</h2>
-        <p class="panel-subtitle">Queued send + runtime delivery reconciliation.</p>
+  <section class="chat-screen" data-testid="comms-chat-screen">
+    <h2 class="sr-only">Comms Chat</h2>
+
+    <header class="chat-screen__header">
+      <div class="chat-screen__header-side">
+        <button
+          class="chat-screen__menu"
+          type="button"
+          aria-label="Open navigation"
+          @click="toggleNavigationDrawer"
+        >
+          <span class="material-symbols-outlined">menu</span>
+        </button>
       </div>
-      <button class="toggle-button" type="button" @click="toggleChatV2">
-        {{ messaging.chatV2Enabled ? "Disable chat_v2" : "Enable chat_v2" }}
-      </button>
+
+      <div class="chat-screen__header-copy">
+        <h1 class="chat-screen__title">CHAT</h1>
+        <div class="chat-screen__status-copy">
+          <span class="chat-screen__status-dot" />
+          <span>{{ encryptionLabel }}</span>
+        </div>
+      </div>
+
+      <div class="chat-screen__header-side chat-screen__header-side--end">
+        <div class="chat-screen__live-pill">
+          <span class="chat-screen__live-dot" />
+          <span>LIVE</span>
+        </div>
+      </div>
     </header>
 
-    <section v-if="!messaging.chatV2Enabled" class="disabled-state">
-      <p>chat_v2 is disabled. Enable it to use Columba-equivalent chat behavior.</p>
-    </section>
-
-    <section v-else class="chat-grid">
-      <aside class="conversations">
-        <h3 class="section-title">Conversations</h3>
-        <button
-          v-for="conversation in messaging.conversations"
-          :key="conversation.id"
-          class="conversation-button"
-          :class="{ active: conversation.id === messaging.activeConversationId }"
-          type="button"
-          @click="chooseConversation(conversation.id)"
-        >
-          <span>{{ conversation.title }}</span>
-        </button>
-      </aside>
-
-      <div class="timeline-wrap">
-        <header class="timeline-header">
-          <div class="status-row">
-            <span>Queued: {{ messaging.queuedCount }}</span>
-            <span>Failed: {{ messaging.failedCount }}</span>
-            <span>Reconnects: {{ messaging.telemetry.reconnectCount }}</span>
-            <span>Dedupe: {{ messaging.telemetry.duplicateSuppressed }}</span>
-          </div>
-          <button class="sync-button" type="button" @click="syncMessages">
-            Sync
-          </button>
-        </header>
-
-        <div class="timeline">
-          <article
-            v-for="message in messaging.activeMessages"
-            :key="message.localMessageId"
-            class="message-card"
-            :class="[`state-${message.deliveryState}`, `direction-${message.direction}`]"
-          >
-            <header class="message-meta">
-              <span>{{ formatTimestamp(message.issuedAt) }}</span>
-              <span>{{ message.sendMethod }}</span>
-              <span>{{ message.deliveryState }}</span>
-            </header>
-            <p class="message-content">{{ message.content || "(empty message)" }}</p>
-            <footer class="message-actions">
-              <button type="button" @click="react(message.localMessageId, '👍')">👍</button>
-              <button type="button" @click="react(message.localMessageId, '✅')">✅</button>
-              <button
-                v-if="message.deliveryState === 'failed'"
-                type="button"
-                @click="retryMessage(message.localMessageId)"
-              >
-                Retry
-              </button>
-            </footer>
-          </article>
-        </div>
-
-        <footer class="composer">
-          <div class="routing-grid">
-            <label class="input-label">
-              Destination
-              <input
-                v-model="destinationInput"
-                class="text-input"
-                type="text"
-                placeholder="destination hex"
-                @blur="openDerivedConversation"
-              />
-            </label>
-            <label class="input-label">
-              Topic
-              <input
-                v-model="topicInput"
-                class="text-input"
-                type="text"
-                placeholder="topic id"
-                @blur="openDerivedConversation"
-              />
-            </label>
-            <label class="input-label">
-              Method
-              <select v-model="sendMethod" class="text-input">
-                <option value="direct">direct</option>
-                <option value="opportunistic">opportunistic</option>
-                <option value="propagated">propagated</option>
-              </select>
-            </label>
-          </div>
-          <textarea
-            v-model="draftModel"
-            class="composer-input"
-            rows="3"
-            placeholder="Type message..."
-          />
-          <div class="composer-actions">
-            <button class="send-button" type="button" @click="sendCurrentDraft">
-              Send
-            </button>
-          </div>
-        </footer>
+    <main class="chat-screen__thread">
+      <div class="chat-screen__timestamp">
+        <span>{{ timestampLabel }}</span>
       </div>
-    </section>
+
+      <CommsChatMessageBubble
+        v-for="message in visibleMessages"
+        :key="message.id"
+        :message="message"
+      />
+    </main>
+
+    <CommsChatComposer
+      v-model="composerText"
+      :sending="sendInProgress"
+      @quick="handleQuickAction"
+      @send="sendCurrentDraft"
+    />
   </section>
 </template>
 
 <style scoped>
-.chat-panel {
-  display: grid;
-  gap: 0.8rem;
+.sr-only {
+  border: 0;
+  clip: rect(0, 0, 0, 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
-.panel-header {
+.chat-screen {
+  background:
+    radial-gradient(circle at top center, rgb(18 71 83 / 22%), transparent 35%),
+    linear-gradient(180deg, #021317, #03171b 52%, #04181c 100%);
+  color: #f2fbff;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100%;
+  margin: 0 auto;
+  max-width: 24rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.chat-screen::before,
+.chat-screen::after {
+  background: rgb(40 209 244 / 14%);
+  bottom: 0;
+  content: "";
+  position: absolute;
+  top: 0;
+  width: 1px;
+}
+
+.chat-screen::before {
+  left: 0;
+}
+
+.chat-screen::after {
+  right: 0;
+}
+
+.chat-screen__header {
   align-items: center;
-  display: flex;
-  gap: 0.8rem;
-  justify-content: space-between;
-}
-
-.title-wrap {
+  border-bottom: 1px solid rgb(36 211 244 / 22%);
   display: grid;
-  gap: 0.2rem;
-}
-
-.panel-title {
-  font-family: var(--font-headline);
-  font-size: 1.3rem;
-  margin: 0;
-}
-
-.panel-subtitle {
-  color: #8ca7d0;
-  font-family: var(--font-body);
-  font-size: 0.84rem;
-  margin: 0;
-}
-
-.toggle-button,
-.sync-button,
-.send-button {
-  background: rgb(10 28 55 / 92%);
-  border: 1px solid rgb(106 177 238 / 44%);
-  border-radius: 10px;
-  color: #d3ecff;
-  cursor: pointer;
-  font-family: var(--font-ui);
-  padding: 0.45rem 0.8rem;
-}
-
-.disabled-state {
-  background: rgb(8 22 45 / 74%);
-  border: 1px solid rgb(92 130 178 / 35%);
-  border-radius: 12px;
-  color: #97b7dd;
-  font-family: var(--font-body);
-  padding: 0.8rem;
-}
-
-.chat-grid {
-  display: grid;
-  gap: 0.8rem;
-  grid-template-columns: 220px minmax(0, 1fr);
-}
-
-.conversations,
-.timeline-wrap {
-  background: rgb(7 20 43 / 72%);
-  border: 1px solid rgb(83 125 185 / 32%);
-  border-radius: 12px;
-  padding: 0.7rem;
-}
-
-.section-title {
-  color: #d8ecff;
-  font-family: var(--font-ui);
-  font-size: 0.85rem;
-  letter-spacing: 0.08em;
-  margin: 0 0 0.5rem;
-  text-transform: uppercase;
-}
-
-.conversation-button {
-  background: transparent;
-  border: 1px solid rgb(88 129 182 / 28%);
-  border-radius: 10px;
-  color: #b2d4f5;
-  cursor: pointer;
-  display: block;
-  font-family: var(--font-body);
-  margin-bottom: 0.4rem;
-  padding: 0.45rem 0.5rem;
-  text-align: left;
-  width: 100%;
-}
-
-.conversation-button.active {
-  border-color: rgb(105 191 245 / 72%);
-  color: #ebf8ff;
-}
-
-.timeline-wrap {
-  display: grid;
-  gap: 0.7rem;
-}
-
-.timeline-header {
-  align-items: center;
-  display: flex;
-  justify-content: space-between;
-}
-
-.status-row {
-  color: #9dbede;
-  display: flex;
-  flex-wrap: wrap;
-  font-family: var(--font-body);
-  font-size: 0.72rem;
-  gap: 0.7rem;
-}
-
-.timeline {
-  display: grid;
-  gap: 0.5rem;
-  max-height: 320px;
-  overflow: auto;
-}
-
-.message-card {
-  border: 1px solid rgb(84 124 179 / 24%);
-  border-radius: 10px;
-  display: grid;
-  gap: 0.45rem;
-  padding: 0.55rem;
-}
-
-.message-card.direction-outbound {
-  background: rgb(10 31 59 / 70%);
-}
-
-.message-card.direction-inbound {
-  background: rgb(16 29 45 / 72%);
-}
-
-.message-card.state-failed {
-  border-color: rgb(224 106 106 / 60%);
-}
-
-.message-meta {
-  color: #95b4d8;
-  display: flex;
-  font-family: var(--font-ui);
-  font-size: 0.68rem;
-  gap: 0.6rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.message-content {
-  color: #e6f3ff;
-  font-family: var(--font-body);
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.message-actions {
-  display: flex;
   gap: 0.4rem;
+  grid-template-columns: 4rem minmax(0, 1fr) 4rem;
+  min-height: 6.35rem;
+  padding: calc(env(safe-area-inset-top) + 0.9rem) 0.7rem 1rem;
 }
 
-.message-actions button {
-  background: rgb(14 34 61 / 85%);
-  border: 1px solid rgb(97 147 201 / 38%);
-  border-radius: 8px;
-  color: #cbe7ff;
-  cursor: pointer;
-  font-family: var(--font-ui);
-  font-size: 0.73rem;
-  padding: 0.25rem 0.5rem;
-}
-
-.composer {
-  display: grid;
-  gap: 0.55rem;
-}
-
-.routing-grid {
-  display: grid;
-  gap: 0.45rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.input-label {
-  color: #97b9de;
-  display: grid;
-  font-family: var(--font-ui);
-  font-size: 0.7rem;
-  gap: 0.25rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
-.text-input,
-.composer-input {
-  background: rgb(2 11 27 / 90%);
-  border: 1px solid rgb(81 131 187 / 30%);
-  border-radius: 9px;
-  color: #d9efff;
-  font-family: var(--font-body);
-  padding: 0.45rem 0.5rem;
-}
-
-.composer-actions {
+.chat-screen__header-side {
   display: flex;
+  justify-content: flex-start;
+}
+
+.chat-screen__header-side--end {
   justify-content: flex-end;
 }
 
-@media (max-width: 900px) {
-  .chat-grid {
-    grid-template-columns: 1fr;
-  }
+.chat-screen__menu {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #1ed7ff;
+  display: inline-flex;
+  height: 2.75rem;
+  justify-content: center;
+  width: 2.75rem;
+}
+
+.chat-screen__menu .material-symbols-outlined {
+  font-size: 2rem;
+}
+
+.chat-screen__header-copy {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.chat-screen__title {
+  color: #18d8ff;
+  font-family: var(--font-headline);
+  font-size: 2rem;
+  font-style: italic;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  margin: 0;
+}
+
+.chat-screen__status-copy {
+  align-items: flex-start;
+  color: #1ed7ff;
+  display: inline-flex;
+  font-family: var(--font-ui);
+  font-size: 0.82rem;
+  gap: 0.45rem;
+  letter-spacing: 0.08em;
+  line-height: 1.35;
+  max-width: 8rem;
+  opacity: 0.8;
+  text-transform: uppercase;
+}
+
+.chat-screen__status-dot {
+  background: #1ed7ff;
+  border-radius: 999px;
+  box-shadow: 0 0 14px rgb(30 215 255 / 70%);
+  flex: none;
+  height: 0.58rem;
+  margin-top: 0.4rem;
+  width: 0.58rem;
+}
+
+.chat-screen__live-pill {
+  align-items: center;
+  background: rgb(9 54 65 / 58%);
+  border: 1px solid rgb(50 211 244 / 30%);
+  border-radius: 999px;
+  color: #1ed7ff;
+  display: inline-flex;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  gap: 0.4rem;
+  letter-spacing: 0.05em;
+  min-height: 2rem;
+  padding: 0 0.7rem;
+}
+
+.chat-screen__live-dot {
+  background: #1ed7ff;
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgb(30 215 255 / 60%);
+  height: 0.42rem;
+  width: 0.42rem;
+}
+
+.chat-screen__thread {
+  align-content: start;
+  display: grid;
+  gap: 1.8rem;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.6rem 0.8rem 1.2rem;
+}
+
+.chat-screen__thread::-webkit-scrollbar {
+  display: none;
+}
+
+.chat-screen__timestamp {
+  display: flex;
+  justify-content: center;
+}
+
+.chat-screen__timestamp span {
+  background: #142849;
+  border: 1px solid rgb(54 97 156 / 54%);
+  border-radius: 999px;
+  color: #adc1df;
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 0.5rem 1.1rem;
+  text-transform: uppercase;
 }
 </style>

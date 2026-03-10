@@ -1,106 +1,23 @@
-import {
+﻿import {
   createRouter,
   createWebHistory,
   type RouteRecordRaw,
   type RouterHistory,
 } from "vue-router";
 
-export const MOBILE_TAB_ROOTS = ["/home", "/missions", "/comms", "/map", "/ops"] as const;
-
-export const MISSION_DOMAIN_KINDS = [
-  "overview",
-  "mission",
-  "topic",
-  "checklists",
-  "checklist-tasks",
-  "checklist-templates",
-  "teams",
-  "team-members",
-  "skills",
-  "team-member-skills",
-  "task-skill-requirements",
-  "assets",
-  "assignments",
-  "zones",
-  "domain-events",
-  "mission-changes",
-  "log-entries",
-  "snapshots",
-  "audit-events",
-] as const;
-
-export type MissionDomainKind = (typeof MISSION_DOMAIN_KINDS)[number];
-
-const missionDomainKindPattern = MISSION_DOMAIN_KINDS.join("|");
-
-export const LEGACY_ROUTE_TARGETS = {
-  "/": "/home",
-  "/checklists": "/missions",
-  "/webmap": "/map",
-  "/topics": "/comms/topics",
-  "/files": "/comms/files",
-  "/chat": "/comms/chat",
-  "/configure": "/ops/settings",
-  "/connect": "/ops/connect",
-  "/about": "/ops/about",
-} as const;
-
-function toLegacyTail(param: unknown): string {
-  if (Array.isArray(param)) {
-    return param.join("/");
-  }
-  if (typeof param === "string") {
-    return param;
-  }
-  return "";
-}
-
-export const ROUTE_TEST_SAMPLES = {
-  missionDomainDeepLink: "/missions/mission-123/overview",
-  usersTeamsMembersDeepLink: "/users/teams/members",
-} as const;
-
 const routes: RouteRecordRaw[] = [
   {
     path: "/",
-    redirect: "/home",
+    redirect: "/dashboard",
   },
   {
-    path: "/home",
+    path: "/dashboard",
     name: "home",
     component: () => import("./views/tabs/HomeTabView.vue"),
     meta: {
-      tab: "home",
-      title: "Home",
-      subtitle: "Discovery and Session",
-    },
-  },
-  {
-    path: "/missions",
-    name: "missions",
-    component: () => import("./views/tabs/MissionsTabView.vue"),
-    meta: {
-      tab: "missions",
-      title: "Missions",
-      subtitle: "Mission Shells",
-    },
-  },
-  {
-    path: "/missions/:missionUid",
-    redirect: (to) => `/missions/${String(to.params.missionUid)}/overview`,
-  },
-  {
-    path: `/missions/:missionUid/:domainKind(${missionDomainKindPattern})`,
-    name: "mission-domain-stack",
-    component: () => import("./views/missions/MissionDomainStackView.vue"),
-    props: (route) => ({
-      missionUid: String(route.params.missionUid),
-      domainKind: String(route.params.domainKind),
-    }),
-    meta: {
-      tab: "missions",
-      title: "Mission Domain",
-      subtitle: "Mission Stack",
+      section: "home",
+      title: "Dashboard",
+      subtitle: "Configured Reticulum + hub handshake driven by announce events.",
     },
   },
   {
@@ -108,43 +25,80 @@ const routes: RouteRecordRaw[] = [
     redirect: "/comms/chat",
   },
   {
-    path: "/comms/:section(chat|topics|files)",
+    path: "/comms/:section(chat|topics|files|images)",
     name: "comms",
     component: () => import("./views/tabs/CommsTabView.vue"),
     meta: {
-      tab: "comms",
+      section: "comms",
       title: "Comms",
-      subtitle: "Messaging and Files",
+      subtitle: "Direct LXMF chat, topic fan-out, and attachment tracking.",
+    },
+  },
+  { path: "/chat", redirect: "/comms/chat" },
+  { path: "/topics", redirect: "/comms/topics" },
+  { path: "/files", redirect: "/comms/files" },
+  { path: "/images", redirect: "/comms/images" },
+  {
+    path: "/missions",
+    name: "missions",
+    component: () => import("./views/tabs/MissionsTabView.vue"),
+    meta: {
+      section: "missions",
+      title: "Missions",
+      subtitle: "Mission-core operations and deep-link domain stack routes.",
     },
   },
   {
-    path: "/map",
+    path: "/checklists",
+    name: "checklists",
+    component: () => import("./views/checklists/ChecklistsListView.vue"),
+    meta: {
+      section: "missions",
+      title: "Checklists",
+      subtitle: "Checklist registry and task readiness across active operations.",
+    },
+  },
+  {
+    path: "/checklists/:checklistId",
+    name: "checklist-detail",
+    component: () => import("./views/checklists/ChecklistDetailView.vue"),
+    props: true,
+    meta: {
+      section: "missions",
+      title: "Checklist Detail",
+      subtitle: "Focused checklist execution surface for field operations.",
+    },
+  },
+  {
+    path: "/missions/:missionUid/:domainKind",
+    name: "mission-domain",
+    component: () => import("./views/missions/MissionDomainStackView.vue"),
+    props: true,
+    meta: {
+      section: "missions",
+      title: "Mission Domain",
+      subtitle: "Deep-link shell for mission, checklist, team, asset, and zone domains.",
+    },
+  },
+  {
+    path: "/webmap",
     name: "map",
     component: () => import("./views/tabs/MapTabView.vue"),
     meta: {
-      tab: "map",
+      section: "map",
       title: "Map",
-      subtitle: "Markers and Zones",
+      subtitle: "Marker and zone operations over the mobile mission map surface.",
     },
   },
+  { path: "/map", redirect: "/webmap" },
   {
     path: "/ops",
     name: "ops",
     component: () => import("./views/tabs/OpsTabView.vue"),
     meta: {
-      tab: "ops",
+      section: "ops",
       title: "Ops",
-      subtitle: "Node Controls",
-    },
-  },
-  {
-    path: "/ops/settings",
-    name: "ops-settings",
-    component: () => import("./views/SettingsView.vue"),
-    meta: {
-      tab: "ops",
-      title: "Ops Settings",
-      subtitle: "Runtime and Hub",
+      subtitle: "Runtime controls, peer connectivity, settings, and legacy scaffolds.",
     },
   },
   {
@@ -152,49 +106,30 @@ const routes: RouteRecordRaw[] = [
     name: "ops-connect",
     component: () => import("./views/PeersDiscoveryView.vue"),
     meta: {
-      tab: "ops",
-      title: "Ops Connect",
-      subtitle: "Peers and Discovery",
+      section: "ops",
+      title: "Peer Connect",
+      subtitle: "Allowlist-based peer discovery and directory refresh controls.",
     },
   },
   {
-    path: "/ops/legacy/messages",
-    name: "ops-legacy-messages",
-    component: () => import("./views/ActionMessagesView.vue"),
+    path: "/ops/settings",
+    name: "ops-settings",
+    component: () => import("./views/SettingsView.vue"),
     meta: {
-      tab: "ops",
-      title: "Legacy Messages",
-      subtitle: "Transition Surface",
+      section: "ops",
+      title: "Settings",
+      subtitle: "Runtime and LXMF hub controls for the mobile client.",
     },
   },
+  { path: "/settings", redirect: "/ops/settings" },
   {
-    path: "/ops/legacy/events",
-    name: "ops-legacy-events",
-    component: () => import("./views/EventsView.vue"),
-    meta: {
-      tab: "ops",
-      title: "Legacy Events",
-      subtitle: "Transition Surface",
-    },
-  },
-  {
-    path: "/ops/legacy/dashboard",
-    name: "ops-legacy-dashboard",
-    component: () => import("./views/DashboardView.vue"),
-    meta: {
-      tab: "ops",
-      title: "Legacy Dashboard",
-      subtitle: "Transition Surface",
-    },
-  },
-  {
-    path: "/ops/users/:pathMatch(.*)*",
+    path: "/ops/users",
     name: "ops-users",
     component: () => import("./views/ops/OpsUsersView.vue"),
     meta: {
-      tab: "ops",
+      section: "ops",
       title: "Users and Teams",
-      subtitle: "Legacy Users",
+      subtitle: "Legacy route surface while team workflows are folded into missions.",
     },
   },
   {
@@ -202,57 +137,44 @@ const routes: RouteRecordRaw[] = [
     name: "ops-about",
     component: () => import("./views/ops/OpsAboutView.vue"),
     meta: {
-      tab: "ops",
+      section: "ops",
       title: "About",
-      subtitle: "Platform",
+      subtitle: "Architecture notes for the event-driven R3AKT client surface.",
     },
   },
   {
-    path: "/missions/:legacyPath(.*)*",
-    redirect: "/missions",
-  },
-  {
-    path: "/users/:pathMatch(.*)*",
-    redirect: (to) => {
-      const tail = toLegacyTail(to.params.pathMatch);
-      return tail ? `/ops/users/${tail}` : "/ops/users";
+    path: "/ops/legacy/dashboard",
+    name: "legacy-dashboard",
+    component: () => import("./views/DashboardView.vue"),
+    meta: {
+      section: "ops",
+      title: "Legacy Dashboard",
+      subtitle: "Baseline readiness dashboard retained during the live shell transition.",
     },
   },
   {
-    path: "/checklists",
-    redirect: LEGACY_ROUTE_TARGETS["/checklists"],
+    path: "/ops/legacy/messages",
+    name: "legacy-messages",
+    component: () => import("./views/ActionMessagesView.vue"),
+    meta: {
+      section: "ops",
+      title: "Legacy Messages",
+      subtitle: "Replicated local emergency action message workflow.",
+    },
   },
   {
-    path: "/webmap",
-    redirect: LEGACY_ROUTE_TARGETS["/webmap"],
-  },
-  {
-    path: "/topics",
-    redirect: LEGACY_ROUTE_TARGETS["/topics"],
-  },
-  {
-    path: "/files",
-    redirect: LEGACY_ROUTE_TARGETS["/files"],
-  },
-  {
-    path: "/chat",
-    redirect: LEGACY_ROUTE_TARGETS["/chat"],
-  },
-  {
-    path: "/configure",
-    redirect: LEGACY_ROUTE_TARGETS["/configure"],
-  },
-  {
-    path: "/connect",
-    redirect: LEGACY_ROUTE_TARGETS["/connect"],
-  },
-  {
-    path: "/about",
-    redirect: LEGACY_ROUTE_TARGETS["/about"],
+    path: "/ops/legacy/events",
+    name: "legacy-events",
+    component: () => import("./views/EventsView.vue"),
+    meta: {
+      section: "ops",
+      title: "Legacy Events",
+      subtitle: "Replicated local incident feed retained during migration.",
+    },
   },
   {
     path: "/:pathMatch(.*)*",
-    redirect: "/home",
+    redirect: "/dashboard",
   },
 ];
 

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RCH Mobile Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#25d1f4",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#101f22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display">
+<!-- Top Status Bar / Header -->
+<header class="sticky top-0 z-10 border-b border-primary/10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="flex items-center justify-between p-4">
+<div class="grid grid-cols-3 items-center w-full">
+<div class="flex items-center">
+<button class="p-2 -ml-2 rounded-full hover:bg-primary/10 transition-colors text-primary">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+</div>
+<div class="flex justify-center">
+<h1 class="text-lg font-bold tracking-tight uppercase">DASHBOARD</h1>
+</div>
+<div class="flex justify-end gap-2"><div class="flex h-7 items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 border border-emerald-500/20">
+<span class="text-[10px] font-bold text-emerald-500 tracking-wider">LIVE</span>
+</div></div>
+</div>
+</div>
+</header>
+<main class="">
+<!-- Telemetry Stream Section -->
+<section class="p-4">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em]" style="">Global Telemetry Stream</h2>
+<span class="text-[10px] font-medium text-primary" style="">REAL-TIME +2.4%</span>
+</div>
+<div class="rounded-xl border border-primary/10 bg-primary/5 p-4">
+<div class="mb-4">
+<p class="text-2xl font-bold text-slate-900 dark:text-slate-100" style="">Stream Active</p>
+</div>
+</div>
+</section>
+<!-- Metrics Grid -->
+<section class="grid grid-cols-3 gap-3 px-4 py-2">
+<div class="flex flex-col items-center justify-center rounded-xl border border-primary/10 bg-primary/5 p-4">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium" style="">USERS</span>
+<span class="text-xl font-bold text-slate-900 dark:text-slate-100" style="">22</span>
+</div>
+<div class="flex flex-col items-center justify-center rounded-xl border border-primary/10 bg-primary/5 p-4">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium" style="">TOPICS</span>
+<span class="text-xl font-bold text-slate-900 dark:text-slate-100" style="">4</span>
+</div>
+<div class="flex flex-col items-center justify-center rounded-xl border border-primary/10 bg-primary/5 p-4">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium" style="">ACTIVE</span>
+<span class="text-xl font-bold text-slate-900 dark:text-slate-100" style="">0</span>
+</div>
+<div class="flex flex-col items-center justify-center rounded-xl border border-primary/10 bg-primary/5 p-4">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium" style="">Tasks</span>
+<span class="text-xl font-bold text-slate-900 dark:text-slate-100" style="">16</span>
+</div>
+<div class="flex flex-col items-center justify-center rounded-xl border border-primary/10 bg-primary/5 p-4">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium" style="">Mission</span>
+<span class="text-xl font-bold text-slate-900 dark:text-slate-100" style="">14ms</span>
+</div>
+<div class="flex flex-col items-center justify-center rounded-xl border border-primary/10 bg-primary/5 p-4">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium" style="">Files</span>
+<span class="text-xl font-bold text-slate-900 dark:text-slate-100" style="">54h</span>
+</div></section>
+<!-- Event Feed -->
+<section class="px-4 py-4">
+<h2 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3" style="">Event Feed</h2>
+<div class="space-y-2">
+<div class="flex items-start gap-3 rounded-lg border border-primary/5 bg-slate-50 dark:bg-slate-800/50 p-3">
+<span class="material-symbols-outlined text-primary text-lg" style="">check_circle</span>
+<div class="flex-1">
+<p class="text-sm font-medium leading-tight" style="">Message accepted for propagation</p>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1" style="">SYSTEM • JUST NOW</p>
+</div>
+</div>
+<div class="flex items-start gap-3 rounded-lg border border-primary/5 bg-slate-50 dark:bg-slate-800/50 p-3">
+<span class="material-symbols-outlined text-primary text-lg" style="">router</span>
+<div class="flex-1">
+<p class="text-sm font-medium leading-tight" style="">Telemetry node handoff complete</p>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1" style="">NODE-04 • 2 MIN AGO</p>
+</div>
+</div>
+<div class="flex items-start gap-3 rounded-lg border border-primary/5 bg-slate-50 dark:bg-slate-800/50 p-3">
+<span class="material-symbols-outlined text-amber-500 text-lg" style="">sensors</span>
+<div class="flex-1">
+<p class="text-sm font-medium leading-tight" style="">Sensor calibration requested</p>
+<p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1" style="">MISSION-CTRL • 5 MIN AGO</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Backend Control -->
+<section class="px-4 py-4">
+<h2 class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-[0.1em] mb-3" style="">Backend Control</h2>
+<div class="grid grid-cols-2 gap-3">
+<button class="flex items-center justify-center gap-2 rounded-lg bg-primary py-3 px-4 text-sm font-bold text-background-dark" style="">
+<span class="material-symbols-outlined text-base" style="">play_arrow</span>
+                    START
+                </button>
+<button class="flex items-center justify-center gap-2 rounded-lg bg-slate-200 dark:bg-slate-800 py-3 px-4 text-sm font-bold text-slate-900 dark:text-slate-100" style="">
+<span class="material-symbols-outlined text-base" style="">stop</span>
+                    STOP
+                </button>
+<button class="col-span-2 flex items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 py-3 px-4 text-sm font-bold text-primary" style="">
+<span class="material-symbols-outlined text-base" style="">info</span>
+                    SYSTEM STATUS: OPTIMAL
+                </button>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+</body></html>

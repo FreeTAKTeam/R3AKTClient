@@ -20,10 +20,8 @@ const cards = computed(() => [
     title: "Gateway",
     value:
       props.settings.hub.mode === "Disabled"
-        ? "http://localhost:8000"
-        : props.settings.hub.mode === "RchHttp"
-          ? props.settings.hub.apiBaseUrl || "Configured"
-          : "RCH via LXMF",
+        ? "Directory disabled"
+        : "RCH via LXMF",
   },
   {
     key: "package",

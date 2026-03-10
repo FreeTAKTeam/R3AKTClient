@@ -62,6 +62,11 @@ final class ReticulumRuntimeBridge implements NodeRuntimeBridge {
     }
 
     @Override
+    public String sendChatMessage(String requestJson) {
+        return ReticulumBridge.sendChatMessage(requestJson);
+    }
+
+    @Override
     public String nextEventJson(int timeoutMs) {
         return ReticulumBridge.nextEventJson(timeoutMs);
     }

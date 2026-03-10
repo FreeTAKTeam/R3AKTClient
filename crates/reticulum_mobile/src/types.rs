@@ -15,7 +15,6 @@ pub enum LogLevel {
 pub enum HubMode {
     Disabled {},
     RchLxmf {},
-    RchHttp {},
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -128,6 +127,34 @@ pub struct MessageEnvelope {
     pub payload: serde_json::Value,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatSendRequest {
+    pub content: String,
+    #[serde(default)]
+    pub destination: Option<String>,
+    #[serde(default, alias = "local_message_id")]
+    pub local_message_id: Option<String>,
+    #[serde(default, alias = "topic_id")]
+    pub topic_id: Option<String>,
+    #[serde(default, alias = "file_attachments")]
+    pub file_attachments: Option<serde_json::Value>,
+    #[serde(default)]
+    pub image: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChatSendResult {
+    pub local_message_id: String,
+    pub sent: bool,
+    pub content: String,
+    #[serde(default)]
+    pub destination: Option<String>,
+    #[serde(default)]
+    pub topic_id: Option<String>,
+}
+
 #[derive(Debug, Clone)]
 pub struct NodeConfig {
     pub name: String,
@@ -138,8 +165,6 @@ pub struct NodeConfig {
     pub announce_capabilities: String,
     pub hub_mode: HubMode,
     pub hub_identity_hash: Option<String>,
-    pub hub_api_base_url: Option<String>,
-    pub hub_api_key: Option<String>,
     pub hub_refresh_interval_seconds: u32,
 }
 
@@ -161,7 +186,9 @@ pub struct PeerChange {
 
 #[derive(Debug, Clone)]
 pub enum NodeEvent {
-    StatusChanged { status: NodeStatus },
+    StatusChanged {
+        status: NodeStatus,
+    },
     AnnounceReceived {
         destination_hex: String,
         app_data: String,
@@ -169,8 +196,13 @@ pub enum NodeEvent {
         interface_hex: String,
         received_at_ms: u64,
     },
-    PeerChanged { change: PeerChange },
-    PacketReceived { destination_hex: String, bytes: Vec<u8> },
+    PeerChanged {
+        change: PeerChange,
+    },
+    PacketReceived {
+        destination_hex: String,
+        bytes: Vec<u8>,
+    },
     PacketSent {
         destination_hex: String,
         bytes: Vec<u8>,
@@ -185,7 +217,12 @@ pub enum NodeEvent {
         payload_json: String,
         correlation_id: Option<String>,
     },
-    Log { level: LogLevel, message: String },
-    Error { code: String, message: String },
+    Log {
+        level: LogLevel,
+        message: String,
+    },
+    Error {
+        code: String,
+        message: String,
+    },
 }
-

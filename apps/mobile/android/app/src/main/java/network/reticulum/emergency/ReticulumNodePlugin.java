@@ -7,6 +7,7 @@ import android.content.ServiceConnection;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
+import android.util.Log;
 
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Logger;
@@ -348,7 +349,22 @@ public class ReticulumNodePlugin extends Plugin {
             return;
         }
 
-        String responseJson = service.executeEnvelope(envelopeJson);
+        String responseJson;
+        try {
+            responseJson = service.executeEnvelope(envelopeJson);
+        } catch (UnsatisfiedLinkError linkError) {
+            Logger.error(TAG, "Native runtime linkage failed while executing envelope.", linkError);
+            rejectWithCode(
+                    call,
+                    "NativeRuntimeUnavailable",
+                    "Native runtime linkage failed while executing envelope."
+            );
+            return;
+        } catch (Throwable throwable) {
+            Logger.error(TAG, "Unexpected native execution failure.", throwable);
+            rejectWithCode(call, "EnvelopeExecutionFailed", "Failed to execute message envelope.");
+            return;
+        }
         if (responseJson == null || responseJson.isEmpty()) {
             rejectFromService(
                     call,
@@ -365,10 +381,50 @@ public class ReticulumNodePlugin extends Plugin {
     }
 
     @PluginMethod
+    public void sendChatMessage(PluginCall call) {
+        String requestJson = call.getString("requestJson");
+        if (requestJson == null || requestJson.isEmpty()) {
+            rejectWithCode(call, "InvalidArgs", "requestJson is required.");
+            return;
+        }
+
+        ReticulumNodeService service = requireService(call, false, "ServiceUnavailable", "Node service is unavailable.");
+        if (service == null) {
+            return;
+        }
+
+        String resultJson;
+        try {
+            resultJson = service.sendChatMessage(requestJson);
+        } catch (UnsatisfiedLinkError linkError) {
+            Logger.error(TAG, "Native runtime linkage failed while sending chat message.", linkError);
+            rejectWithCode(
+                    call,
+                    "NativeRuntimeUnavailable",
+                    "Native runtime linkage failed while sending chat message."
+            );
+            return;
+        } catch (Throwable throwable) {
+            Logger.error(TAG, "Unexpected native chat send failure.", throwable);
+            rejectWithCode(call, "ChatSendFailed", "Failed to send chat message.");
+            return;
+        }
+
+        if (resultJson == null || resultJson.isEmpty()) {
+            rejectFromService(call, service, "ChatSendFailed", "Failed to send chat message.");
+            return;
+        }
+
+        JSObject payload = new JSObject();
+        payload.put("resultJson", resultJson);
+        call.resolve(payload);
+    }
+
+    @PluginMethod
     public void getClientOperationCatalog(PluginCall call) {
         String catalogJson = ReticulumBridge.getClientOperationCatalogJson();
         if (catalogJson == null || catalogJson.isEmpty()) {
-            rejectFromNative(call, "Failed to load client operation catalog.");
+            rejectWithCode(call, "CatalogUnavailable", "Failed to load client operation catalog.");
             return;
         }
 
@@ -504,6 +560,11 @@ public class ReticulumNodePlugin extends Plugin {
                 String eventName = envelope.getString("event");
                 JSObject payload = envelope.getJSObject("payload", new JSObject());
                 if (eventName != null && !eventName.isEmpty()) {
+                    if ("log".equals(eventName)) {
+                        Log.i(TAG, "Node log " + payload.toString());
+                    } else if ("error".equals(eventName)) {
+                        Log.w(TAG, "Node error " + payload.toString());
+                    }
                     notifyListeners(eventName, payload);
                 }
             } catch (Exception ex) {

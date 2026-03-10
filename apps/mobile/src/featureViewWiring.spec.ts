@@ -1,103 +1,73 @@
 import { createPinia } from "pinia";
 import type { Component } from "vue";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createMemoryHistory } from "vue-router";
 import { describe, expect, it } from "vitest";
 
+import App from "./App.vue";
 import { createAppRouter } from "./router";
-import MissionDomainStackView from "./views/missions/MissionDomainStackView.vue";
-import CommsTabView from "./views/tabs/CommsTabView.vue";
-import HomeTabView from "./views/tabs/HomeTabView.vue";
-import MapTabView from "./views/tabs/MapTabView.vue";
-import MissionsTabView from "./views/tabs/MissionsTabView.vue";
 
 async function mountWithRoute(component: Component, path: string) {
   const pinia = createPinia();
   const router = createAppRouter(createMemoryHistory());
   await router.push(path);
   await router.isReady();
-
-  return mount(component, {
+  const wrapper = mount(component, {
     global: {
       plugins: [pinia, router],
     },
   });
+  await flushPromises();
+  return wrapper;
 }
 
-describe("view to store wiring", () => {
-  it("renders discovery + telemetry shells on home", async () => {
-    const wrapper = await mountWithRoute(HomeTabView, "/home");
-    expect(wrapper.text()).toContain("Discovery and Session");
-    expect(wrapper.text()).toContain("Telemetry");
-    expect(wrapper.findAll("select option").length).toBeGreaterThan(0);
+describe("live shell wiring", () => {
+  it("renders the live home route inside the mobile shell", async () => {
+    const wrapper = await mountWithRoute(App, "/dashboard");
+    expect(wrapper.text()).toContain("Community Hub");
+    expect(wrapper.text()).toContain("DASHBOARD");
+    expect(wrapper.text()).toContain("Backend Control");
+    expect(wrapper.text()).toContain("Event Feed");
+    expect(wrapper.text()).toContain("Session Controls");
+    expect(wrapper.text()).toContain("Telemetry Drill-Down");
   });
 
-  it("renders mission core shell on missions tab", async () => {
-    const wrapper = await mountWithRoute(MissionsTabView, "/missions");
-    expect(wrapper.text()).toContain("Mission Core");
-    expect(wrapper.findAll("select option").length).toBeGreaterThan(0);
+  it("renders mission routes inside the live shell", async () => {
+    const missions = await mountWithRoute(App, "/missions");
+    expect(missions.text()).toContain("MISSIONS");
+    expect(missions.text()).toContain("Mission Directory");
+
+    const missionDomain = await mountWithRoute(App, "/missions/demo/log-entries");
+    expect(missionDomain.text()).toContain("Mission Workspace");
+    expect(missionDomain.text()).toContain("Mission UID");
+    expect(missionDomain.text()).toContain("Logs & Changes");
   });
 
-  it("renders comms shell families by section route", async () => {
-    const chat = await mountWithRoute(CommsTabView, "/comms/chat");
-    expect(chat.text()).toContain("Comms Chat");
+  it("renders comms routes", async () => {
+    const topics = await mountWithRoute(App, "/comms/topics");
+    expect(topics.text()).toContain("TOPIC REGISTRY");
+    expect(topics.text()).toContain("Selected Branch");
 
-    const topics = await mountWithRoute(CommsTabView, "/comms/topics");
-    expect(topics.text()).toContain("Comms Topics");
-
-    const files = await mountWithRoute(CommsTabView, "/comms/files");
-    expect(files.text()).toContain("Comms Files and Media");
+    const chat = await mountWithRoute(App, "/comms/chat");
+    expect(chat.text()).toContain("CHAT");
   });
 
-  it("renders map shell", async () => {
-    const wrapper = await mountWithRoute(MapTabView, "/map");
-    expect(wrapper.text()).toContain("Map, Markers, and Zones");
-    expect(wrapper.findAll("select option").length).toBeGreaterThan(0);
+  it("renders map and ops settings routes", async () => {
+    const webmap = await mountWithRoute(App, "/webmap");
+    expect(webmap.text()).toContain("WEBMAP");
+
+    const settings = await mountWithRoute(App, "/ops/settings");
+    expect(settings.text()).toContain("Settings");
+    expect(settings.text()).toContain("Application Hub");
+    expect(settings.text()).toContain("Hub Session Parity");
+    expect(settings.text()).toContain("Telemetry Drill-Down");
   });
 
-  it("maps mission-domain shells to family stores", async () => {
-    const checklists = mount(MissionDomainStackView, {
-      props: {
-        missionUid: "mission-1",
-        domainKind: "checklists",
-      },
-      global: {
-        plugins: [createPinia()],
-      },
-    });
-    expect(checklists.text()).toContain("Mission Checklists");
+  it("renders ops routing surfaces", async () => {
+    const peers = await mountWithRoute(App, "/ops/connect");
+    expect(peers.text()).toContain("Peers & Discovery");
 
-    const teams = mount(MissionDomainStackView, {
-      props: {
-        missionUid: "mission-1",
-        domainKind: "teams",
-      },
-      global: {
-        plugins: [createPinia()],
-      },
-    });
-    expect(teams.text()).toContain("Mission Teams");
-
-    const assets = mount(MissionDomainStackView, {
-      props: {
-        missionUid: "mission-1",
-        domainKind: "assets",
-      },
-      global: {
-        plugins: [createPinia()],
-      },
-    });
-    expect(assets.text()).toContain("Assets");
-
-    const zones = mount(MissionDomainStackView, {
-      props: {
-        missionUid: "mission-1",
-        domainKind: "zones",
-      },
-      global: {
-        plugins: [createPinia()],
-      },
-    });
-    expect(zones.text()).toContain("Mission Zones");
+    const about = await mountWithRoute(App, "/ops/about");
+    expect(about.text()).toContain("About R3AKTMobile");
   });
 });

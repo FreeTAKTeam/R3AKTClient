@@ -1,0 +1,32 @@
+﻿{
+  "screenshot": {
+    "name": "projects/4350946208414714711/files/f74f3150cd74438986b73ca34cc0f83d",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AOfcidXizDgmZaWSs5Y-rZKBKSdtk7mKo03eAgxjAegpbUI2QEqYkEbvUUIqhCfM-hbG23cE7GRAuUvhu25ya1HGKpuqFQZ7pNhQh-n88wauLKISOV7j2qoIFQI_6HynD1XyCT4g7v1lDLxvqNAjooe5JVjYH0ygH93KMN4qgLUNJaMeQAqCu3-sHpwBl1XAsSUUWBcR7KvSqgIRW9ff_ovWTULbc_nJ8IP8n9iWlvG3DCublW-VAmF7Fxjl5w"
+  },
+  "htmlCode": {
+    "name": "projects/4350946208414714711/files/4168227968488279849",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzAwMDY0YzRjNTVkMzMwOWQwMzM4NDcyOTNjMjIyOGJmEgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "b0b7630adcc641b289484ddbc3a59c69",
+  "generatedBy": "figaro_agent",
+  "width": "780",
+  "height": "2112",
+  "title": "RCH Side Navigation Menu",
+  "prompt": "Design a side navigation drawer (hamburger menu) for the RCH app, styled after the sidebar in {{DATA:IMAGE:IMAGE_4}}. It should have a dark, high-tech aesthetic with neon cyan accents ({{DATA:THEME:THEME_2}}). The menu should include links for: Home, Missions, Checklists, Webmap, Topics, Files, Chat, Users, Configure, Connect, and About. Include a header with the 'Reticulum Community Hub' logo and name. The background should be a translucent dark overlay.",
+  "name": "projects/4350946208414714711/screens/b0b7630adcc641b289484ddbc3a59c69",
+  "theme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#25d1f4",
+    "saturation": 3
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "HATTER_AGENT",
+    "status": "COMPLETE",
+    "displayMode": "HTML"
+  }
+}

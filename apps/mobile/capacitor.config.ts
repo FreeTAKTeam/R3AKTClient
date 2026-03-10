@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "network.reticulum.emergency",
-  appName: "Reticulum Mobile Emergency Management",
+  appId: "network.reticulum.r3akt",
+  appName: "R3AKT",
   webDir: "dist",
 };
 

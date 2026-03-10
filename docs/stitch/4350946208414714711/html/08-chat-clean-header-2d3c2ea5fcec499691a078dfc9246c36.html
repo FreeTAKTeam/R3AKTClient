@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Secure Comms Interface</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#25d1f4",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#101f22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<div class="relative flex h-screen w-full flex-col overflow-hidden max-w-md mx-auto border-x border-slate-800 shadow-2xl">
+<!-- TopAppBar -->
+<header class="flex items-center justify-between p-4 bg-background-dark/80 backdrop-blur-md border-b border-primary/20 sticky top-0 z-10"><div class="flex items-center w-1/4">
+<button class="text-primary hover:bg-primary/10 p-2 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+</div>
+<div class="flex flex-col items-center flex-1">
+<h1 class="text-primary text-lg font-bold leading-tight tracking-tight uppercase italic">CHAT</h1>
+<div class="flex items-center gap-1.5">
+<span class="size-2 bg-primary rounded-full animate-pulse shadow-[0_0_8px_rgba(37,209,244,0.6)]"></span>
+<span class="text-[10px] text-primary/70 font-medium tracking-widest uppercase">Encrypted Connection</span>
+</div>
+</div>
+<div class="flex items-center justify-end w-1/4">
+<div class="flex items-center gap-1.5 px-2 py-1 bg-primary/10 rounded-full border border-primary/20">
+<span class="size-1.5 bg-primary rounded-full animate-pulse"></span>
+<span class="text-[9px] text-primary font-bold tracking-tighter uppercase">LIVE</span>
+</div>
+</div></header>
+<!-- Chat Area -->
+<main class="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-hide">
+<!-- Timestamp Divider -->
+<div class="flex justify-center my-4">
+<span class="px-3 py-1 bg-slate-800/50 rounded-full text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] border border-slate-700/50" style="">
+                    Today 14:22 UTC
+                </span>
+</div>
+<!-- Server Message -->
+<div class="flex items-start gap-3 group">
+<div class="relative">
+<div class="bg-slate-800 size-10 rounded-lg flex items-center justify-center border border-primary/30 overflow-hidden shadow-[0_0_15px_rgba(37,209,244,0.1)]">
+<img class="w-full h-full object-cover opacity-80" data-alt="Advanced AI terminal interface icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBkdSNfxLn5O45sViw586EY0dMd9RD8EC_L2xGWGg6u-U88xn45cKx3FvN_dYrlc5Oy41wpob4LDWcEJJ095gi0WniNNpKRsgnzFYjo41aQPoDxjhWyzzDzGScfHuZrhgtAXpx4iFT1LeKxUaTmXB8yoHXugUP2AvUO6ta_N6_CUD2A71_fbdOS0CjtCnopf8vGtPbloZzNNpozzWzFhQCyufv_VvVkZVByRmnITVJ1t1r7W5aIU9L1KZpIo9ZrXTAjGKhGEMDqRg" style=""/>
+</div>
+<div class="absolute -bottom-1 -right-1 size-3 bg-primary rounded-full border-2 border-background-dark"></div>
+</div>
+<div class="flex flex-col gap-1.5 max-w-[80%]">
+<p class="text-primary/70 text-[11px] font-bold uppercase tracking-widest ml-1" style="">Central Server</p>
+<div class="bg-slate-800/80 border border-slate-700 text-slate-200 px-4 py-3 rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-lg">
+<p class="text-sm leading-relaxed" style="">System integrity verified. Quantum handshake complete. Secure connection established on channel 4-Alpha.</p>
+</div>
+<span class="text-[10px] text-slate-500 font-medium ml-1" style="">14:22</span>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-start gap-3 justify-end group">
+<div class="flex flex-col gap-1.5 items-end max-w-[80%]">
+<p class="text-primary text-[11px] font-bold uppercase tracking-widest mr-1" style="">Operative 01</p>
+<div class="bg-primary text-background-dark px-4 py-3 rounded-tl-xl rounded-bl-xl rounded-br-xl shadow-[0_0_20px_rgba(37,209,244,0.2)] font-medium">
+<p class="text-sm leading-relaxed" style="">Copy that. Requesting live satellite uplink for Sector 7 status update. Initiate Operation Neon sequence.</p>
+</div>
+<div class="flex items-center gap-1 mr-1">
+<span class="text-[10px] text-slate-500 font-medium" style="">14:23</span>
+<span class="material-symbols-outlined text-primary text-sm" style="">done_all</span>
+</div>
+</div>
+<div class="bg-slate-800 size-10 rounded-lg flex items-center justify-center border border-primary/50 overflow-hidden shadow-[0_0_15px_rgba(37,209,244,0.2)]">
+<img class="w-full h-full object-cover" data-alt="Cyberpunk operative portrait profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB9ABDI0CKs5d8QRPbfZViZ_G-m6hxIAsTK7LM_g29RfIyQRXMVJeVOG14yxmcjYn2GIClfS-FJP2fpFhfBm2QaZ2IIQPw_Bzum7dVD_A1GFmqk6NG-dkoXftWzyrS_375DBENpnL_1jHnMrDFVHv9bUd58iLtKS5Ld4dAtArrxVpl1XVWVaW1IbEoBiEOhOfeQKRNKOmE18l61pSxxXL1yah56J7s8A8lBlYt8ldyf3AoIqywtmFAdN4JuQ168FxJPG7iVKQVwKw" style=""/>
+</div>
+</div>
+<!-- Server Message -->
+<div class="flex items-start gap-3 group">
+<div class="bg-slate-800 size-10 rounded-lg flex items-center justify-center border border-primary/30 overflow-hidden">
+<img class="w-full h-full object-cover opacity-80" data-alt="Advanced AI terminal interface icon" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBLQkUH8V5b7D8NM-wQgp4_TcPX-iVqzjSiQB3wRTSIAucDw96cZMEcEW-Y0OETdkvY4HQHcgBt06Gv3G9T0xzVlYQtmg7MOJG2j8OlJ5j4WgcN2N8UFNyxUlZTKjrEk9rXfWShZdtCB5aCkDfp6dPQVFfuwap2jENGwxWd19rtOueO_EwN8jCeEcdYQxwiKdy84wxAu7FuqiRrwJf5U8CABi8KAx6ihYqlQwcPe-UzUdeZz2hP2LkLG_2rFhAL3v21qqemMwDGnA" style=""/>
+</div>
+<div class="flex flex-col gap-1.5 max-w-[80%]">
+<p class="text-primary/70 text-[11px] font-bold uppercase tracking-widest ml-1" style="">Central Server</p>
+<div class="bg-slate-800/80 border border-slate-700 text-slate-200 px-4 py-3 rounded-tr-xl rounded-br-xl rounded-bl-xl shadow-lg">
+<p class="text-sm leading-relaxed italic mb-2" style="">Analyzing sector 7 data...</p>
+<p class="text-sm leading-relaxed" style="">Operation Neon is in Phase 2. Stealth units are holding perimeter. Ready to transmit tactical overlay on your command.</p>
+</div>
+<span class="text-[10px] text-slate-500 font-medium ml-1" style="">14:24</span>
+</div>
+</div>
+<!-- User Message -->
+<div class="flex items-start gap-3 justify-end group">
+<div class="flex flex-col gap-1.5 items-end max-w-[80%]">
+<p class="text-primary text-[11px] font-bold uppercase tracking-widest mr-1" style="">Operative 01</p>
+<div class="bg-primary text-background-dark px-4 py-3 rounded-tl-xl rounded-bl-xl rounded-br-xl shadow-[0_0_20px_rgba(37,209,244,0.2)] font-medium">
+<p class="text-sm leading-relaxed" style="">Confirmed. Execute Alpha Protocol. Patching through local grid now.</p>
+</div>
+<div class="flex items-center gap-1 mr-1">
+<span class="text-[10px] text-slate-500 font-medium" style="">14:25</span>
+<span class="material-symbols-outlined text-primary text-sm" style="">done_all</span>
+</div>
+</div>
+<div class="bg-slate-800 size-10 rounded-lg flex items-center justify-center border border-primary/50 overflow-hidden shadow-[0_0_15px_rgba(37,209,244,0.2)]">
+<img class="w-full h-full object-cover" data-alt="Cyberpunk operative portrait profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-uACpOzm0YBMnRlRitIBzz4UB1npBvvEK9T5nZjILRlEWdWuGxBx9E3QzejqHoH9or07RigCjNOwO1L09wuhc_Nqrgh5g7JTo1T7FCa2tocQugmGlVvgacAcNM9dAPQNSRjANNXX99uujp-BrW6s50UVVTOCjRxre1TIIsQUW91QOo8MT5IsZf7ChSmPlpjOn_VPLK7x0cj4L8Km7hrTBT6aQDdSPc3kn-WQlxvUazf63ElOOXQYECB9_1AxMrzX51EGOFtbeDA" style=""/>
+</div>
+</div>
+</main>
+<!-- Input Area -->
+<footer class="p-4 bg-background-dark border-t border-slate-800 space-y-4">
+<div class="flex items-center gap-3">
+<button class="bg-slate-800 hover:bg-slate-700 text-primary p-2.5 rounded-lg border border-slate-700 transition-all active:scale-95 flex items-center justify-center" style="">
+<span class="material-symbols-outlined" style="">add</span>
+</button>
+<div class="flex-1 relative flex items-center">
+<input class="w-full bg-slate-900/50 border border-slate-700 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-sm text-slate-100 placeholder:text-slate-500 transition-all" placeholder="Encrypted message..." type="text"/>
+<button class="absolute right-2 text-slate-500 hover:text-primary p-1" style="">
+<span class="material-symbols-outlined text-xl" style="">face</span>
+</button>
+</div>
+<button class="bg-primary hover:brightness-110 text-background-dark p-2.5 rounded-lg shadow-[0_0_15px_rgba(37,209,244,0.3)] transition-all active:scale-95 flex items-center justify-center" style="">
+<span class="material-symbols-outlined font-bold" style="">send</span>
+</button>
+</div>
+<!-- Quick Actions -->
+<div class="flex items-center justify-between px-2">
+<div class="flex gap-4">
+<button class="flex items-center gap-1.5 text-slate-500 hover:text-primary transition-colors" style="">
+<span class="material-symbols-outlined text-lg" style="">mic</span>
+</button>
+<button class="flex items-center gap-1.5 text-slate-500 hover:text-primary transition-colors" style="">
+<span class="material-symbols-outlined text-lg" style="">image</span>
+</button>
+<button class="flex items-center gap-1.5 text-slate-500 hover:text-primary transition-colors" style="">
+<span class="material-symbols-outlined text-lg" style="">location_on</span>
+</button>
+</div>
+<div class="flex items-center gap-1 text-[10px] text-slate-600 font-bold uppercase tracking-tighter" style="">
+<span class="material-symbols-outlined text-xs" style="">lock</span>
+                    End-to-end
+                </div>
+</div>
+</footer>
+</div>
+</body></html>

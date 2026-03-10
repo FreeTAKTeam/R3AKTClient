@@ -1,10 +1,15 @@
-@import url("https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap");
 
 :root {
-  --font-headline: "Rajdhani", sans-serif;
-  --font-ui: "Rajdhani", sans-serif;
-  --font-body: "Chakra Petch", sans-serif;
-  color: #def1ff;
+  color: #f3fcff;
+  font-family: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-headline: "Sora", sans-serif;
+  --font-ui: "Space Grotesk", sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  background: #06161c;
 }
 
 *,
@@ -23,5 +28,13 @@ body,
 }
 
 body {
-  background: #020710;
+  background: #06161c;
+  color: #f3fcff;
+  font-family: var(--font-body);
+  overflow: hidden;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+  font-family: "Material Symbols Outlined", sans-serif;
 }

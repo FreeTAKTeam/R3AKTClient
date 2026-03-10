@@ -1,0 +1,31 @@
+﻿{
+  "screenshot": {
+    "name": "projects/4350946208414714711/files/4cd3be361a6e4cf898b24b9b734a96b8",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AOfcidU5h6btZFW4I0AjN2bTDoKFxt9MYSD64mFwvw1LCSaFG5uD7P_ovKyeWihiYbM7X84OO4kvLCb1UYjXbr7fEq9KuwGEKz7clhJfPmM8zJJh7EsLfXSpRAwPzPan2GLEtUvX9LC4wvvH1lyfGTfXdZdGeRBR2x5dZraAZxrUtrDlgOOtd4tOGlts3DdA3uuZXh_AdVLiuO_hsLay9k_PkphJ_ccOvXkZ_aftRd_ggY4jgMI_b-yz7GiGfw"
+  },
+  "htmlCode": {
+    "name": "projects/4350946208414714711/files/3eec70fa0b97429aa29d215b8a17b70b",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzJjMzc2YjA1YTM4ODQwOTNiYjFhMzQ0NmM0MzE3N2EyEgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "85831ee54b2f41de9c4848c32e37f664",
+  "generatedBy": "HatterAgent",
+  "width": "780",
+  "height": "1768",
+  "title": "Missions - Clean Header",
+  "prompt": "Update the header: keep the hamburger menu on the far left, center the page title 'MISSIONS', and show only the 'LIVE' indicator badge on the far right. Remove any other buttons (like search) from the header.",
+  "name": "projects/4350946208414714711/screens/85831ee54b2f41de9c4848c32e37f664",
+  "theme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#25d1f4",
+    "saturation": 3
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "HATTER_AGENT",
+    "status": "COMPLETE"
+  }
+}

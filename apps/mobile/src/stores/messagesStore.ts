@@ -2,41 +2,39 @@ import { defineStore } from "pinia";
 import { computed, reactive, ref, watch } from "vue";
 import type { PacketReceivedEvent } from "@reticulum/node-client";
 
+import { createAppPersistenceNamespace } from "../persistence/appPersistence";
 import type { ActionMessage, EamStatus, ReplicationMessage } from "../types/domain";
 import { useNodeStore } from "./nodeStore";
 
 const MESSAGE_STORAGE_KEY = "reticulum.mobile.messages.v1";
+const messagesPersistence = createAppPersistenceNamespace("legacy-messages");
 
 const STATUS_ROTATION: EamStatus[] = ["Green", "Yellow", "Red"];
 
-function loadMessages(): Record<string, ActionMessage> {
-  try {
-    const raw = localStorage.getItem(MESSAGE_STORAGE_KEY);
-    if (!raw) {
-      return {};
+function normalizeStoredMessages(parsed: ActionMessage[] | null | undefined): Record<string, ActionMessage> {
+  const out: Record<string, ActionMessage> = {};
+  for (const message of parsed ?? []) {
+    const callsign = String(message.callsign ?? "").trim();
+    if (!callsign) {
+      continue;
     }
-    const parsed = JSON.parse(raw) as ActionMessage[];
-    const out: Record<string, ActionMessage> = {};
-    for (const message of parsed) {
-      const callsign = String(message.callsign ?? "").trim();
-      if (!callsign) {
-        continue;
-      }
-      out[callsign.toLowerCase()] = {
-        ...message,
-        callsign,
-        groupName: String(message.groupName ?? "Cal team"),
-        updatedAt: Number(message.updatedAt ?? Date.now()),
-      };
-    }
-    return out;
-  } catch {
-    return {};
+    out[callsign.toLowerCase()] = {
+      ...message,
+      callsign,
+      groupName: String(message.groupName ?? "Cal team"),
+      updatedAt: Number(message.updatedAt ?? Date.now()),
+    };
   }
+  return out;
+}
+
+async function loadMessages(): Promise<Record<string, ActionMessage>> {
+  const parsed = await messagesPersistence.getJson<ActionMessage[] | null>(MESSAGE_STORAGE_KEY, null);
+  return normalizeStoredMessages(parsed);
 }
 
 function saveMessages(messages: Record<string, ActionMessage>): void {
-  localStorage.setItem(MESSAGE_STORAGE_KEY, JSON.stringify(Object.values(messages)));
+  void messagesPersistence.setJson(MESSAGE_STORAGE_KEY, Object.values(messages));
 }
 
 function cloneMessage(message: ActionMessage): ActionMessage {
@@ -72,6 +70,7 @@ export const useMessagesStore = defineStore("messages", () => {
   const initialized = ref(false);
   const replicationInitialized = ref(false);
   const nodeStore = useNodeStore();
+  let hydratePromise: Promise<void> | null = null;
 
   function persist(): void {
     saveMessages(byCallsign);
@@ -82,11 +81,11 @@ export const useMessagesStore = defineStore("messages", () => {
       return;
     }
     initialized.value = true;
-
-    const loaded = loadMessages();
-    for (const [key, message] of Object.entries(loaded)) {
-      byCallsign[key] = cloneMessage(message);
-    }
+    hydratePromise = loadMessages().then((loaded) => {
+      for (const [key, message] of Object.entries(loaded)) {
+        byCallsign[key] = cloneMessage(message);
+      }
+    });
   }
 
   function keyFor(callsign: string): string {

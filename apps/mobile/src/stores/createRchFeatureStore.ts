@@ -18,10 +18,14 @@ function toErrorMessage(error: unknown): string {
   return String(error);
 }
 
+function wrapWireError(context: string, error: unknown): Error {
+  return new Error(`${context}: ${toErrorMessage(error)}`);
+}
 export function createRchFeatureStore<K extends RchFeatureKey>(
   storeId: string,
   feature: K,
   operations: readonly RchFeatureOperationMap[K][],
+  bootstrapOperation: RchFeatureOperationMap[K] | null,
 ) {
   return defineStore(storeId, () => {
     const rchClientStore = useRchClientStore();
@@ -80,11 +84,17 @@ export function createRchFeatureStore<K extends RchFeatureKey>(
     }
 
     async function wire(): Promise<void> {
-      if (wired.value || operations.length === 0) {
+      if (wired.value) {
         return;
       }
+      if (bootstrapOperation) {
+        try {
+          await execute(bootstrapOperation);
+        } catch (error: unknown) {
+          throw wrapWireError(`${feature}/${bootstrapOperation}`, error);
+        }
+      }
       wired.value = true;
-      await execute(operations[0]);
     }
 
     const lastResponseJson = computed(() =>

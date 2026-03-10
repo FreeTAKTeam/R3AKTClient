@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from "vue";
 import { useRoute } from "vue-router";
 
@@ -10,39 +10,37 @@ const route = useRoute();
 
 const section = computed(() => {
   const value = route.params.section;
-  if (value === "topics" || value === "files" || value === "chat") {
+  if (value === "topics" || value === "files" || value === "images" || value === "chat") {
     return value;
   }
   return "chat";
 });
+
+const immersiveComms = computed(() =>
+  section.value === "chat" || section.value === "topics" || section.value === "files" || section.value === "images",
+);
 </script>
 
 <template>
-  <section class="tab-view">
-    <header class="tab-header">
-      <h1>Comms</h1>
-      <p>Messaging, topic fan-out, and file/media transfer shells.</p>
-    </header>
-
-    <nav class="subnav">
+  <section class="tab-view" :class="{ immersive: immersiveComms }">
+    <nav v-if="!immersiveComms" class="subnav">
       <RouterLink to="/comms/chat" class="subnav-link" :class="{ active: section === 'chat' }">
         Chat
       </RouterLink>
-      <RouterLink
-        to="/comms/topics"
-        class="subnav-link"
-        :class="{ active: section === 'topics' }"
-      >
+      <RouterLink to="/comms/topics" class="subnav-link" :class="{ active: section === 'topics' }">
         Topics
       </RouterLink>
       <RouterLink to="/comms/files" class="subnav-link" :class="{ active: section === 'files' }">
         Files
       </RouterLink>
+      <RouterLink to="/comms/images" class="subnav-link" :class="{ active: section === 'images' }">
+        Images
+      </RouterLink>
     </nav>
 
     <CommsChatPanel v-if="section === 'chat'" />
     <CommsTopicsPanel v-else-if="section === 'topics'" />
-    <CommsFilesPanel v-else />
+    <CommsFilesPanel v-else :initial-tab="section === 'images' ? 'images' : 'files'" />
   </section>
 </template>
 
@@ -52,22 +50,15 @@ const section = computed(() => {
   gap: 0.9rem;
 }
 
-.tab-header h1 {
-  font-family: var(--font-headline);
-  font-size: clamp(1.8rem, 3.4vw, 2.6rem);
-  margin: 0;
-}
-
-.tab-header p {
-  color: #8eaad4;
-  font-family: var(--font-body);
-  margin: 0.3rem 0 0;
+.tab-view.immersive {
+  gap: 0;
+  height: 100%;
 }
 
 .subnav {
   display: grid;
   gap: 0.5rem;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .subnav-link {

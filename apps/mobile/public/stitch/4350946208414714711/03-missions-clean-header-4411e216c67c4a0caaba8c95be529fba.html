@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Missions Workspace</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#25d1f4",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#101f22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 justify-between border-b border-primary/10">
+<div class="text-primary flex size-12 shrink-0 items-center justify-start">
+<span class="material-symbols-outlined text-2xl cursor-pointer">menu</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight flex-1 text-center">MISSIONS</h2>
+<div class="flex items-center justify-end min-w-[48px]"><div class="flex items-center gap-2 bg-emerald-500/10 px-2 py-1 rounded border border-emerald-500/20">
+<span class="size-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+<p class="text-emerald-500 text-[10px] font-bold uppercase tracking-widest">LIVE</p>
+</div></div>
+</header>
+<main class="flex-1 overflow-y-auto">
+<!-- Stats Grid -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4">
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-primary/20 bg-primary/5">
+<p class="text-slate-500 dark:text-primary/70 text-sm font-medium uppercase tracking-wider">Total</p>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-slate-100 text-3xl font-bold">24</p>
+<p class="text-emerald-500 text-xs font-bold">+2%</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-primary/20 bg-primary/5">
+<p class="text-slate-500 dark:text-primary/70 text-sm font-medium uppercase tracking-wider">Active</p>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-slate-100 text-3xl font-bold">08</p>
+<p class="text-emerald-500 text-xs font-bold">+5%</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-primary/20 bg-primary/5">
+<p class="text-slate-500 dark:text-primary/70 text-sm font-medium uppercase tracking-wider">Checklists</p>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-slate-100 text-3xl font-bold">12</p>
+<p class="text-rose-500 text-xs font-bold">-1%</p>
+</div>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-5 border border-primary/20 bg-primary/5">
+<p class="text-slate-500 dark:text-primary/70 text-sm font-medium uppercase tracking-wider">Assets</p>
+<div class="flex items-baseline gap-2">
+<p class="text-slate-900 dark:text-slate-100 text-3xl font-bold">42</p>
+<p class="text-primary text-xs font-bold">0%</p>
+</div>
+</div>
+</div>
+<!-- Section Title -->
+<div class="px-4 pt-6 pb-2 flex justify-between items-center">
+<h2 class="text-slate-900 dark:text-slate-100 text-xl font-bold tracking-tight">Active Operations</h2>
+<button class="text-primary text-sm font-medium hover:underline">View All</button>
+</div>
+<!-- Mission Cards List -->
+<div class="flex flex-col gap-4 p-4">
+<!-- Card 1 -->
+<div class="flex flex-col sm:flex-row items-stretch justify-between gap-4 rounded-xl bg-slate-100 dark:bg-primary/10 border border-primary/10 p-4 shadow-lg">
+<div class="flex flex-[2_2_0px] flex-col justify-between gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-rose-500 animate-pulse"></span>
+<p class="text-rose-500 text-xs font-bold uppercase tracking-widest">Priority: High</p>
+</div>
+<p class="text-slate-900 dark:text-slate-100 text-lg font-bold">Operation Nightfall</p>
+<p class="text-slate-600 dark:text-primary/60 text-sm font-normal">Infiltration Phase - Sector 7</p>
+</div>
+<button class="flex min-w-[120px] max-w-fit cursor-pointer items-center justify-center rounded-lg h-10 px-5 bg-primary text-background-dark gap-2 text-sm font-bold uppercase tracking-wider transition-all hover:brightness-110 active:scale-95">
+<span>Deploy</span>
+<span class="material-symbols-outlined text-lg">chevron_right</span>
+</button>
+</div>
+<div class="w-full sm:w-48 bg-center bg-no-repeat aspect-video bg-cover rounded-lg border border-primary/20" data-alt="Futuristic cybernetic interface with neon blue lines" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuANYbNg0gTOaZR-pMk63ufflF4PXURdeZ6E7EVdoKEyM6KEFVDIA-LL3YVarggfMJQJj3e1sshKN3SObs8IVZ_wOGEKNvS09658I86T9kWW_fAfUynR__UEn3GyQvIzbzvKzRzge5V0s8g-oS3-GPbyhtyGQ2lDGb24enNox9J9XSmCg_lgABstWLM4Vx8smyK5XZtA3RkO66E_aUsECaFyTI3YeVoaRQ3LNQ8WVI5j4r3OJVOQsuBqmXxww5BTsBqV7xbyYHCDHw");'>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex flex-col sm:flex-row items-stretch justify-between gap-4 rounded-xl bg-slate-100 dark:bg-primary/10 border border-primary/10 p-4 shadow-lg">
+<div class="flex flex-[2_2_0px] flex-col justify-between gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-amber-500"></span>
+<p class="text-amber-500 text-xs font-bold uppercase tracking-widest">Priority: Medium</p>
+</div>
+<p class="text-slate-900 dark:text-slate-100 text-lg font-bold">Ghost Protocol</p>
+<p class="text-slate-600 dark:text-primary/60 text-sm font-normal">Data Extraction - Research Lab</p>
+</div>
+<button class="flex min-w-[120px] max-w-fit cursor-pointer items-center justify-center rounded-lg h-10 px-5 bg-primary/20 border border-primary text-primary gap-2 text-sm font-bold uppercase tracking-wider transition-all hover:bg-primary/30 active:scale-95">
+<span>Resume</span>
+<span class="material-symbols-outlined text-lg">play_arrow</span>
+</button>
+</div>
+<div class="w-full sm:w-48 bg-center bg-no-repeat aspect-video bg-cover rounded-lg border border-primary/20" data-alt="Abstract digital data streams in blue and black" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAn_Muvtw9AlD-Dxdy0NiWR7xMsS5PFB3JkXAH-jFYbPoNI8JcTgOuKW9AvrpjvliXkViHU-sQVIbXcvf9R_dnyC7N-T8om4acCpJew7r-keXXl1BdeOBYOeby_GR7Mt6pcNznHRNUlgs-t2iqBopiJ1qdv9MMEyVQu-7EnN4Qk6A6XFOBdMvU_H9kPBRugicBucUZDxkpRiba_60kTJzCupBJtTJ42WhB1_Z7hVUpeOMiCfQ64OqhW80-HnQLb5EE1cUeWZl4Mhg");'>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="flex flex-col sm:flex-row items-stretch justify-between gap-4 rounded-xl bg-slate-100 dark:bg-primary/10 border border-primary/10 p-4 shadow-lg">
+<div class="flex flex-[2_2_0px] flex-col justify-between gap-4">
+<div class="flex flex-col gap-1">
+<div class="flex items-center gap-2">
+<span class="size-2 rounded-full bg-emerald-500"></span>
+<p class="text-emerald-500 text-xs font-bold uppercase tracking-widest">Priority: Low</p>
+</div>
+<p class="text-slate-900 dark:text-slate-100 text-lg font-bold">Deep Scan</p>
+<p class="text-slate-600 dark:text-primary/60 text-sm font-normal">Environmental Analysis - Outer Rim</p>
+</div>
+<button class="flex min-w-[120px] max-w-fit cursor-pointer items-center justify-center rounded-lg h-10 px-5 bg-primary/20 border border-primary text-primary gap-2 text-sm font-bold uppercase tracking-wider transition-all hover:bg-primary/30 active:scale-95">
+<span>Initialize</span>
+<span class="material-symbols-outlined text-lg">settings_suggest</span>
+</button>
+</div>
+<div class="w-full sm:w-48 bg-center bg-no-repeat aspect-video bg-cover rounded-lg border border-primary/20" data-alt="Earth from space with digital grid overlay" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCp8130RaRpeS-nvGINBZkIYKQbKnS145ESraRACenhPLz1o9AUWJ3sjJibMqnLdTKJtnJmgn3YDgd1cFRsQ50FsfGSEJaxgJ35Cbd1BhNKfkSU6CoYie2U3GTefHE1lj5gg2fRKFcTp3x_oDrDJawLDdZI-1F3d47w2lE9NNIOv6civjwJIaHZpx1SZOWGnWzYIGqxw6fB2QTu25TNp0-YCxA096g4I_06ZfBXV-AGLvRZXOGqvQ-T1VSgxOjdj0MDO7qJopV_fA");'>
+</div>
+</div>
+</div>
+<!-- Spacer for scroll padding -->
+<div class="h-8"></div>
+</main>
+</body></html>

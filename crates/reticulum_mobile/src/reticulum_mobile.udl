@@ -7,7 +7,7 @@ namespace reticulum_mobile {
 
 enum LogLevel { "Trace", "Debug", "Info", "Warn", "Error" };
 
-enum HubMode { "Disabled", "RchLxmf", "RchHttp" };
+enum HubMode { "Disabled", "RchLxmf" };
 
 enum PeerState { "Connecting", "Connected", "Disconnected" };
 
@@ -59,8 +59,6 @@ dictionary NodeConfig {
   // Hub directory settings (optional).
   HubMode hub_mode;
   string? hub_identity_hash;
-  string? hub_api_base_url;
-  string? hub_api_key;
   u32 hub_refresh_interval_seconds;
 };
 

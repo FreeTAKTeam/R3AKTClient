@@ -19,6 +19,7 @@ public final class ReticulumBridge {
     public static native int setLogLevel(String levelString);
     public static native int refreshHubDirectory();
     public static native String executeEnvelope(String envelopeJson);
+    public static native String sendChatMessage(String requestJson);
     public static native String getClientOperationCatalogJson();
     public static native String nextEventJson(int timeoutMs);
     public static native String takeLastErrorJson();

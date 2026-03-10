@@ -1,26 +1,38 @@
 import {
+  CHAT_TOPIC_LIST_OPERATION,
+  CHAT_TOPIC_SUBSCRIBE_OPERATION,
+  CHAT_MESSAGE_SEND_OPERATION,
   MESSAGES_OPERATIONS,
   type ChatEvent,
   type ChatMessage,
-  type DeliveryState,
   type ExecuteEnvelopeOptions,
   type RchEnvelopeResponse,
-  type SendMethod,
-  type SyncRequest,
 } from "@reticulum/node-client";
 import { defineStore } from "pinia";
 import { computed, reactive, ref, shallowRef } from "vue";
 
+import { createAppPersistenceNamespace } from "../persistence/appPersistence";
+import { useNodeStore } from "./nodeStore";
+import { useFilesMediaStore } from "./filesMediaStore";
 import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
+import { useProjectionStore } from "./projectionStore";
 import { useRchClientStore } from "./rchClientStore";
 
-const CHAT_DRAFT_STORAGE_KEY = "reticulum.mobile.chat.drafts.v2";
-const CHAT_FLAG_STORAGE_KEY = "reticulum.mobile.flags.chat_v2";
+const CHAT_DRAFT_STORAGE_KEY = "reticulum.mobile.chat.drafts.v3";
+const CHAT_MESSAGES_STORAGE_KEY = "reticulum.mobile.chat.messages.v1";
+const CHAT_CHANNELS_STORAGE_KEY = "reticulum.mobile.chat.channels.v1";
+const messagingPersistence = createAppPersistenceNamespace("rch-messaging");
+const GLOBAL_CHANNEL_KEY = "hub:global";
+const REQUIRED_CHAT_OPERATIONS = [
+  CHAT_TOPIC_LIST_OPERATION,
+  CHAT_TOPIC_SUBSCRIBE_OPERATION,
+] as const;
 
 type MessagingOperation = (typeof MESSAGES_OPERATIONS)[number];
+export type MessageDeliveryState = "queued" | "sent" | "failed";
 
-interface ConversationRecord {
-  id: string;
+export interface MessagingChannelRecord {
+  channelKey: string;
   title: string;
   destination?: string;
   topicId?: string;
@@ -28,16 +40,16 @@ interface ConversationRecord {
   messageIds: string[];
 }
 
-interface MessagingTelemetry {
-  directSuccess: number;
-  opportunisticSuccess: number;
-  propagatedSuccess: number;
-  directFailure: number;
-  opportunisticFailure: number;
-  propagatedFailure: number;
-  reconnectCount: number;
-  lastSyncLatencyMs: number;
-  duplicateSuppressed: number;
+export interface MessagingCapabilityState {
+  messageSend: boolean;
+  topicList: boolean;
+  topicSubscribe: boolean;
+}
+
+export interface MessagingMessageRecord extends ChatMessage {
+  channelKey: string;
+  deliveryState: MessageDeliveryState;
+  error?: string;
 }
 
 function toErrorMessage(error: unknown): string {
@@ -58,273 +70,358 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function asChatSendMethod(raw: unknown): SendMethod {
-  const value = String(raw ?? "").trim().toLowerCase();
-  if (value === "direct" || value === "opportunistic" || value === "propagated") {
-    return value;
-  }
-  return "opportunistic";
+function normalizeDestination(destination?: string): string | undefined {
+  const normalized = destination?.trim().toLowerCase();
+  return normalized || undefined;
 }
 
-function asDeliveryState(raw: unknown): DeliveryState {
-  const value = String(raw ?? "").trim().toLowerCase();
-  if (value === "queued" || value === "sent" || value === "delivered" || value === "failed") {
-    return value;
-  }
-  return "sent";
+function normalizeTopicId(topicId?: string): string | undefined {
+  const normalized = topicId?.trim();
+  return normalized || undefined;
 }
 
-function parseStoredDrafts(): Record<string, string> {
-  try {
-    const raw = localStorage.getItem(CHAT_DRAFT_STORAGE_KEY);
-    if (!raw) {
-      return {};
+function channelTitle(topicId?: string, destination?: string): string {
+  if (topicId) {
+    return `Topic ${topicId}`;
+  }
+  if (destination) {
+    return `DM ${destination.slice(0, 8)}`;
+  }
+  return "Global Hub";
+}
+
+export function buildChannelKey(input: {
+  topicId?: string;
+  destination?: string;
+} = {}): string {
+  const topicId = normalizeTopicId(input.topicId);
+  if (topicId) {
+    return `topic:${topicId}`;
+  }
+
+  const destination = normalizeDestination(input.destination);
+  if (destination) {
+    return `dm:${destination}`;
+  }
+
+  return GLOBAL_CHANNEL_KEY;
+}
+
+export function describeChannelKey(channelKey: string): {
+  destination?: string;
+  topicId?: string;
+} {
+  if (channelKey.startsWith("topic:")) {
+    return {
+      topicId: normalizeTopicId(channelKey.slice("topic:".length)),
+    };
+  }
+
+  if (channelKey.startsWith("dm:")) {
+    return {
+      destination: normalizeDestination(channelKey.slice("dm:".length)),
+    };
+  }
+
+  return {};
+}
+
+function normalizeStoredDrafts(parsed: Record<string, unknown> | null): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(parsed ?? {})) {
+    if (typeof value === "string" && value.trim().length > 0) {
+      out[key] = value;
     }
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const out: Record<string, string> = {};
-    for (const [key, value] of Object.entries(parsed)) {
-      if (typeof value === "string" && value.trim().length > 0) {
-        out[key] = value;
-      }
-    }
-    return out;
-  } catch {
-    return {};
   }
+  return out;
 }
 
-function isChatV2EnabledByDefault(): boolean {
-  const envValue = String(import.meta.env.VITE_CHAT_V2 ?? "").trim().toLowerCase();
-  if (envValue === "0" || envValue === "false" || envValue === "off") {
-    return false;
-  }
-  return true;
-}
-
-function readChatV2Flag(): boolean {
-  const stored = localStorage.getItem(CHAT_FLAG_STORAGE_KEY);
-  if (stored === null) {
-    return isChatV2EnabledByDefault();
-  }
-  return stored === "true";
-}
-
-function persistChatV2Flag(enabled: boolean): void {
-  localStorage.setItem(CHAT_FLAG_STORAGE_KEY, enabled ? "true" : "false");
+async function loadStoredDrafts(): Promise<Record<string, string>> {
+  const parsed = await messagingPersistence.getJson<Record<string, unknown> | null>(
+    CHAT_DRAFT_STORAGE_KEY,
+    null,
+  );
+  return normalizeStoredDrafts(parsed);
 }
 
 export const useMessagingStore = defineStore("rch-messaging", () => {
+  const nodeStore = useNodeStore();
+  const filesMediaStore = useFilesMediaStore();
+  const projectionStore = useProjectionStore();
   const rchClientStore = useRchClientStore();
 
   const operations = MESSAGES_OPERATIONS;
   const wired = ref(false);
   const busy = ref(false);
   const lastError = ref("");
+  const hydrated = ref(false);
   const lastOperation = shallowRef<MessagingOperation | null>(null);
   const lastResponse = shallowRef<RchEnvelopeResponse<unknown> | null>(null);
+  const activeChannelKey = ref(GLOBAL_CHANNEL_KEY);
 
-  const chatV2Enabled = ref(readChatV2Flag());
-  const activeConversationId = ref("conversation:global");
-
-  const messagesByLocalId = reactive<Record<string, ChatMessage>>({});
-  const networkToLocalId = reactive<Record<string, string>>({});
-  const conversationsById = reactive<Record<string, ConversationRecord>>({
-    "conversation:global": {
-      id: "conversation:global",
-      title: "Global",
+  const capabilities = reactive<MessagingCapabilityState>({
+    messageSend: false,
+    topicList: false,
+    topicSubscribe: false,
+  });
+  const messagesByLocalId = reactive<Record<string, MessagingMessageRecord>>({});
+  const channelsByKey = reactive<Record<string, MessagingChannelRecord>>({
+    [GLOBAL_CHANNEL_KEY]: {
+      channelKey: GLOBAL_CHANNEL_KEY,
+      title: channelTitle(),
       updatedAtMs: Date.now(),
       messageIds: [],
     },
   });
-  const draftsByConversation = reactive<Record<string, string>>(parseStoredDrafts());
+  const draftsByChannel = reactive<Record<string, string>>({});
 
-  const telemetry = reactive<MessagingTelemetry>({
-    directSuccess: 0,
-    opportunisticSuccess: 0,
-    propagatedSuccess: 0,
-    directFailure: 0,
-    opportunisticFailure: 0,
-    propagatedFailure: 0,
-    reconnectCount: 0,
-    lastSyncLatencyMs: 0,
-    duplicateSuppressed: 0,
-  });
-
+  let hydratePromise: Promise<void> | null = null;
   let unsubscribeChatEvents: (() => void) | null = null;
 
   function persistDrafts(): void {
-    localStorage.setItem(CHAT_DRAFT_STORAGE_KEY, JSON.stringify(draftsByConversation));
+    void messagingPersistence.setJson(CHAT_DRAFT_STORAGE_KEY, draftsByChannel);
   }
 
-  function ensureConversation(
-    id: string,
-    patch: Partial<Omit<ConversationRecord, "id" | "messageIds">> = {},
-  ): ConversationRecord {
-    if (!conversationsById[id]) {
-      conversationsById[id] = {
-        id,
-        title: patch.title ?? id,
-        destination: patch.destination,
-        topicId: patch.topicId,
+  function persistChannelsAndMessages(): void {
+    void Promise.all([
+      messagingPersistence.setJson(
+        CHAT_CHANNELS_STORAGE_KEY,
+        Object.values(channelsByKey),
+      ),
+      messagingPersistence.setJson(
+        CHAT_MESSAGES_STORAGE_KEY,
+        Object.values(messagesByLocalId),
+      ),
+    ]);
+  }
+
+  async function hydrate(): Promise<void> {
+    if (hydrated.value) {
+      return;
+    }
+    if (hydratePromise) {
+      await hydratePromise;
+      return;
+    }
+
+    hydratePromise = (async () => {
+      const [storedDrafts, storedChannels, storedMessages] = await Promise.all([
+        loadStoredDrafts(),
+        messagingPersistence.getJson<MessagingChannelRecord[] | null>(
+          CHAT_CHANNELS_STORAGE_KEY,
+          null,
+        ),
+        messagingPersistence.getJson<MessagingMessageRecord[] | null>(
+          CHAT_MESSAGES_STORAGE_KEY,
+          null,
+        ),
+      ]);
+
+      for (const key of Object.keys(draftsByChannel)) {
+        delete draftsByChannel[key];
+      }
+      Object.assign(draftsByChannel, storedDrafts);
+
+      for (const key of Object.keys(channelsByKey)) {
+        delete channelsByKey[key];
+      }
+      channelsByKey[GLOBAL_CHANNEL_KEY] = {
+        channelKey: GLOBAL_CHANNEL_KEY,
+        title: channelTitle(),
+        updatedAtMs: Date.now(),
+        messageIds: [],
+      };
+      for (const record of storedChannels ?? []) {
+        if (!record.channelKey?.trim()) {
+          continue;
+        }
+        channelsByKey[record.channelKey] = {
+          ...record,
+          messageIds: Array.isArray(record.messageIds) ? [...record.messageIds] : [],
+        };
+      }
+
+      for (const key of Object.keys(messagesByLocalId)) {
+        delete messagesByLocalId[key];
+      }
+      for (const record of storedMessages ?? []) {
+        if (!record.localMessageId?.trim()) {
+          continue;
+        }
+        messagesByLocalId[record.localMessageId] = {
+          ...record,
+        };
+        ensureChannel(record.channelKey, {
+          destination: record.destination,
+          topicId: record.topicId,
+          updatedAtMs: Date.parse(record.issuedAt) || Date.now(),
+        });
+        const channel = channelsByKey[record.channelKey];
+        if (!channel.messageIds.includes(record.localMessageId)) {
+          channel.messageIds.push(record.localMessageId);
+        }
+      }
+
+      hydrated.value = true;
+    })().finally(() => {
+      hydratePromise = null;
+    });
+
+    await hydratePromise;
+  }
+
+  function ensureChannel(
+    channelKey: string,
+    patch: Partial<Omit<MessagingChannelRecord, "channelKey" | "messageIds">> = {},
+  ): MessagingChannelRecord {
+    const descriptor = describeChannelKey(channelKey);
+    if (!channelsByKey[channelKey]) {
+      channelsByKey[channelKey] = {
+        channelKey,
+        title: patch.title ?? channelTitle(descriptor.topicId, descriptor.destination),
+        destination: patch.destination ?? descriptor.destination,
+        topicId: patch.topicId ?? descriptor.topicId,
         updatedAtMs: patch.updatedAtMs ?? Date.now(),
         messageIds: [],
       };
     }
-    const conversation = conversationsById[id];
-    conversation.title = patch.title ?? conversation.title;
-    conversation.destination = patch.destination ?? conversation.destination;
-    conversation.topicId = patch.topicId ?? conversation.topicId;
-    conversation.updatedAtMs = patch.updatedAtMs ?? conversation.updatedAtMs;
-    return conversation;
+
+    const channel = channelsByKey[channelKey];
+    channel.destination = normalizeDestination(patch.destination ?? channel.destination);
+    channel.topicId = normalizeTopicId(patch.topicId ?? channel.topicId);
+    channel.title = patch.title ?? channelTitle(channel.topicId, channel.destination);
+    channel.updatedAtMs = patch.updatedAtMs ?? channel.updatedAtMs;
+    persistChannelsAndMessages();
+    return channel;
   }
 
-  function mergeMessage(message: ChatMessage): void {
-    if (message.networkMessageId) {
-      const existingLocalId = networkToLocalId[message.networkMessageId];
-      if (existingLocalId && existingLocalId !== message.localMessageId) {
-        telemetry.duplicateSuppressed += 1;
-        const existing = messagesByLocalId[existingLocalId];
-        if (existing) {
-          messagesByLocalId[existingLocalId] = {
-            ...existing,
-            ...message,
-            localMessageId: existing.localMessageId,
-            conversationId: existing.conversationId,
-            updatedAt: message.updatedAt || existing.updatedAt,
-          };
-          return;
-        }
-      }
-      networkToLocalId[message.networkMessageId] = message.localMessageId;
+  function detachMessageFromChannel(channelKey: string, localMessageId: string): void {
+    const channel = channelsByKey[channelKey];
+    if (!channel) {
+      return;
     }
+    channel.messageIds = channel.messageIds.filter((entry) => entry !== localMessageId);
+    persistChannelsAndMessages();
+  }
 
+  function upsertMessage(
+    message: ChatMessage,
+    patch: {
+      channelKey?: string;
+      deliveryState?: MessageDeliveryState;
+      error?: string;
+    } = {},
+  ): MessagingMessageRecord {
     const existing = messagesByLocalId[message.localMessageId];
-    messagesByLocalId[message.localMessageId] = existing
-      ? {
-          ...existing,
-          ...message,
-          updatedAt: message.updatedAt || existing.updatedAt,
-        }
-      : message;
+    const topicId = normalizeTopicId(message.topicId ?? existing?.topicId);
+    const destination = normalizeDestination(message.destination ?? existing?.destination);
+    const channelKey =
+      patch.channelKey
+      ?? existing?.channelKey
+      ?? buildChannelKey({ topicId, destination });
+    const deliveryState =
+      patch.deliveryState
+      ?? existing?.deliveryState
+      ?? (message.direction === "outbound" ? "sent" : "sent");
+    const record: MessagingMessageRecord = {
+      ...existing,
+      ...message,
+      topicId,
+      destination,
+      channelKey,
+      deliveryState,
+      error: patch.error ?? (deliveryState === "failed" ? existing?.error : undefined),
+    };
 
-    const conversation = ensureConversation(message.conversationId, {
-      title:
-        message.topicId
-        ? `Topic ${message.topicId}`
-        : message.destination
-          ? `DM ${message.destination.slice(0, 8)}`
-          : "Global",
-      destination: message.destination,
-      topicId: message.topicId,
-      updatedAtMs: Date.parse(message.updatedAt) || Date.now(),
-    });
-    if (!conversation.messageIds.includes(message.localMessageId)) {
-      conversation.messageIds.push(message.localMessageId);
+    if (existing?.channelKey && existing.channelKey !== channelKey) {
+      detachMessageFromChannel(existing.channelKey, message.localMessageId);
     }
-    conversation.updatedAtMs = Math.max(
-      conversation.updatedAtMs,
-      Date.parse(message.updatedAt) || Date.now(),
+
+    messagesByLocalId[message.localMessageId] = record;
+
+    const issuedAtMs = Date.parse(record.issuedAt);
+    const channel = ensureChannel(channelKey, {
+      destination,
+      topicId,
+      updatedAtMs: Number.isFinite(issuedAtMs) ? issuedAtMs : Date.now(),
+    });
+    if (!channel.messageIds.includes(record.localMessageId)) {
+      channel.messageIds.push(record.localMessageId);
+    }
+    channel.updatedAtMs = Math.max(
+      channel.updatedAtMs,
+      Number.isFinite(issuedAtMs) ? issuedAtMs : Date.now(),
     );
+    persistChannelsAndMessages();
+
+    return record;
   }
 
-  function applyDeliveryUpdate(
+  function applyMessageState(
     localMessageId: string,
-    state: DeliveryState,
-    reason?: string,
-    networkMessageId?: string,
+    state: MessageDeliveryState,
+    error?: string,
   ): void {
     const existing = messagesByLocalId[localMessageId];
     if (!existing) {
-      const conversationId = activeConversationId.value;
-      const placeholder: ChatMessage = {
-        conversationId,
-        localMessageId,
-        networkMessageId,
-        direction: "outbound",
-        deliveryState: state,
-        sendMethod: "opportunistic",
-        content: "",
-        issuedAt: nowIso(),
-        updatedAt: nowIso(),
-        attachments: [],
-        reactions: [],
-        error: reason,
-      };
-      mergeMessage(placeholder);
       return;
     }
-    mergeMessage({
-      ...existing,
-      networkMessageId: networkMessageId ?? existing.networkMessageId,
+
+    upsertMessage(existing, {
+      channelKey: existing.channelKey,
       deliveryState: state,
-      updatedAt: nowIso(),
-      error: reason,
+      error,
     });
   }
 
-  function trackSendOutcome(method: SendMethod, success: boolean): void {
-    if (method === "direct") {
-      if (success) {
-        telemetry.directSuccess += 1;
-      } else {
-        telemetry.directFailure += 1;
-      }
-      return;
-    }
-    if (method === "opportunistic") {
-      if (success) {
-        telemetry.opportunisticSuccess += 1;
-      } else {
-        telemetry.opportunisticFailure += 1;
-      }
-      return;
-    }
-    if (success) {
-      telemetry.propagatedSuccess += 1;
-    } else {
-      telemetry.propagatedFailure += 1;
-    }
-  }
-
   function handleChatEvent(event: ChatEvent): void {
-    if (event.type === "message.receive" || event.type === "message.sent") {
-      mergeMessage(event.message);
-      return;
-    }
-    if (event.type === "message.delivery") {
-      applyDeliveryUpdate(
-        event.localMessageId,
-        event.state,
-        event.reason,
-        event.networkMessageId,
+    if (event.type === "message.receive") {
+      upsertMessage(event.message, { deliveryState: "sent" });
+      filesMediaStore.markTransfers(
+        Object.values(filesMediaStore.transfersById)
+          .filter((entry) => entry.messageLocalId === event.message.localMessageId)
+          .map((entry) => entry.id),
+        {
+          state: "completed",
+          progressPct: 100,
+          messageLocalId: event.message.localMessageId,
+        },
       );
       return;
     }
-    if (event.type === "message.reaction") {
-      const target = messagesByLocalId[event.localMessageId];
-      if (!target) {
-        return;
-      }
-      const nextReactions = [
-        ...target.reactions.filter(
-          (entry) => !(entry.key === event.reaction.key && entry.by === event.reaction.by),
-        ),
-        event.reaction,
-      ];
-      mergeMessage({
-        ...target,
-        reactions: nextReactions,
-        updatedAt: nowIso(),
-      });
+
+    if (event.type === "message.sent") {
+      upsertMessage(event.message, { deliveryState: "sent" });
       return;
     }
-    if (event.type === "message.subscribed") {
-      telemetry.reconnectCount += 1;
-      return;
+
+    if (event.type === "topic.subscribed") {
+      ensureChannel(
+        buildChannelKey({
+          topicId: event.topicId,
+          destination: event.destination,
+        }),
+        {
+          topicId: event.topicId,
+          destination: event.destination,
+          updatedAtMs: event.meta.receivedAtMs,
+        },
+      );
     }
-    if (event.type === "message.syncProgress") {
-      return;
+  }
+
+  async function refreshCapabilities(): Promise<void> {
+    await nodeStore.init();
+    const nodeClient = nodeStore.getNodeClient();
+    if (!nodeClient) {
+      throw new Error("Reticulum node client is not initialized.");
     }
+
+    const catalog = await nodeClient.getClientOperationCatalog();
+    const available = new Set(catalog.map((entry) => entry.operation));
+    capabilities.messageSend = true;
+    capabilities.topicList = available.has(CHAT_TOPIC_LIST_OPERATION);
+    capabilities.topicSubscribe = available.has(CHAT_TOPIC_SUBSCRIBE_OPERATION);
   }
 
   async function execute(
@@ -368,168 +465,200 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
   }
 
   async function wire(): Promise<void> {
-    if (wired.value || !chatV2Enabled.value) {
+    if (wired.value) {
       return;
+    }
+
+    await hydrate();
+    await projectionStore.init();
+    lastError.value = "";
+    await refreshCapabilities();
+    const readyNow =
+      capabilities.messageSend && capabilities.topicList && capabilities.topicSubscribe;
+    if (!readyNow) {
+      const missing = REQUIRED_CHAT_OPERATIONS.filter(
+        (operation) =>
+          ![
+            capabilities.topicList && CHAT_TOPIC_LIST_OPERATION,
+            capabilities.topicSubscribe && CHAT_TOPIC_SUBSCRIBE_OPERATION,
+          ].includes(operation),
+      );
+      const message = `Messaging requires hub operations: ${missing.join(", ")}.`;
+      lastError.value = message;
+      throw new Error(message);
     }
 
     const client = await rchClientStore.requireClient();
     unsubscribeChatEvents?.();
     unsubscribeChatEvents = client.chat.onEvent(handleChatEvent);
-    await client.chat.subscribeMessages({ replayLimit: 100 }).catch(() => undefined);
     wired.value = true;
   }
 
-  function setChatV2Enabled(enabled: boolean): void {
-    chatV2Enabled.value = enabled;
-    persistChatV2Flag(enabled);
-    if (!enabled) {
-      unsubscribeChatEvents?.();
-      unsubscribeChatEvents = null;
-      wired.value = false;
-    }
+  function setActiveChannel(channelKey: string): void {
+    ensureChannel(channelKey);
+    activeChannelKey.value = channelKey;
   }
 
-  function setActiveConversation(conversationId: string): void {
-    ensureConversation(conversationId);
-    activeConversationId.value = conversationId;
-  }
-
-  function setDraft(value: string, conversationId = activeConversationId.value): void {
-    draftsByConversation[conversationId] = value;
+  function setDraft(value: string, channelKey = activeChannelKey.value): void {
+    draftsByChannel[channelKey] = value;
     persistDrafts();
   }
 
   async function sendDraft(options: {
-    conversationId?: string;
+    channelKey?: string;
     destination?: string;
     topicId?: string;
-    sendMethod?: SendMethod;
-    tryPropagationOnFail?: boolean;
   } = {}): Promise<void> {
-    if (!chatV2Enabled.value) {
-      return;
-    }
-
     await wire();
-    const client = await rchClientStore.requireClient();
-    const conversationId = options.conversationId ?? activeConversationId.value;
-    const draft = (draftsByConversation[conversationId] ?? "").trim();
+    await filesMediaStore.wire();
+    const descriptor = {
+      ...describeChannelKey(options.channelKey ?? activeChannelKey.value),
+      destination: normalizeDestination(options.destination) ?? describeChannelKey(options.channelKey ?? activeChannelKey.value).destination,
+      topicId: normalizeTopicId(options.topicId) ?? describeChannelKey(options.channelKey ?? activeChannelKey.value).topicId,
+    };
+    const channelKey = options.channelKey ?? buildChannelKey(descriptor);
+    const draft = (draftsByChannel[channelKey] ?? "").trim();
     if (!draft) {
       return;
     }
 
-    const sendMethod = asChatSendMethod(options.sendMethod ?? "opportunistic");
     const localMessageId = createMessageId();
+    const issuedAt = nowIso();
+    const pendingUploads = filesMediaStore.getQueuedUploads(channelKey);
     const optimisticMessage: ChatMessage = {
-      conversationId,
       localMessageId,
       direction: "outbound",
-      deliveryState: "queued",
-      sendMethod,
       content: draft,
-      destination: options.destination ?? conversationsById[conversationId]?.destination,
-      topicId: options.topicId ?? conversationsById[conversationId]?.topicId,
-      issuedAt: nowIso(),
-      updatedAt: nowIso(),
-      attachments: [],
-      reactions: [],
+      destination: descriptor.destination,
+      topicId: descriptor.topicId,
+      issuedAt,
+      attachments: pendingUploads.fileAttachments,
+      image: pendingUploads.image,
     };
-    mergeMessage(optimisticMessage);
-    draftsByConversation[conversationId] = "";
+
+    ensureChannel(channelKey, {
+      destination: descriptor.destination,
+      topicId: descriptor.topicId,
+    });
+    setActiveChannel(channelKey);
+    upsertMessage(optimisticMessage, {
+      channelKey,
+      deliveryState: "queued",
+    });
+    await projectionStore.recordCommandRequest(
+      CHAT_MESSAGE_SEND_OPERATION,
+      optimisticMessage,
+      {
+        conversationId: localMessageId,
+        feature: "messages",
+        aggregateRef: {
+          feature: "messages",
+          entityType: "channel",
+          entityId: channelKey,
+          channelKey,
+        },
+        requestSummary: draft,
+      },
+    );
+    filesMediaStore.markTransfers(pendingUploads.transferIds, {
+      state: "in_progress",
+      progressPct: 35,
+      messageLocalId: localMessageId,
+    });
+    draftsByChannel[channelKey] = "";
     persistDrafts();
 
     try {
+      const client = await rchClientStore.requireClient();
       const response = await client.chat.sendMessage({
         localMessageId,
-        conversationId,
         content: draft,
-        destination: optimisticMessage.destination,
-        topicId: optimisticMessage.topicId,
-        sendMethod,
-        tryPropagationOnFail: options.tryPropagationOnFail ?? true,
+        destination: descriptor.destination,
+        topicId: descriptor.topicId,
+        fileAttachments: pendingUploads.fileAttachments,
+        image: pendingUploads.image,
       });
-      applyDeliveryUpdate(
-        response.payload.localMessageId,
-        asDeliveryState(response.payload.state),
-        undefined,
-        response.payload.networkMessageId,
+      await projectionStore.recordCommandResponse(
+        CHAT_MESSAGE_SEND_OPERATION,
+        response,
+        {
+          conversationId: localMessageId,
+          feature: "messages",
+          aggregateRef: {
+            feature: "messages",
+            entityType: "channel",
+            entityId: channelKey,
+            channelKey,
+          },
+          requestSummary: draft,
+        },
       );
-      trackSendOutcome(response.payload.sendMethod, true);
-    } catch (error: unknown) {
-      applyDeliveryUpdate(localMessageId, "failed", toErrorMessage(error));
-      trackSendOutcome(sendMethod, false);
-      lastError.value = toErrorMessage(error);
-    }
-  }
-
-  async function retryMessage(
-    localMessageId: string,
-    sendMethod: SendMethod = "opportunistic",
-  ): Promise<void> {
-    const client = await rchClientStore.requireClient();
-    try {
-      const response = await client.chat.retryMessage({
-        localMessageId,
-        sendMethod,
+      upsertMessage(
+        {
+          localMessageId: response.payload.localMessageId,
+          direction: "outbound",
+          content: response.payload.content || draft,
+          destination: response.payload.destination ?? descriptor.destination,
+          topicId: response.payload.topicId ?? descriptor.topicId,
+          issuedAt,
+          attachments: pendingUploads.fileAttachments,
+          image: pendingUploads.image,
+        },
+        {
+          channelKey,
+          deliveryState:
+            response.payload.sent && messagesByLocalId[response.payload.localMessageId]?.deliveryState === "sent"
+              ? "sent"
+              : response.payload.sent
+                ? "queued"
+                : "failed",
+        },
+      );
+      filesMediaStore.markTransfers(pendingUploads.transferIds, {
+        state: response.payload.sent ? "in_progress" : "failed",
+        progressPct: response.payload.sent ? 75 : 35,
+        messageLocalId: response.payload.localMessageId,
+        error: response.payload.sent ? undefined : "Attachment send was rejected.",
       });
-      applyDeliveryUpdate(
-        response.payload.localMessageId,
-        asDeliveryState(response.payload.state),
-        undefined,
-        response.payload.networkMessageId,
-      );
-      trackSendOutcome(response.payload.sendMethod, true);
     } catch (error: unknown) {
-      applyDeliveryUpdate(localMessageId, "failed", toErrorMessage(error));
-      trackSendOutcome(sendMethod, false);
+      applyMessageState(localMessageId, "failed", toErrorMessage(error));
+      await projectionStore.recordCommandFailure(localMessageId, toErrorMessage(error));
+      filesMediaStore.markTransfers(pendingUploads.transferIds, {
+        state: "failed",
+        progressPct: 35,
+        messageLocalId: localMessageId,
+        error: toErrorMessage(error),
+      });
       lastError.value = toErrorMessage(error);
+      throw error;
     }
   }
 
-  async function syncMessages(request: SyncRequest = {}): Promise<void> {
-    const startedAt = Date.now();
-    const client = await rchClientStore.requireClient();
-    try {
-      await client.chat.syncMessages(request);
-    } finally {
-      telemetry.lastSyncLatencyMs = Date.now() - startedAt;
-    }
-  }
-
-  async function sendReaction(localMessageId: string, reactionKey: string): Promise<void> {
-    const client = await rchClientStore.requireClient();
-    const target = messagesByLocalId[localMessageId];
-    if (!target) {
-      return;
-    }
-    await client.chat.sendReaction({
-      localMessageId,
-      networkMessageId: target.networkMessageId,
-      reactionKey,
-      by: "ui",
-    });
-  }
-
-  const lastResponseJson = computed(() =>
-    lastResponse.value ? JSON.stringify(lastResponse.value, null, 2) : "",
+  const ready = computed(
+    () =>
+      wired.value
+      && capabilities.messageSend
+      && capabilities.topicList
+      && capabilities.topicSubscribe,
   );
 
-  const conversations = computed(() =>
-    Object.values(conversationsById).sort((a, b) => b.updatedAtMs - a.updatedAtMs),
+  const channels = computed(() =>
+    Object.values(channelsByKey).sort((left, right) => right.updatedAtMs - left.updatedAtMs),
   );
 
   const activeMessages = computed(() => {
-    const conversation = conversationsById[activeConversationId.value];
-    if (!conversation) {
-      return [] as ChatMessage[];
+    const channel = channelsByKey[activeChannelKey.value];
+    if (!channel) {
+      return [] as MessagingMessageRecord[];
     }
-    return [...conversation.messageIds]
+
+    return [...channel.messageIds]
       .map((messageId) => messagesByLocalId[messageId])
-      .filter((message): message is ChatMessage => Boolean(message))
-      .sort((a, b) => Date.parse(a.issuedAt) - Date.parse(b.issuedAt));
+      .filter((message): message is MessagingMessageRecord => Boolean(message))
+      .sort((left, right) => Date.parse(left.issuedAt) - Date.parse(right.issuedAt));
   });
 
-  const activeDraft = computed(() => draftsByConversation[activeConversationId.value] ?? "");
+  const activeDraft = computed(() => draftsByChannel[activeChannelKey.value] ?? "");
 
   const failedCount = computed(
     () => activeMessages.value.filter((message) => message.deliveryState === "failed").length,
@@ -539,33 +668,33 @@ export const useMessagingStore = defineStore("rch-messaging", () => {
     () => activeMessages.value.filter((message) => message.deliveryState === "queued").length,
   );
 
+  const lastResponseJson = computed(() =>
+    lastResponse.value ? JSON.stringify(lastResponse.value, null, 2) : "",
+  );
+
   return {
     operations,
     wired,
     busy,
+    ready,
     lastError,
     lastOperation,
     lastResponse,
     lastResponseJson,
-    chatV2Enabled,
-    activeConversationId,
+    capabilities,
+    activeChannelKey,
     messagesByLocalId,
-    conversationsById,
-    conversations,
+    channelsByKey,
+    channels,
     activeMessages,
     activeDraft,
-    telemetry,
     failedCount,
     queuedCount,
     execute,
     executeFromJson,
     wire,
-    setChatV2Enabled,
-    setActiveConversation,
+    setActiveChannel,
     setDraft,
     sendDraft,
-    retryMessage,
-    syncMessages,
-    sendReaction,
   };
 });

@@ -1,9 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Reticulum Mobile Emergency Management</string>
-    <string name="title_activity_main">Reticulum Mobile Emergency Management</string>
-    <string name="package_name">network.reticulum.emergency</string>
-    <string name="custom_url_scheme">network.reticulum.emergency</string>
+    <string name="app_name">R3AKT</string>
+    <string name="title_activity_main">R3AKT</string>
+    <string name="package_name">network.reticulum.r3akt</string>
+    <string name="custom_url_scheme">network.reticulum.r3akt</string>
     <string name="node_service_notification_channel_name">Reticulum Runtime</string>
     <string name="node_service_notification_channel_description">Foreground runtime status for the local Reticulum node.</string>
     <string name="node_service_notification_title">Reticulum node service</string>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RCH Android - Checklists</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#25d1f4",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#101f22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .cyber-border {
+            border-left: 3px solid #25d1f4;
+        }
+        .glow-cyan {
+            box-shadow: 0 0 10px rgba(37, 209, 244, 0.2);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #182f34;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #25d1f4;
+            border-radius: 10px;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased overflow-hidden">
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Header -->
+<header class="sticky top-0 z-10 border-b border-primary/10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="flex items-center justify-between p-4">
+<div class="grid grid-cols-3 items-center w-full">
+<div class="flex items-center">
+<button class="p-2 -ml-2 rounded-full hover:bg-primary/10 transition-colors text-primary">
+<span class="material-symbols-outlined text-2xl">menu</span>
+</button>
+</div>
+<div class="flex justify-center">
+<h1 class="text-lg font-bold tracking-tight uppercase">CHECKLISTS</h1>
+</div>
+<div class="flex justify-end">
+<div class="flex h-7 items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 border border-emerald-500/20">
+<span class="text-[10px] font-bold text-emerald-500 tracking-wider">LIVE</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 overflow-y-auto custom-scrollbar px-4 space-y-6 pb-8">
+<!-- Active Checklist List -->
+<section class="space-y-4 pt-2">
+<div class="flex items-center justify-between">
+<h2 class="text-xs font-bold text-primary uppercase tracking-[0.2em]">Active Missions</h2>
+<span class="text-[10px] text-slate-500 font-mono">3 ITEMS LOADED</span>
+</div>
+<!-- Checklist Card 1 -->
+<div class="cyber-border bg-primary/5 dark:bg-primary/5 border border-primary/10 rounded-lg p-4 space-y-3 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-1 bg-primary/20 rounded-bl-lg">
+<span class="text-[10px] font-bold text-primary px-1">OFFLINE</span>
+</div>
+<div class="flex justify-between items-start pr-12">
+<div>
+<h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg leading-tight uppercase tracking-wide">REconnaissance</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Sector 7 Extraction Protocol</p>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-[10px] font-mono text-primary/80">
+<span>SYNC PROGRESS</span>
+<span>0%</span>
+</div>
+<div class="w-full bg-primary/10 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-0 shadow-[0_0_8px_rgba(37,209,244,0.6)]"></div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2 border-t border-primary/10 text-[10px] text-slate-500 font-medium">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">assignment</span>
+<span>TASKS: 13</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">schedule</span>
+<span>UPDATED: 2M AGO</span>
+</div>
+</div>
+</div>
+<!-- Checklist Card 2 -->
+<div class="cyber-border bg-primary/5 dark:bg-primary/5 border border-primary/10 rounded-lg p-4 space-y-3 relative">
+<div class="absolute top-0 right-0 p-1 bg-yellow-500/20 rounded-bl-lg border-l border-b border-yellow-500/30">
+<span class="text-[10px] font-bold text-yellow-500 px-1">PENDING</span>
+</div>
+<div class="flex justify-between items-start pr-12">
+<div>
+<h3 class="font-bold text-slate-900 dark:text-slate-100 text-lg leading-tight uppercase tracking-wide">Infiltration Alpha</h3>
+<p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Nakamoto Plaza Penetration</p>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-[10px] font-mono text-primary/80">
+<span>SYNC PROGRESS</span>
+<span>45%</span>
+</div>
+<div class="w-full bg-primary/10 h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full w-[45%] shadow-[0_0_8px_rgba(37,209,244,0.6)]"></div>
+</div>
+</div>
+<div class="flex items-center justify-between pt-2 border-t border-primary/10 text-[10px] text-slate-500 font-medium">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">assignment</span>
+<span>TASKS: 8</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">schedule</span>
+<span>UPDATED: 15M AGO</span>
+</div>
+</div>
+</div>
+<!-- Detail View / Task List Section -->
+<div class="mt-8 space-y-4">
+<h2 class="text-xs font-bold text-primary uppercase tracking-[0.2em]">Selected Operation: REconnaissance</h2>
+<div class="space-y-3">
+<!-- Task 1 -->
+<div class="flex items-center gap-4 p-3 bg-slate-800/20 dark:bg-primary/5 border border-white/5 rounded-xl">
+<div class="flex-shrink-0">
+<button class="size-6 rounded border-2 border-primary/40 flex items-center justify-center">
+<!-- Empty for pending -->
+</button>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Mission Briefing</h4>
+<span class="text-[9px] font-bold text-yellow-500 border border-yellow-500/30 px-1.5 py-0.5 rounded uppercase">PENDING</span>
+</div>
+<p class="text-[11px] text-slate-500 dark:text-slate-400">Review objective and exfiltration routes.</p>
+</div>
+</div>
+<!-- Task 2 -->
+<div class="flex items-center gap-4 p-3 bg-primary/10 border border-primary/20 rounded-xl">
+<div class="flex-shrink-0">
+<button class="size-6 rounded bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-background-dark text-sm font-bold">check</span>
+</button>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100 opacity-60">Equipment Check</h4>
+<span class="text-[9px] font-bold text-primary border border-primary/30 px-1.5 py-0.5 rounded uppercase">COMPLETE</span>
+</div>
+<p class="text-[11px] text-slate-500 dark:text-slate-400 opacity-60">Verify field gear and communication encryption.</p>
+</div>
+</div>
+<!-- Task 3 -->
+<div class="flex items-center gap-4 p-3 bg-slate-800/20 dark:bg-primary/5 border border-white/5 rounded-xl">
+<div class="flex-shrink-0">
+<button class="size-6 rounded border-2 border-primary/40 flex items-center justify-center">
+</button>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Grid Authorization</h4>
+<span class="text-[9px] font-bold text-yellow-500 border border-yellow-500/30 px-1.5 py-0.5 rounded uppercase">PENDING</span>
+</div>
+<p class="text-[11px] text-slate-500 dark:text-slate-400">Request access codes from central hub.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<!-- Floating Decorative Element (Bottom Corner) -->
+<div class="absolute bottom-20 right-4 pointer-events-none opacity-20">
+<div class="text-[8px] font-mono text-primary text-right uppercase">
+                RCH_SYSTEM_OS_v4.2<br/>
+                SECURE_CONNECTION_ESTABLISHED<br/>
+                LATENCY: 14MS
+            </div>
+</div>
+</div>
+</body></html>

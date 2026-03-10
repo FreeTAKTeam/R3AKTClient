@@ -22,6 +22,22 @@ client for the client-safe feature surface that RCH already exposes.
   RCH operations classified as `client`, including the R3AKT mission,
   checklist, team, asset, and assignment workflows.
 
+## Messaging Contract
+
+- The primary southbound messaging path is now LXMF mission-sync, not a
+  separate HTTP/WS chat transport.
+- The client-safe messaging surface currently implemented in this repo is:
+  - `mission.message.send` via `POST /Message`
+  - `topic.list` via `GET /Topic`
+  - `topic.subscribe` via `POST /Topic/Subscribe`
+  - inbound relay receive via `rch.message.relay`
+- Local UI routing derives its own channel keys:
+  - `topic:<topicId>`
+  - `dm:<destinationHash>`
+  - `hub:global`
+- Retry/reaction/replay cursor semantics are intentionally not part of the
+  transport contract until RCH exposes explicit southbound support for them.
+
 ## Consolidated Runtime Dependencies
 
 The runtime is pinned to the sibling consolidated `LXMF-rs` checkout rather

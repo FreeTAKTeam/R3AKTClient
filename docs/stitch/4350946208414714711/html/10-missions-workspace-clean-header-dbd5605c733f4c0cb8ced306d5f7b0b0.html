@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>RCH Mobile Missions View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#25d1f4",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#101f22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .active-tab .material-symbols-outlined {
+            font-variation-settings: 'FILL' 1;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased overflow-x-hidden">
+<!-- Main Container -->
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Header -->
+<header class="flex items-center bg-background-light dark:bg-background-dark p-4 border-b border-slate-200 dark:border-primary/20 justify-between sticky top-0 z-10">
+<div class="flex size-10 shrink-0 items-center justify-center text-slate-900 dark:text-slate-100">
+<span class="material-symbols-outlined">menu</span>
+</div>
+<h2 class="text-slate-900 dark:text-slate-100 text-lg font-bold leading-tight tracking-tight flex-1 text-center uppercase">MISSIONS</h2>
+<div class="flex items-center justify-end">
+<span class="flex items-center gap-1.5 px-2 py-1 rounded bg-red-500/10 border border-red-500/50">
+<span class="size-1.5 rounded-full bg-red-500 animate-pulse"></span>
+<span class="text-[10px] font-bold text-red-500 leading-none">LIVE</span>
+</span>
+</div>
+</header>
+<!-- Scrollable Content Area -->
+<main class="flex-1 overflow-y-auto">
+<!-- Quick Stats Row -->
+<div class="grid grid-cols-2 gap-3 p-4">
+<div class="flex flex-col gap-1 rounded-xl p-4 bg-slate-200/50 dark:bg-primary/10 border border-slate-300 dark:border-primary/20">
+<p class="text-slate-600 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider">Total</p>
+<p class="text-slate-900 dark:text-white text-2xl font-bold leading-tight tabular-nums">12</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 bg-slate-200/50 dark:bg-primary/10 border border-slate-300 dark:border-primary/20">
+<p class="text-slate-600 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider">Active</p>
+<p class="text-slate-900 dark:text-white text-2xl font-bold leading-tight tabular-nums">4</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 bg-slate-200/50 dark:bg-primary/10 border border-slate-300 dark:border-primary/20">
+<p class="text-slate-600 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider">Checklists</p>
+<p class="text-slate-900 dark:text-white text-2xl font-bold leading-tight tabular-nums">8</p>
+</div>
+<div class="flex flex-col gap-1 rounded-xl p-4 bg-slate-200/50 dark:bg-primary/10 border border-slate-300 dark:border-primary/20">
+<p class="text-slate-600 dark:text-primary/70 text-xs font-semibold uppercase tracking-wider">Assets</p>
+<p class="text-slate-900 dark:text-white text-2xl font-bold leading-tight tabular-nums">24</p>
+</div>
+</div>
+<!-- Mission Directory Header -->
+<div class="px-4 py-2 flex items-center justify-between mt-2">
+<h2 class="text-slate-900 dark:text-white text-sm font-bold leading-tight tracking-wider uppercase">Mission Directory</h2>
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-primary text-background-dark gap-2 text-xs font-bold leading-normal tracking-wide shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined !text-lg">add</span>
+<span>CREATE</span>
+</button>
+</div>
+<!-- Directory List -->
+<div class="px-4 py-4 space-y-3">
+<!-- Selected Mission Item -->
+<div class="rounded-xl border-2 border-primary bg-primary/5 p-4 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-2">
+<span class="bg-primary/20 text-primary text-[10px] font-bold px-2 py-0.5 rounded uppercase">Active</span>
+</div>
+<div class="flex flex-col gap-1">
+<h3 class="text-slate-900 dark:text-white font-bold text-base">Operation Nightfall</h3>
+<p class="text-slate-500 dark:text-slate-400 text-xs">ID: MS-2024-0892</p>
+</div>
+<!-- Expanded MISSION DETAILS -->
+<div class="mt-4 pt-4 border-t border-primary/20 space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase">Status</span>
+<span class="text-xs text-slate-900 dark:text-slate-200 font-bold bg-slate-200 dark:bg-slate-800 px-2 py-1 rounded">UNSCOPED</span>
+</div>
+<!-- Quick Action Buttons -->
+<div class="grid grid-cols-3 gap-2">
+<button class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined !text-lg text-primary">refresh</span>
+<span class="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Refresh</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined !text-lg text-primary">podcasts</span>
+<span class="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Broadcast</span>
+</button>
+<button class="flex flex-col items-center justify-center gap-1 p-2 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined !text-lg text-primary">edit_note</span>
+<span class="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Edit</span>
+</button>
+</div>
+<!-- Activity Feed -->
+<div class="space-y-2">
+<p class="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest">Activity Feed</p>
+<div class="space-y-3 pl-2 border-l border-primary/30">
+<div class="text-[11px] relative">
+<div class="absolute -left-[13px] top-1.5 size-1.5 rounded-full bg-primary"></div>
+<p class="text-slate-800 dark:text-slate-200"><span class="font-bold">System:</span> Mission initialized by Admin</p>
+<p class="text-slate-500 dark:text-slate-500 text-[9px]">2m ago</p>
+</div>
+<div class="text-[11px] relative">
+<div class="absolute -left-[13px] top-1.5 size-1.5 rounded-full bg-slate-400"></div>
+<p class="text-slate-800 dark:text-slate-200"><span class="font-bold">User:</span> Asset drone-43 deployed</p>
+<p class="text-slate-500 dark:text-slate-500 text-[9px]">14m ago</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Regular Mission Item -->
+<div class="rounded-xl border border-slate-200 dark:border-primary/10 bg-slate-50 dark:bg-primary/5 p-4 flex items-center justify-between opacity-70">
+<div class="flex flex-col gap-1">
+<h3 class="text-slate-900 dark:text-white font-bold text-sm">Arctic Survey Sigma</h3>
+<p class="text-slate-500 dark:text-slate-400 text-[10px]">ID: MS-2024-0711</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+<!-- Regular Mission Item -->
+<div class="rounded-xl border border-slate-200 dark:border-primary/10 bg-slate-50 dark:bg-primary/5 p-4 flex items-center justify-between opacity-70">
+<div class="flex flex-col gap-1">
+<h3 class="text-slate-900 dark:text-white font-bold text-sm">Urban Grid Recovery</h3>
+<p class="text-slate-500 dark:text-slate-400 text-[10px]">ID: MS-2024-0654</p>
+</div>
+<span class="material-symbols-outlined text-slate-400">chevron_right</span>
+</div>
+</div>
+<!-- Map Placeholder for Visual Context -->
+<div class="px-4 pb-4">
+<div class="rounded-xl overflow-hidden h-32 relative bg-slate-300 dark:bg-slate-800 border border-slate-200 dark:border-primary/20">
+<img class="w-full h-full object-cover mix-blend-overlay opacity-50" data-alt="Digital satellite map view with mission markers" data-location="Global" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDWumfadGQODXy80R3B_uWm_rOv57FdBwRs2bHpFKqbDuf9rk_Ph0UNRazu7kJoCyUOp5Hj_lxWi7Nx26cyKm3yFtCGci0UNipBoZpgNmR3ywYc0HOL6DurSxEcxqrXnn41Rz1RuLXjr1cTxluOVZIohtEhraoj-LRfbhcT6c7BM-6WoamZ9hmyG7T-KIkZHyz8iyj0CGn59HRb2hh1avQ74sXAD868NeQbADJPNqJr48FzeBMbXOwusu3nvxGPof1hqRgSV5mwag"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<span class="text-[10px] font-bold text-primary/50 tracking-widest uppercase">Live Area Map Preview</span>
+</div>
+</div>
+</div>
+</main>
+<!-- Navigation Bottom Tab Bar -->
+</div>
+</body></html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#25d1f4",
+                        "background-light": "#f5f8f8",
+                        "background-dark": "#101f22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<title>Topic Registry - RCH Mobile</title>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 antialiased">
+<!-- Main Container -->
+<div class="relative flex h-screen w-full flex-col overflow-hidden">
+<!-- Header Section -->
+<header class="flex items-center justify-between bg-background-light dark:bg-background-dark border-b border-primary/20 p-4 flex-row">
+<div class="flex-1 flex items-center">
+<button class="flex items-center justify-center p-2 rounded-lg hover:bg-primary/10 text-primary">
+<span class="material-symbols-outlined">menu</span>
+</button>
+</div>
+<div class="flex-1 flex justify-center">
+<h1 class="text-lg font-bold tracking-tight uppercase whitespace-nowrap">Topic Registry</h1>
+</div>
+<div class="flex-1 flex justify-end">
+<div class="flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 border border-primary/30">
+<span class="size-1.5 rounded-full bg-primary animate-pulse"></span>
+<span class="text-[10px] font-bold text-primary tracking-widest uppercase leading-none">Live</span>
+</div>
+</div>
+</header>
+<!-- Search Bar -->
+<div class="px-4 py-3 bg-background-light dark:bg-background-dark">
+<div class="relative flex w-full items-center">
+<span class="material-symbols-outlined absolute left-3 text-primary/60">search</span>
+<input class="w-full bg-primary/5 border border-primary/20 rounded-lg py-2.5 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all placeholder:text-primary/40" placeholder="Filter or Jump" type="text"/>
+</div>
+</div>
+<!-- Scrollable Content Area -->
+<main class="flex-1 overflow-y-auto pb-8">
+<!-- Hierarchy Tags Section -->
+<section class="mb-6">
+<h3 class="px-4 text-xs font-bold text-primary/70 uppercase tracking-widest mb-3">Topic Hierarchy Tree</h3>
+<div class="flex gap-2 px-4 overflow-x-auto no-scrollbar">
+<button class="flex shrink-0 items-center gap-2 px-4 py-2 rounded-lg bg-primary text-background-dark text-xs font-bold uppercase transition-colors">
+                        Environment <span class="bg-background-dark/20 px-1.5 rounded text-[10px]">12</span>
+</button>
+<button class="flex shrink-0 items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase hover:bg-primary/20 transition-colors">
+                        Forecast <span class="bg-primary/20 px-1.5 rounded text-[10px]">8</span>
+</button>
+<button class="flex shrink-0 items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase hover:bg-primary/20 transition-colors">
+                        Weather <span class="bg-primary/20 px-1.5 rounded text-[10px]">5</span>
+</button>
+<button class="flex shrink-0 items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase hover:bg-primary/20 transition-colors">
+                        Prepping <span class="bg-primary/20 px-1.5 rounded text-[10px]">10</span>
+</button>
+</div>
+</section>
+<!-- Active Branch Header -->
+<section class="px-4 mb-4">
+<div class="flex items-center justify-between border-l-2 border-primary pl-3 py-1">
+<div>
+<p class="text-[10px] text-primary/60 uppercase font-bold tracking-widest">Selected Branch</p>
+<h2 class="text-xl font-bold uppercase">ENVIRONMENT</h2>
+</div>
+<button class="p-2 rounded-lg bg-primary/5 border border-primary/20 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-sm">refresh</span>
+</button>
+</div>
+</section>
+<!-- Topic Cards List -->
+<section class="px-4 space-y-4">
+<!-- Card 1 -->
+<div class="bg-primary/5 border border-primary/10 rounded-xl p-4 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-1">
+<span class="text-[8px] font-mono text-primary/30 uppercase">ID: ENV-0091-W</span>
+</div>
+<div class="flex items-start justify-between mb-3">
+<div>
+<h4 class="text-lg font-bold text-primary tracking-tight">WEATHER</h4>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="material-symbols-outlined text-xs text-primary/60">groups</span>
+<span class="text-xs font-medium text-slate-400">1,248 Subscribers</span>
+</div>
+</div>
+<div class="bg-primary/20 rounded-full px-2 py-0.5 text-[10px] font-bold text-primary uppercase">Active</div>
+</div>
+<p class="text-sm text-slate-400 mb-4 leading-relaxed">
+                        Real-time environmental sensor data including temperature, humidity, and atmospheric pressure at ground level.
+                    </p>
+<div class="flex items-center gap-3">
+<button class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-bold uppercase hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-sm">edit</span>
+                            Edit
+                        </button>
+<button class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-red-500/30 text-red-400 text-xs font-bold uppercase hover:bg-red-500/10 transition-all">
+<span class="material-symbols-outlined text-sm">delete</span>
+                            Delete
+                        </button>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="bg-primary/5 border border-primary/10 rounded-xl p-4 relative overflow-hidden group">
+<div class="absolute top-0 right-0 p-1">
+<span class="text-[8px] font-mono text-primary/30 uppercase">ID: ENV-0104-F</span>
+</div>
+<div class="flex items-start justify-between mb-3">
+<div>
+<h4 class="text-lg font-bold text-primary tracking-tight">FORECAST</h4>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="material-symbols-outlined text-xs text-primary/60">groups</span>
+<span class="text-xs font-medium text-slate-400">892 Subscribers</span>
+</div>
+</div>
+<div class="bg-primary/10 rounded-full px-2 py-0.5 text-[10px] font-bold text-primary/40 uppercase">Idle</div>
+</div>
+<p class="text-sm text-slate-400 mb-4 leading-relaxed">
+                        Predictive modeling for short-term environmental shifts based on aggregate global feed data.
+                    </p>
+<div class="flex items-center gap-3">
+<button class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg bg-primary/10 border border-primary/30 text-primary text-xs font-bold uppercase hover:bg-primary/20 transition-all">
+<span class="material-symbols-outlined text-sm">edit</span>
+                            Edit
+                        </button>
+<button class="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border border-red-500/30 text-red-400 text-xs font-bold uppercase hover:bg-red-500/10 transition-all">
+<span class="material-symbols-outlined text-sm">delete</span>
+                            Delete
+                        </button>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed right-6 size-14 rounded-full bg-primary text-background-dark shadow-lg shadow-primary/20 flex items-center justify-center hover:scale-105 active:scale-95 transition-transform z-20 bottom-6">
+<span class="material-symbols-outlined font-bold">add</span>
+</button>
+<!-- Bottom Navigation Bar -->
+<!-- Decoration / Cyberpunk Grain Overlay -->
+<div class="pointer-events-none fixed inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')]"></div>
+</div>
+<style>
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</body></html>

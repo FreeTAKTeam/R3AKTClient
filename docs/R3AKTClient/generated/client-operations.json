@@ -1,50 +1,141 @@
 {
-  "generated_at": "2026-03-04T23:42:43.278Z",
-  "source": "docs/R3AKTClient/APIANnalysis_clientImplementationSet.md",
-  "operation_count": 104,
+  "generated_at": "2026-03-06T20:58:48.624Z",
+  "source": "API/ReticulumCommunityHub-SouthboundCommands.json",
+  "operation_count": 115,
+  "group_order": [
+    "Core Discovery and Session",
+    "Telemetry and Live Status",
+    "Messaging and Chat",
+    "Topics and Distribution",
+    "Files and Media",
+    "Map, Markers, and Zones",
+    "R3AKT Mission Core",
+    "R3AKT Teams, People, and Skills",
+    "R3AKT Assets and Assignments",
+    "Checklists",
+    "Hub Admin and Legacy Command Parity"
+  ],
   "groups": [
     {
       "name": "Core Discovery and Session",
       "operations": [
         {
-          "operation": "GET /Client",
-          "description": "Lists all clients currently connected to the Hub, including their Reticulum identities and connection metadata"
+          "operation": "Help",
+          "group": "Core Discovery and Session",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return a Markdown list of available legacy/plugin commands.",
+          "aliases": [
+            "GET /Help"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "GET /Events",
-          "description": "Return recent hub events."
+          "operation": "Examples",
+          "group": "Core Discovery and Session",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return Markdown examples for legacy/plugin command payloads.",
+          "aliases": [
+            "GET /Examples"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "GET /Examples",
-          "description": "Return command descriptions and JSON payload examples."
+          "operation": "join",
+          "group": "Core Discovery and Session",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Register the sender LXMF destination with the hub connection list.",
+          "aliases": [],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "GET /Help",
-          "description": "Return the list of supported commands."
+          "operation": "leave",
+          "group": "Core Discovery and Session",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Remove the sender LXMF destination from the hub connection list.",
+          "aliases": [],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "POST /RCH",
-          "description": "Join an RCH instance as the supplied identity."
+          "operation": "getAppInfo",
+          "group": "Core Discovery and Session",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return app metadata such as name, version, and Reticulum destination.",
+          "aliases": [
+            "GET /api/v1/app/info"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "PUT /RCH",
-          "description": "Leave an RCH instance as the supplied identity."
+          "operation": "GetStatus",
+          "group": "Core Discovery and Session",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return hub status, counts, uptime, and telemetry summary.",
+          "aliases": [
+            "GET /Status"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
         },
         {
-          "operation": "POST /RTH",
-          "description": "Legacy compatibility alias for join."
+          "operation": "ListEvents",
+          "group": "Core Discovery and Session",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return recent event log entries.",
+          "aliases": [
+            "GET /Events"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
         },
         {
-          "operation": "PUT /RTH",
-          "description": "Legacy compatibility alias for leave."
+          "operation": "ListClients",
+          "group": "Core Discovery and Session",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "List joined LXMF clients.",
+          "aliases": [
+            "GET /Client"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
         },
         {
-          "operation": "GET /Status",
-          "description": "Return dashboard status metrics."
+          "operation": "mission.join",
+          "group": "Core Discovery and Session",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Join the mission transport identity. Defaults to the LXMF sender identity.",
+          "aliases": [
+            "POST /RCH",
+            "POST /RTH"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
         },
         {
-          "operation": "GET /api/v1/app/info",
-          "description": "returns the configured application metadata and component versions"
+          "operation": "mission.leave",
+          "group": "Core Discovery and Session",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Leave the mission transport identity. Defaults to the LXMF sender identity.",
+          "aliases": [
+            "PUT /RCH",
+            "PUT /RTH"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
         }
       ]
     },
@@ -52,16 +143,16 @@
       "name": "Telemetry and Live Status",
       "operations": [
         {
-          "operation": "GET /Telemetry",
-          "description": "Retrieve telemetry snapshots since a timestamp."
-        },
-        {
-          "operation": "GET /events/system",
-          "description": "WebSocket stream for system status + events."
-        },
-        {
-          "operation": "GET /telemetry/stream",
-          "description": "WebSocket stream for live telemetry."
+          "operation": "TelemetryRequest",
+          "group": "Telemetry and Live Status",
+          "kind": "query",
+          "transport_variant": "telemetry",
+          "description": "Return telemetry snapshots via `FIELD_TELEMETRY_STREAM`.",
+          "aliases": [
+            "GET /Telemetry"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         }
       ]
     },
@@ -69,12 +160,16 @@
       "name": "Messaging and Chat",
       "operations": [
         {
-          "operation": "POST /Message",
-          "description": "Send a message into the hub."
-        },
-        {
-          "operation": "GET /messages/stream",
-          "description": "WebSocket stream for inbound/outbound messages."
+          "operation": "mission.message.send",
+          "group": "Messaging and Chat",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Send a message via the hub from the mission-sync path.",
+          "aliases": [
+            "POST /Message"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
         }
       ]
     },
@@ -82,16 +177,60 @@
       "name": "Topics and Distribution",
       "operations": [
         {
-          "operation": "GET /Topic",
-          "description": "Retrieves a list of all Topic"
+          "operation": "ListTopic",
+          "group": "Topics and Distribution",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "List registered topics.",
+          "aliases": [],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "POST /Topic/Subscribe",
-          "description": "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted)."
+          "operation": "RetrieveTopic",
+          "group": "Topics and Distribution",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return one topic by ID.",
+          "aliases": [
+            "GET /Topic/{id}"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "GET /Topic/{id}",
-          "description": "retrieve an existing Topic record based on the provided ID."
+          "operation": "SubscribeTopic",
+          "group": "Topics and Distribution",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Subscribe the sender to a topic.",
+          "aliases": [],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
+        },
+        {
+          "operation": "topic.list",
+          "group": "Topics and Distribution",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List topics through the mission-sync API.",
+          "aliases": [
+            "GET /Topic"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
+        },
+        {
+          "operation": "topic.subscribe",
+          "group": "Topics and Distribution",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Subscribe a destination to a topic through the mission-sync API.",
+          "aliases": [
+            "POST /Topic/Subscribe"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
         }
       ]
     },
@@ -99,36 +238,54 @@
       "name": "Files and Media",
       "operations": [
         {
-          "operation": "GET /File",
-          "description": "List stored file attachments."
+          "operation": "ListFiles",
+          "group": "Files and Media",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "List stored file attachments.",
+          "aliases": [
+            "GET /File"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "GET /File/{id}",
-          "description": "Retrieve a stored file by its ID."
+          "operation": "ListImages",
+          "group": "Files and Media",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "List stored image attachments.",
+          "aliases": [
+            "GET /Image"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "DELETE /File/{id}",
-          "description": "Delete a stored file by its ID."
+          "operation": "RetrieveFile",
+          "group": "Files and Media",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return a stored file via `FIELD_FILE_ATTACHMENTS`.",
+          "aliases": [
+            "GET /File/{id}",
+            "GET /File/{id}/raw"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         },
         {
-          "operation": "GET /File/{id}/raw",
-          "description": "Download a stored file by its ID (raw bytes)."
-        },
-        {
-          "operation": "GET /Image",
-          "description": "List stored images."
-        },
-        {
-          "operation": "GET /Image/{id}",
-          "description": "Retrieve a stored image by its ID."
-        },
-        {
-          "operation": "DELETE /Image/{id}",
-          "description": "Delete a stored image by its ID."
-        },
-        {
-          "operation": "GET /Image/{id}/raw",
-          "description": "Download a stored image by its ID (raw bytes)."
+          "operation": "RetrieveImage",
+          "group": "Files and Media",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return a stored image via `FIELD_IMAGE` and `FIELD_FILE_ATTACHMENTS`.",
+          "aliases": [
+            "GET /Image/{id}",
+            "GET /Image/{id}/raw"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Public commands"
         }
       ]
     },
@@ -136,36 +293,88 @@
       "name": "Map, Markers, and Zones",
       "operations": [
         {
-          "operation": "GET /api/markers",
-          "description": "List stored operator markers."
+          "operation": "mission.marker.list",
+          "group": "Map, Markers, and Zones",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List mission markers.",
+          "aliases": [
+            "GET /api/markers"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Marker and zone content"
         },
         {
-          "operation": "POST /api/markers",
-          "description": "Create a new operator marker."
+          "operation": "mission.marker.create",
+          "group": "Map, Markers, and Zones",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create a mission marker.",
+          "aliases": [
+            "POST /api/markers"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Marker and zone content"
         },
         {
-          "operation": "GET /api/markers/symbols",
-          "description": "List available marker symbols."
+          "operation": "mission.marker.position.patch",
+          "group": "Map, Markers, and Zones",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Update a mission marker position.",
+          "aliases": [
+            "PATCH /api/markers/{object_destination_hash}/position"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Marker and zone content"
         },
         {
-          "operation": "PATCH /api/markers/{object_destination_hash}/position",
-          "description": "Update marker coordinates."
+          "operation": "mission.zone.list",
+          "group": "Map, Markers, and Zones",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List zones.",
+          "aliases": [
+            "GET /api/zones"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Marker and zone content"
         },
         {
-          "operation": "GET /api/zones",
-          "description": "List stored operational zones."
+          "operation": "mission.zone.create",
+          "group": "Map, Markers, and Zones",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create a zone.",
+          "aliases": [
+            "POST /api/zones"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Marker and zone content"
         },
         {
-          "operation": "POST /api/zones",
-          "description": "Create a new operational zone."
+          "operation": "mission.zone.patch",
+          "group": "Map, Markers, and Zones",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Update a zone.",
+          "aliases": [
+            "PATCH /api/zones/{zone_id}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Marker and zone content"
         },
         {
-          "operation": "PATCH /api/zones/{zone_id}",
-          "description": "Update zone metadata and/or polygon points."
-        },
-        {
-          "operation": "DELETE /api/zones/{zone_id}",
-          "description": "Delete an operational zone."
+          "operation": "mission.zone.delete",
+          "group": "Map, Markers, and Zones",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Delete a zone.",
+          "aliases": [
+            "DELETE /api/zones/{zone_id}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Marker and zone content"
         }
       ]
     },
@@ -173,84 +382,172 @@
       "name": "R3AKT Mission Core",
       "operations": [
         {
-          "operation": "GET /api/r3akt/capabilities/{identity}",
-          "description": "List capability grants for an identity."
+          "operation": "mission.events.list",
+          "group": "R3AKT Mission Core",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "Return recent hub event log entries.",
+          "aliases": [
+            "GET /api/r3akt/events"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
         },
         {
-          "operation": "PUT /api/r3akt/capabilities/{identity}/{capability}",
-          "description": "Grant capability to identity."
+          "operation": "mission.registry.mission.upsert",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update a mission aggregate.",
+          "aliases": [
+            "POST /api/r3akt/missions"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "DELETE /api/r3akt/capabilities/{identity}/{capability}",
-          "description": "Revoke capability from identity."
+          "operation": "mission.registry.mission.get",
+          "group": "R3AKT Mission Core",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "Return one mission.",
+          "aliases": [
+            "GET /api/r3akt/missions/{mission_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "GET /api/r3akt/events",
-          "description": "List domain events."
+          "operation": "mission.registry.mission.list",
+          "group": "R3AKT Mission Core",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List missions.",
+          "aliases": [
+            "GET /api/r3akt/missions"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "GET /api/r3akt/log-entries",
-          "description": "List mission log entries."
+          "operation": "mission.registry.mission.patch",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Patch a mission.",
+          "aliases": [
+            "PATCH /api/r3akt/missions/{mission_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "POST /api/r3akt/log-entries",
-          "description": "Create or update mission log entry."
+          "operation": "mission.registry.mission.delete",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Delete a mission.",
+          "aliases": [
+            "DELETE /api/r3akt/missions/{mission_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "GET /api/r3akt/mission-changes",
-          "description": "List mission changes."
+          "operation": "mission.registry.mission.parent.set",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Set or clear a mission parent relationship.",
+          "aliases": [
+            "PUT /api/r3akt/missions/{mission_uid}/parent"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "POST /api/r3akt/mission-changes",
-          "description": "Create or update mission change."
+          "operation": "mission.registry.mission.rde.set",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Upsert the mission RDE role assignment.",
+          "aliases": [
+            "PUT /api/r3akt/missions/{mission_uid}/rde"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "GET /api/r3akt/missions",
-          "description": "List missions."
+          "operation": "mission.registry.mission_change.upsert",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update a mission change record.",
+          "aliases": [
+            "POST /api/r3akt/mission-changes"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "POST /api/r3akt/missions",
-          "description": "Create or update mission."
+          "operation": "mission.registry.mission_change.list",
+          "group": "R3AKT Mission Core",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List mission changes.",
+          "aliases": [
+            "GET /api/r3akt/mission-changes"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "GET /api/r3akt/missions/{mission_uid}",
-          "description": "Retrieve mission by identifier."
+          "operation": "mission.registry.log_entry.upsert",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update a log entry.",
+          "aliases": [
+            "POST /api/r3akt/log-entries"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "PATCH /api/r3akt/missions/{mission_uid}",
-          "description": "Patch mission fields."
+          "operation": "mission.registry.log_entry.list",
+          "group": "R3AKT Mission Core",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List log entries.",
+          "aliases": [
+            "GET /api/r3akt/log-entries"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission registry and audit"
         },
         {
-          "operation": "DELETE /api/r3akt/missions/{mission_uid}",
-          "description": "Soft-delete mission."
+          "operation": "mission.registry.mission.zone.link",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Link a mission to a zone.",
+          "aliases": [
+            "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "PUT /api/r3akt/missions/{mission_uid}/parent",
-          "description": "Set or clear mission parent."
-        },
-        {
-          "operation": "GET /api/r3akt/missions/{mission_uid}/rde",
-          "description": "Retrieve mission role descriptor."
-        },
-        {
-          "operation": "PUT /api/r3akt/missions/{mission_uid}/rde",
-          "description": "Create or update mission role descriptor."
-        },
-        {
-          "operation": "GET /api/r3akt/missions/{mission_uid}/zones",
-          "description": "List mission zone identifiers."
-        },
-        {
-          "operation": "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}",
-          "description": "Link mission to zone."
-        },
-        {
-          "operation": "DELETE /api/r3akt/missions/{mission_uid}/zones/{zone_id}",
-          "description": "Unlink mission from zone."
-        },
-        {
-          "operation": "GET /api/r3akt/snapshots",
-          "description": "List domain snapshots."
+          "operation": "mission.registry.mission.zone.unlink",
+          "group": "R3AKT Mission Core",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Unlink a mission from a zone.",
+          "aliases": [
+            "DELETE /api/r3akt/missions/{mission_uid}/zones/{zone_id}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         }
       ]
     },
@@ -258,84 +555,220 @@
       "name": "R3AKT Teams, People, and Skills",
       "operations": [
         {
-          "operation": "GET /api/r3akt/skills",
-          "description": "List skills."
+          "operation": "mission.registry.team.upsert",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update a team.",
+          "aliases": [
+            "POST /api/r3akt/teams"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "POST /api/r3akt/skills",
-          "description": "Create or update skill."
+          "operation": "mission.registry.team.get",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "Return one team.",
+          "aliases": [
+            "GET /api/r3akt/teams/{team_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "GET /api/r3akt/task-skill-requirements",
-          "description": "List task skill requirements."
+          "operation": "mission.registry.team.list",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List teams.",
+          "aliases": [
+            "GET /api/r3akt/teams"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "POST /api/r3akt/task-skill-requirements",
-          "description": "Create or update task skill requirement."
+          "operation": "mission.registry.team.delete",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Delete a team.",
+          "aliases": [
+            "DELETE /api/r3akt/teams/{team_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "GET /api/r3akt/team-member-skills",
-          "description": "List team member skills."
+          "operation": "mission.registry.team.mission.link",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Link a team to a mission.",
+          "aliases": [
+            "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "POST /api/r3akt/team-member-skills",
-          "description": "Create or update team member skill."
+          "operation": "mission.registry.team.mission.unlink",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Unlink a team from a mission.",
+          "aliases": [
+            "DELETE /api/r3akt/teams/{team_uid}/missions/{mission_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "GET /api/r3akt/team-members",
-          "description": "List team members."
+          "operation": "mission.registry.team_member.upsert",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update a team member.",
+          "aliases": [
+            "POST /api/r3akt/team-members"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "POST /api/r3akt/team-members",
-          "description": "Create or update team member."
+          "operation": "mission.registry.team_member.get",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "Return one team member.",
+          "aliases": [
+            "GET /api/r3akt/team-members/{team_member_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "GET /api/r3akt/team-members/{team_member_uid}",
-          "description": "Retrieve a team member by uid."
+          "operation": "mission.registry.team_member.list",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List team members.",
+          "aliases": [
+            "GET /api/r3akt/team-members"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "DELETE /api/r3akt/team-members/{team_member_uid}",
-          "description": "Delete a team member."
+          "operation": "mission.registry.team_member.delete",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Delete a team member.",
+          "aliases": [
+            "DELETE /api/r3akt/team-members/{team_member_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "GET /api/r3akt/team-members/{team_member_uid}/clients",
-          "description": "List linked client identities for a team member."
+          "operation": "mission.registry.team_member.client.link",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Link a team member to a client identity.",
+          "aliases": [
+            "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}",
-          "description": "Link a team member to a client identity."
+          "operation": "mission.registry.team_member.client.unlink",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Unlink a team member from a client identity.",
+          "aliases": [
+            "DELETE /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Teams and memberships"
         },
         {
-          "operation": "DELETE /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}",
-          "description": "Unlink a team member from a client identity."
+          "operation": "mission.registry.skill.upsert",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update a skill.",
+          "aliases": [
+            "POST /api/r3akt/skills"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "GET /api/r3akt/teams",
-          "description": "List teams."
+          "operation": "mission.registry.skill.list",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List skills.",
+          "aliases": [
+            "GET /api/r3akt/skills"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "POST /api/r3akt/teams",
-          "description": "Create or update team."
+          "operation": "mission.registry.team_member_skill.upsert",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update a team-member skill record.",
+          "aliases": [
+            "POST /api/r3akt/team-member-skills"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "GET /api/r3akt/teams/{team_uid}",
-          "description": "Retrieve a team by uid."
+          "operation": "mission.registry.team_member_skill.list",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List team-member skill records.",
+          "aliases": [
+            "GET /api/r3akt/team-member-skills"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "DELETE /api/r3akt/teams/{team_uid}",
-          "description": "Delete a team."
+          "operation": "mission.registry.task_skill_requirement.upsert",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update a task skill requirement.",
+          "aliases": [
+            "POST /api/r3akt/task-skill-requirements"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "GET /api/r3akt/teams/{team_uid}/missions",
-          "description": "List mission assignments for a team."
-        },
-        {
-          "operation": "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
-          "description": "Link a team to a mission."
-        },
-        {
-          "operation": "DELETE /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
-          "description": "Unlink a team from a mission."
+          "operation": "mission.registry.task_skill_requirement.list",
+          "group": "R3AKT Teams, People, and Skills",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List task skill requirements.",
+          "aliases": [
+            "GET /api/r3akt/task-skill-requirements"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         }
       ]
     },
@@ -343,40 +776,112 @@
       "name": "R3AKT Assets and Assignments",
       "operations": [
         {
-          "operation": "GET /api/r3akt/assets",
-          "description": "List assets."
+          "operation": "mission.registry.asset.upsert",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update an asset.",
+          "aliases": [
+            "POST /api/r3akt/assets"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "POST /api/r3akt/assets",
-          "description": "Create or update asset."
+          "operation": "mission.registry.asset.get",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "Return one asset.",
+          "aliases": [
+            "GET /api/r3akt/assets/{asset_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "GET /api/r3akt/assets/{asset_uid}",
-          "description": "Retrieve an asset by uid."
+          "operation": "mission.registry.asset.list",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List assets.",
+          "aliases": [
+            "GET /api/r3akt/assets"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "DELETE /api/r3akt/assets/{asset_uid}",
-          "description": "Delete an asset."
+          "operation": "mission.registry.asset.delete",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Delete an asset.",
+          "aliases": [
+            "DELETE /api/r3akt/assets/{asset_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "GET /api/r3akt/assignments",
-          "description": "List mission task assignments."
+          "operation": "mission.registry.assignment.upsert",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create or update an assignment.",
+          "aliases": [
+            "POST /api/r3akt/assignments"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "POST /api/r3akt/assignments",
-          "description": "Create or update assignment."
+          "operation": "mission.registry.assignment.list",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "query",
+          "transport_variant": "mission_sync",
+          "description": "List assignments.",
+          "aliases": [
+            "GET /api/r3akt/assignments"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "PUT /api/r3akt/assignments/{assignment_uid}/assets",
-          "description": "Replace assignment asset links."
+          "operation": "mission.registry.assignment.asset.set",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Replace the assignment asset set.",
+          "aliases": [
+            "PUT /api/r3akt/assignments/{assignment_uid}/assets"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}",
-          "description": "Link assignment to asset."
+          "operation": "mission.registry.assignment.asset.link",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Link one asset to an assignment.",
+          "aliases": [
+            "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         },
         {
-          "operation": "DELETE /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}",
-          "description": "Unlink assignment from asset."
+          "operation": "mission.registry.assignment.asset.unlink",
+          "group": "R3AKT Assets and Assignments",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Unlink one asset from an assignment.",
+          "aliases": [
+            "DELETE /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Assets, skills, and assignments"
         }
       ]
     },
@@ -384,612 +889,1928 @@
       "name": "Checklists",
       "operations": [
         {
-          "operation": "GET /checklists",
-          "description": "List active checklists."
+          "operation": "checklist.template.list",
+          "group": "Checklists",
+          "kind": "query",
+          "transport_variant": "checklist",
+          "description": "List checklist templates.",
+          "aliases": [
+            "GET /checklists/templates"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Template commands"
         },
         {
-          "operation": "POST /checklists",
-          "description": "Create online checklist."
+          "operation": "checklist.template.get",
+          "group": "Checklists",
+          "kind": "query",
+          "transport_variant": "checklist",
+          "description": "Return one checklist template.",
+          "aliases": [
+            "GET /checklists/templates/{template_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Template commands"
         },
         {
-          "operation": "POST /checklists/import/csv",
-          "description": "Import checklist from CSV."
+          "operation": "checklist.template.create",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Create a checklist template.",
+          "aliases": [
+            "POST /checklists/templates"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Template commands"
         },
         {
-          "operation": "POST /checklists/offline",
-          "description": "Create offline checklist."
+          "operation": "checklist.template.update",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Update a checklist template.",
+          "aliases": [
+            "PATCH /checklists/templates/{template_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Template commands"
         },
         {
-          "operation": "GET /checklists/templates",
-          "description": "List checklist templates."
+          "operation": "checklist.template.clone",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Clone a checklist template.",
+          "aliases": [
+            "POST /checklists/templates/{template_id}/clone"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Template commands"
         },
         {
-          "operation": "POST /checklists/templates",
-          "description": "Create checklist template."
+          "operation": "checklist.template.delete",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Delete a checklist template.",
+          "aliases": [
+            "DELETE /checklists/templates/{template_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Template commands"
         },
         {
-          "operation": "GET /checklists/templates/{template_id}",
-          "description": "Get checklist template details."
+          "operation": "checklist.list.active",
+          "group": "Checklists",
+          "kind": "query",
+          "transport_variant": "checklist",
+          "description": "List active checklists.",
+          "aliases": [
+            "GET /checklists"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "PATCH /checklists/templates/{template_id}",
-          "description": "Update checklist template."
+          "operation": "checklist.create.online",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Create an online checklist.",
+          "aliases": [
+            "POST /checklists"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "DELETE /checklists/templates/{template_id}",
-          "description": "Delete checklist template."
+          "operation": "checklist.create.offline",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Create an offline checklist.",
+          "aliases": [
+            "POST /checklists/offline"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "POST /checklists/templates/{template_id}/clone",
-          "description": "Clone checklist template."
+          "operation": "checklist.update",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Update a checklist.",
+          "aliases": [
+            "PATCH /checklists/{checklist_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "GET /checklists/{checklist_id}",
-          "description": "Get checklist details."
+          "operation": "checklist.delete",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Delete a checklist.",
+          "aliases": [
+            "DELETE /checklists/{checklist_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "PATCH /checklists/{checklist_id}",
-          "description": "Update checklist metadata and mission link."
+          "operation": "checklist.import.csv",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Import a checklist from CSV-shaped payload data.",
+          "aliases": [
+            "POST /checklists/import/csv"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "DELETE /checklists/{checklist_id}",
-          "description": "Delete checklist instance."
+          "operation": "checklist.join",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Join a checklist as the sending identity.",
+          "aliases": [
+            "POST /checklists/{checklist_id}/join"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "POST /checklists/{checklist_id}/feeds/{feed_id}",
-          "description": "Publish checklist to mission feed."
+          "operation": "checklist.get",
+          "group": "Checklists",
+          "kind": "query",
+          "transport_variant": "checklist",
+          "description": "Return one checklist.",
+          "aliases": [
+            "GET /checklists/{checklist_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "POST /checklists/{checklist_id}/join",
-          "description": "Join checklist updates."
+          "operation": "checklist.upload",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Upload a checklist state snapshot.",
+          "aliases": [
+            "POST /checklists/{checklist_id}/upload"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "POST /checklists/{checklist_id}/tasks",
-          "description": "Add checklist task row."
+          "operation": "checklist.feed.publish",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Publish a checklist feed update.",
+          "aliases": [
+            "POST /checklists/{checklist_id}/feeds/{feed_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist lifecycle commands"
         },
         {
-          "operation": "DELETE /checklists/{checklist_id}/tasks/{task_id}",
-          "description": "Delete checklist task row."
+          "operation": "checklist.task.status.set",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Update task status.",
+          "aliases": [
+            "POST /checklists/{checklist_id}/tasks/{task_id}/status"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist task editing commands"
         },
         {
-          "operation": "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}",
-          "description": "Set checklist task cell value."
+          "operation": "checklist.task.row.add",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Add a checklist task row.",
+          "aliases": [
+            "POST /checklists/{checklist_id}/tasks"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist task editing commands"
         },
         {
-          "operation": "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style",
-          "description": "Set checklist task row style."
+          "operation": "checklist.task.row.delete",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Delete a checklist task row.",
+          "aliases": [
+            "DELETE /checklists/{checklist_id}/tasks/{task_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist task editing commands"
         },
         {
-          "operation": "POST /checklists/{checklist_id}/tasks/{task_id}/status",
-          "description": "Set checklist task status."
+          "operation": "checklist.task.row.style.set",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Update row styling.",
+          "aliases": [
+            "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist task editing commands"
         },
         {
-          "operation": "POST /checklists/{checklist_id}/upload",
-          "description": "Upload checklist and mark synced."
+          "operation": "checklist.task.cell.set",
+          "group": "Checklists",
+          "kind": "command",
+          "transport_variant": "checklist",
+          "description": "Update a single checklist task cell.",
+          "aliases": [
+            "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}"
+          ],
+          "section": "R3AKT checklist LXMF commands",
+          "subsection": "Checklist task editing commands"
+        }
+      ]
+    },
+    {
+      "name": "Hub Admin and Legacy Command Parity",
+      "operations": [
+        {
+          "operation": "ListIdentities",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "List identity moderation state.",
+          "aliases": [
+            "GET /Identities"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "BanIdentity",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Ban an identity.",
+          "aliases": [
+            "POST /Client/{id}/Ban"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "UnbanIdentity",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Remove ban or blackhole state from an identity.",
+          "aliases": [
+            "POST /Client/{id}/Unban"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "BlackholeIdentity",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Blackhole an identity.",
+          "aliases": [
+            "POST /Client/{id}/Blackhole"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "CreateTopic",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Create a topic.",
+          "aliases": [],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "PatchTopic",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Update a topic.",
+          "aliases": [],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "DeleteTopic",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Delete a topic.",
+          "aliases": [],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "AssociateTopicID",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Associate inbound attachments on the same LXMF message with a topic.",
+          "aliases": [
+            "POST /Topic/Associate"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "ListSubscriber",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "List subscriber entries.",
+          "aliases": [
+            "GET /Subscriber"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "CreateSubscriber",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Create a subscriber record. If `Destination` is omitted, the sender is used.",
+          "aliases": [
+            "POST /Subscriber"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "AddSubscriber",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Alias of `CreateSubscriber`.",
+          "aliases": [
+            "POST /Subscriber/Add"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "RetrieveSubscriber",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return one subscriber by ID.",
+          "aliases": [
+            "GET /Subscriber/{id}"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "DeleteSubscriber",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Delete a subscriber.",
+          "aliases": [
+            "DELETE /Subscriber"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "RemoveSubscriber",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Alias of `DeleteSubscriber`.",
+          "aliases": [],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "PatchSubscriber",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Update subscriber metadata.",
+          "aliases": [
+            "PATCH /Subscriber"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "GetConfig",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return the current `config.ini` text.",
+          "aliases": [
+            "GET /Config"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "ValidateConfig",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Validate `config.ini` text without applying it.",
+          "aliases": [
+            "POST /Config/Validate"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "ApplyConfig",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Apply new `config.ini` text.",
+          "aliases": [
+            "PUT /Config"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "RollbackConfig",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Roll back `config.ini` using the latest or specified backup.",
+          "aliases": [
+            "POST /Config/Rollback"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "FlushTelemetry",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Delete stored telemetry snapshots.",
+          "aliases": [
+            "POST /Command/FlushTelemetry"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "ReloadConfig",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "legacy",
+          "description": "Reload config from disk.",
+          "aliases": [
+            "POST /Command/ReloadConfig"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "DumpRouting",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "query",
+          "transport_variant": "legacy",
+          "description": "Return connected destination hashes.",
+          "aliases": [
+            "GET /Command/DumpRouting"
+          ],
+          "section": "Legacy / plugin commands",
+          "subsection": "Protected / admin commands"
+        },
+        {
+          "operation": "topic.create",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Create a topic through the mission-sync API.",
+          "aliases": [
+            "POST /Topic"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
+        },
+        {
+          "operation": "topic.patch",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Patch a topic through the mission-sync API.",
+          "aliases": [
+            "PATCH /Topic"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
+        },
+        {
+          "operation": "topic.delete",
+          "group": "Hub Admin and Legacy Command Parity",
+          "kind": "command",
+          "transport_variant": "mission_sync",
+          "description": "Delete a topic through the mission-sync API.",
+          "aliases": [
+            "DELETE /Topic"
+          ],
+          "section": "R3AKT mission-sync LXMF commands",
+          "subsection": "Mission control and topic bridge"
         }
       ]
     }
   ],
   "operations": [
     {
-      "operation": "DELETE /api/r3akt/assets/{asset_uid}",
-      "description": "Delete an asset.",
-      "group": "R3AKT Assets and Assignments"
+      "operation": "Help",
+      "group": "Core Discovery and Session",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return a Markdown list of available legacy/plugin commands.",
+      "aliases": [
+        "GET /Help"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "DELETE /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}",
-      "description": "Unlink assignment from asset.",
-      "group": "R3AKT Assets and Assignments"
+      "operation": "Examples",
+      "group": "Core Discovery and Session",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return Markdown examples for legacy/plugin command payloads.",
+      "aliases": [
+        "GET /Examples"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "DELETE /api/r3akt/capabilities/{identity}/{capability}",
-      "description": "Revoke capability from identity.",
-      "group": "R3AKT Mission Core"
+      "operation": "join",
+      "group": "Core Discovery and Session",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Register the sender LXMF destination with the hub connection list.",
+      "aliases": [],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "DELETE /api/r3akt/missions/{mission_uid}",
-      "description": "Soft-delete mission.",
-      "group": "R3AKT Mission Core"
+      "operation": "leave",
+      "group": "Core Discovery and Session",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Remove the sender LXMF destination from the hub connection list.",
+      "aliases": [],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "DELETE /api/r3akt/missions/{mission_uid}/zones/{zone_id}",
-      "description": "Unlink mission from zone.",
-      "group": "R3AKT Mission Core"
+      "operation": "getAppInfo",
+      "group": "Core Discovery and Session",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return app metadata such as name, version, and Reticulum destination.",
+      "aliases": [
+        "GET /api/v1/app/info"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "DELETE /api/r3akt/team-members/{team_member_uid}",
-      "description": "Delete a team member.",
-      "group": "R3AKT Teams, People, and Skills"
+      "operation": "GetStatus",
+      "group": "Core Discovery and Session",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return hub status, counts, uptime, and telemetry summary.",
+      "aliases": [
+        "GET /Status"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
     },
     {
-      "operation": "DELETE /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}",
-      "description": "Unlink a team member from a client identity.",
-      "group": "R3AKT Teams, People, and Skills"
+      "operation": "ListEvents",
+      "group": "Core Discovery and Session",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return recent event log entries.",
+      "aliases": [
+        "GET /Events"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
     },
     {
-      "operation": "DELETE /api/r3akt/teams/{team_uid}",
-      "description": "Delete a team.",
-      "group": "R3AKT Teams, People, and Skills"
+      "operation": "ListClients",
+      "group": "Core Discovery and Session",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "List joined LXMF clients.",
+      "aliases": [
+        "GET /Client"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
     },
     {
-      "operation": "DELETE /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
-      "description": "Unlink a team from a mission.",
-      "group": "R3AKT Teams, People, and Skills"
+      "operation": "mission.join",
+      "group": "Core Discovery and Session",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Join the mission transport identity. Defaults to the LXMF sender identity.",
+      "aliases": [
+        "POST /RCH",
+        "POST /RTH"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
     },
     {
-      "operation": "DELETE /api/zones/{zone_id}",
-      "description": "Delete an operational zone.",
-      "group": "Map, Markers, and Zones"
+      "operation": "mission.leave",
+      "group": "Core Discovery and Session",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Leave the mission transport identity. Defaults to the LXMF sender identity.",
+      "aliases": [
+        "PUT /RCH",
+        "PUT /RTH"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
     },
     {
-      "operation": "DELETE /checklists/{checklist_id}",
-      "description": "Delete checklist instance.",
-      "group": "Checklists"
+      "operation": "TelemetryRequest",
+      "group": "Telemetry and Live Status",
+      "kind": "query",
+      "transport_variant": "telemetry",
+      "description": "Return telemetry snapshots via `FIELD_TELEMETRY_STREAM`.",
+      "aliases": [
+        "GET /Telemetry"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "DELETE /checklists/{checklist_id}/tasks/{task_id}",
-      "description": "Delete checklist task row.",
-      "group": "Checklists"
+      "operation": "mission.message.send",
+      "group": "Messaging and Chat",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Send a message via the hub from the mission-sync path.",
+      "aliases": [
+        "POST /Message"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
     },
     {
-      "operation": "DELETE /checklists/templates/{template_id}",
-      "description": "Delete checklist template.",
-      "group": "Checklists"
+      "operation": "ListTopic",
+      "group": "Topics and Distribution",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "List registered topics.",
+      "aliases": [],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "DELETE /File/{id}",
-      "description": "Delete a stored file by its ID.",
-      "group": "Files and Media"
+      "operation": "RetrieveTopic",
+      "group": "Topics and Distribution",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return one topic by ID.",
+      "aliases": [
+        "GET /Topic/{id}"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "DELETE /Image/{id}",
-      "description": "Delete a stored image by its ID.",
-      "group": "Files and Media"
+      "operation": "SubscribeTopic",
+      "group": "Topics and Distribution",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Subscribe the sender to a topic.",
+      "aliases": [],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "GET /api/markers",
-      "description": "List stored operator markers.",
-      "group": "Map, Markers, and Zones"
+      "operation": "topic.list",
+      "group": "Topics and Distribution",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List topics through the mission-sync API.",
+      "aliases": [
+        "GET /Topic"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
     },
     {
-      "operation": "GET /api/markers/symbols",
-      "description": "List available marker symbols.",
-      "group": "Map, Markers, and Zones"
+      "operation": "topic.subscribe",
+      "group": "Topics and Distribution",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Subscribe a destination to a topic through the mission-sync API.",
+      "aliases": [
+        "POST /Topic/Subscribe"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
     },
     {
-      "operation": "GET /api/r3akt/assets",
-      "description": "List assets.",
-      "group": "R3AKT Assets and Assignments"
-    },
-    {
-      "operation": "GET /api/r3akt/assets/{asset_uid}",
-      "description": "Retrieve an asset by uid.",
-      "group": "R3AKT Assets and Assignments"
-    },
-    {
-      "operation": "GET /api/r3akt/assignments",
-      "description": "List mission task assignments.",
-      "group": "R3AKT Assets and Assignments"
-    },
-    {
-      "operation": "GET /api/r3akt/capabilities/{identity}",
-      "description": "List capability grants for an identity.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/events",
-      "description": "List domain events.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/log-entries",
-      "description": "List mission log entries.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/mission-changes",
-      "description": "List mission changes.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/missions",
-      "description": "List missions.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/missions/{mission_uid}",
-      "description": "Retrieve mission by identifier.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/missions/{mission_uid}/rde",
-      "description": "Retrieve mission role descriptor.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/missions/{mission_uid}/zones",
-      "description": "List mission zone identifiers.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/skills",
-      "description": "List skills.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/r3akt/snapshots",
-      "description": "List domain snapshots.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "GET /api/r3akt/task-skill-requirements",
-      "description": "List task skill requirements.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/r3akt/team-member-skills",
-      "description": "List team member skills.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/r3akt/team-members",
-      "description": "List team members.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/r3akt/team-members/{team_member_uid}",
-      "description": "Retrieve a team member by uid.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/r3akt/team-members/{team_member_uid}/clients",
-      "description": "List linked client identities for a team member.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/r3akt/teams",
-      "description": "List teams.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/r3akt/teams/{team_uid}",
-      "description": "Retrieve a team by uid.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/r3akt/teams/{team_uid}/missions",
-      "description": "List mission assignments for a team.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "GET /api/v1/app/info",
-      "description": "returns the configured application metadata and component versions",
-      "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "GET /api/zones",
-      "description": "List stored operational zones.",
-      "group": "Map, Markers, and Zones"
-    },
-    {
-      "operation": "GET /checklists",
-      "description": "List active checklists.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "GET /checklists/{checklist_id}",
-      "description": "Get checklist details.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "GET /checklists/templates",
-      "description": "List checklist templates.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "GET /checklists/templates/{template_id}",
-      "description": "Get checklist template details.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "GET /Client",
-      "description": "Lists all clients currently connected to the Hub, including their Reticulum identities and connection metadata",
-      "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "GET /Events",
-      "description": "Return recent hub events.",
-      "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "GET /events/system",
-      "description": "WebSocket stream for system status + events.",
-      "group": "Telemetry and Live Status"
-    },
-    {
-      "operation": "GET /Examples",
-      "description": "Return command descriptions and JSON payload examples.",
-      "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "GET /File",
+      "operation": "ListFiles",
+      "group": "Files and Media",
+      "kind": "query",
+      "transport_variant": "legacy",
       "description": "List stored file attachments.",
-      "group": "Files and Media"
+      "aliases": [
+        "GET /File"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "GET /File/{id}",
-      "description": "Retrieve a stored file by its ID.",
-      "group": "Files and Media"
+      "operation": "ListImages",
+      "group": "Files and Media",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "List stored image attachments.",
+      "aliases": [
+        "GET /Image"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "GET /File/{id}/raw",
-      "description": "Download a stored file by its ID (raw bytes).",
-      "group": "Files and Media"
+      "operation": "RetrieveFile",
+      "group": "Files and Media",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return a stored file via `FIELD_FILE_ATTACHMENTS`.",
+      "aliases": [
+        "GET /File/{id}",
+        "GET /File/{id}/raw"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "GET /Help",
-      "description": "Return the list of supported commands.",
-      "group": "Core Discovery and Session"
+      "operation": "RetrieveImage",
+      "group": "Files and Media",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return a stored image via `FIELD_IMAGE` and `FIELD_FILE_ATTACHMENTS`.",
+      "aliases": [
+        "GET /Image/{id}",
+        "GET /Image/{id}/raw"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Public commands"
     },
     {
-      "operation": "GET /Image",
-      "description": "List stored images.",
-      "group": "Files and Media"
+      "operation": "mission.marker.list",
+      "group": "Map, Markers, and Zones",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List mission markers.",
+      "aliases": [
+        "GET /api/markers"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Marker and zone content"
     },
     {
-      "operation": "GET /Image/{id}",
-      "description": "Retrieve a stored image by its ID.",
-      "group": "Files and Media"
+      "operation": "mission.marker.create",
+      "group": "Map, Markers, and Zones",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create a mission marker.",
+      "aliases": [
+        "POST /api/markers"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Marker and zone content"
     },
     {
-      "operation": "GET /Image/{id}/raw",
-      "description": "Download a stored image by its ID (raw bytes).",
-      "group": "Files and Media"
+      "operation": "mission.marker.position.patch",
+      "group": "Map, Markers, and Zones",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Update a mission marker position.",
+      "aliases": [
+        "PATCH /api/markers/{object_destination_hash}/position"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Marker and zone content"
     },
     {
-      "operation": "GET /messages/stream",
-      "description": "WebSocket stream for inbound/outbound messages.",
-      "group": "Messaging and Chat"
+      "operation": "mission.zone.list",
+      "group": "Map, Markers, and Zones",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List zones.",
+      "aliases": [
+        "GET /api/zones"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Marker and zone content"
     },
     {
-      "operation": "GET /Status",
-      "description": "Return dashboard status metrics.",
-      "group": "Core Discovery and Session"
+      "operation": "mission.zone.create",
+      "group": "Map, Markers, and Zones",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create a zone.",
+      "aliases": [
+        "POST /api/zones"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Marker and zone content"
     },
     {
-      "operation": "GET /Telemetry",
-      "description": "Retrieve telemetry snapshots since a timestamp.",
-      "group": "Telemetry and Live Status"
+      "operation": "mission.zone.patch",
+      "group": "Map, Markers, and Zones",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Update a zone.",
+      "aliases": [
+        "PATCH /api/zones/{zone_id}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Marker and zone content"
     },
     {
-      "operation": "GET /telemetry/stream",
-      "description": "WebSocket stream for live telemetry.",
-      "group": "Telemetry and Live Status"
+      "operation": "mission.zone.delete",
+      "group": "Map, Markers, and Zones",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Delete a zone.",
+      "aliases": [
+        "DELETE /api/zones/{zone_id}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Marker and zone content"
     },
     {
-      "operation": "GET /Topic",
-      "description": "Retrieves a list of all Topic",
-      "group": "Topics and Distribution"
+      "operation": "mission.events.list",
+      "group": "R3AKT Mission Core",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "Return recent hub event log entries.",
+      "aliases": [
+        "GET /api/r3akt/events"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
     },
     {
-      "operation": "GET /Topic/{id}",
-      "description": "retrieve an existing Topic record based on the provided ID.",
-      "group": "Topics and Distribution"
+      "operation": "mission.registry.mission.upsert",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update a mission aggregate.",
+      "aliases": [
+        "POST /api/r3akt/missions"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "PATCH /api/markers/{object_destination_hash}/position",
-      "description": "Update marker coordinates.",
-      "group": "Map, Markers, and Zones"
+      "operation": "mission.registry.mission.get",
+      "group": "R3AKT Mission Core",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "Return one mission.",
+      "aliases": [
+        "GET /api/r3akt/missions/{mission_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "PATCH /api/r3akt/missions/{mission_uid}",
-      "description": "Patch mission fields.",
-      "group": "R3AKT Mission Core"
+      "operation": "mission.registry.mission.list",
+      "group": "R3AKT Mission Core",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List missions.",
+      "aliases": [
+        "GET /api/r3akt/missions"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "PATCH /api/zones/{zone_id}",
-      "description": "Update zone metadata and/or polygon points.",
-      "group": "Map, Markers, and Zones"
+      "operation": "mission.registry.mission.patch",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Patch a mission.",
+      "aliases": [
+        "PATCH /api/r3akt/missions/{mission_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "PATCH /checklists/{checklist_id}",
-      "description": "Update checklist metadata and mission link.",
-      "group": "Checklists"
+      "operation": "mission.registry.mission.delete",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Delete a mission.",
+      "aliases": [
+        "DELETE /api/r3akt/missions/{mission_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}",
-      "description": "Set checklist task cell value.",
-      "group": "Checklists"
+      "operation": "mission.registry.mission.parent.set",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Set or clear a mission parent relationship.",
+      "aliases": [
+        "PUT /api/r3akt/missions/{mission_uid}/parent"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style",
-      "description": "Set checklist task row style.",
-      "group": "Checklists"
+      "operation": "mission.registry.mission.rde.set",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Upsert the mission RDE role assignment.",
+      "aliases": [
+        "PUT /api/r3akt/missions/{mission_uid}/rde"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "PATCH /checklists/templates/{template_id}",
-      "description": "Update checklist template.",
-      "group": "Checklists"
+      "operation": "mission.registry.mission_change.upsert",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update a mission change record.",
+      "aliases": [
+        "POST /api/r3akt/mission-changes"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "POST /api/markers",
-      "description": "Create a new operator marker.",
-      "group": "Map, Markers, and Zones"
+      "operation": "mission.registry.mission_change.list",
+      "group": "R3AKT Mission Core",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List mission changes.",
+      "aliases": [
+        "GET /api/r3akt/mission-changes"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "POST /api/r3akt/assets",
-      "description": "Create or update asset.",
-      "group": "R3AKT Assets and Assignments"
+      "operation": "mission.registry.log_entry.upsert",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update a log entry.",
+      "aliases": [
+        "POST /api/r3akt/log-entries"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "POST /api/r3akt/assignments",
-      "description": "Create or update assignment.",
-      "group": "R3AKT Assets and Assignments"
+      "operation": "mission.registry.log_entry.list",
+      "group": "R3AKT Mission Core",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List log entries.",
+      "aliases": [
+        "GET /api/r3akt/log-entries"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission registry and audit"
     },
     {
-      "operation": "POST /api/r3akt/log-entries",
-      "description": "Create or update mission log entry.",
-      "group": "R3AKT Mission Core"
+      "operation": "mission.registry.mission.zone.link",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Link a mission to a zone.",
+      "aliases": [
+        "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
     },
     {
-      "operation": "POST /api/r3akt/mission-changes",
-      "description": "Create or update mission change.",
-      "group": "R3AKT Mission Core"
+      "operation": "mission.registry.mission.zone.unlink",
+      "group": "R3AKT Mission Core",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Unlink a mission from a zone.",
+      "aliases": [
+        "DELETE /api/r3akt/missions/{mission_uid}/zones/{zone_id}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
     },
     {
-      "operation": "POST /api/r3akt/missions",
-      "description": "Create or update mission.",
-      "group": "R3AKT Mission Core"
+      "operation": "mission.registry.team.upsert",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update a team.",
+      "aliases": [
+        "POST /api/r3akt/teams"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
     },
     {
-      "operation": "POST /api/r3akt/skills",
-      "description": "Create or update skill.",
-      "group": "R3AKT Teams, People, and Skills"
+      "operation": "mission.registry.team.get",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "Return one team.",
+      "aliases": [
+        "GET /api/r3akt/teams/{team_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
     },
     {
-      "operation": "POST /api/r3akt/task-skill-requirements",
-      "description": "Create or update task skill requirement.",
-      "group": "R3AKT Teams, People, and Skills"
+      "operation": "mission.registry.team.list",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List teams.",
+      "aliases": [
+        "GET /api/r3akt/teams"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
     },
     {
-      "operation": "POST /api/r3akt/team-member-skills",
-      "description": "Create or update team member skill.",
-      "group": "R3AKT Teams, People, and Skills"
+      "operation": "mission.registry.team.delete",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Delete a team.",
+      "aliases": [
+        "DELETE /api/r3akt/teams/{team_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
     },
     {
-      "operation": "POST /api/r3akt/team-members",
-      "description": "Create or update team member.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "POST /api/r3akt/teams",
-      "description": "Create or update team.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "POST /api/zones",
-      "description": "Create a new operational zone.",
-      "group": "Map, Markers, and Zones"
-    },
-    {
-      "operation": "POST /checklists",
-      "description": "Create online checklist.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/{checklist_id}/feeds/{feed_id}",
-      "description": "Publish checklist to mission feed.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/{checklist_id}/join",
-      "description": "Join checklist updates.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/{checklist_id}/tasks",
-      "description": "Add checklist task row.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/{checklist_id}/tasks/{task_id}/status",
-      "description": "Set checklist task status.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/{checklist_id}/upload",
-      "description": "Upload checklist and mark synced.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/import/csv",
-      "description": "Import checklist from CSV.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/offline",
-      "description": "Create offline checklist.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/templates",
-      "description": "Create checklist template.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /checklists/templates/{template_id}/clone",
-      "description": "Clone checklist template.",
-      "group": "Checklists"
-    },
-    {
-      "operation": "POST /Message",
-      "description": "Send a message into the hub.",
-      "group": "Messaging and Chat"
-    },
-    {
-      "operation": "POST /RCH",
-      "description": "Join an RCH instance as the supplied identity.",
-      "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "POST /RTH",
-      "description": "Legacy compatibility alias for join.",
-      "group": "Core Discovery and Session"
-    },
-    {
-      "operation": "POST /Topic/Subscribe",
-      "description": "Subscribe a destination to a topic (Destination defaults to the authenticated identity when omitted).",
-      "group": "Topics and Distribution"
-    },
-    {
-      "operation": "PUT /api/r3akt/assignments/{assignment_uid}/assets",
-      "description": "Replace assignment asset links.",
-      "group": "R3AKT Assets and Assignments"
-    },
-    {
-      "operation": "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}",
-      "description": "Link assignment to asset.",
-      "group": "R3AKT Assets and Assignments"
-    },
-    {
-      "operation": "PUT /api/r3akt/capabilities/{identity}/{capability}",
-      "description": "Grant capability to identity.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "PUT /api/r3akt/missions/{mission_uid}/parent",
-      "description": "Set or clear mission parent.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "PUT /api/r3akt/missions/{mission_uid}/rde",
-      "description": "Create or update mission role descriptor.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "PUT /api/r3akt/missions/{mission_uid}/zones/{zone_id}",
-      "description": "Link mission to zone.",
-      "group": "R3AKT Mission Core"
-    },
-    {
-      "operation": "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}",
-      "description": "Link a team member to a client identity.",
-      "group": "R3AKT Teams, People, and Skills"
-    },
-    {
-      "operation": "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}",
+      "operation": "mission.registry.team.mission.link",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
       "description": "Link a team to a mission.",
-      "group": "R3AKT Teams, People, and Skills"
+      "aliases": [
+        "PUT /api/r3akt/teams/{team_uid}/missions/{mission_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
     },
     {
-      "operation": "PUT /RCH",
-      "description": "Leave an RCH instance as the supplied identity.",
-      "group": "Core Discovery and Session"
+      "operation": "mission.registry.team.mission.unlink",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Unlink a team from a mission.",
+      "aliases": [
+        "DELETE /api/r3akt/teams/{team_uid}/missions/{mission_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
     },
     {
-      "operation": "PUT /RTH",
-      "description": "Legacy compatibility alias for leave.",
-      "group": "Core Discovery and Session"
+      "operation": "mission.registry.team_member.upsert",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update a team member.",
+      "aliases": [
+        "POST /api/r3akt/team-members"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
+    },
+    {
+      "operation": "mission.registry.team_member.get",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "Return one team member.",
+      "aliases": [
+        "GET /api/r3akt/team-members/{team_member_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
+    },
+    {
+      "operation": "mission.registry.team_member.list",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List team members.",
+      "aliases": [
+        "GET /api/r3akt/team-members"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
+    },
+    {
+      "operation": "mission.registry.team_member.delete",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Delete a team member.",
+      "aliases": [
+        "DELETE /api/r3akt/team-members/{team_member_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
+    },
+    {
+      "operation": "mission.registry.team_member.client.link",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Link a team member to a client identity.",
+      "aliases": [
+        "PUT /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
+    },
+    {
+      "operation": "mission.registry.team_member.client.unlink",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Unlink a team member from a client identity.",
+      "aliases": [
+        "DELETE /api/r3akt/team-members/{team_member_uid}/clients/{client_identity}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Teams and memberships"
+    },
+    {
+      "operation": "mission.registry.skill.upsert",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update a skill.",
+      "aliases": [
+        "POST /api/r3akt/skills"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.skill.list",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List skills.",
+      "aliases": [
+        "GET /api/r3akt/skills"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.team_member_skill.upsert",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update a team-member skill record.",
+      "aliases": [
+        "POST /api/r3akt/team-member-skills"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.team_member_skill.list",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List team-member skill records.",
+      "aliases": [
+        "GET /api/r3akt/team-member-skills"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.task_skill_requirement.upsert",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update a task skill requirement.",
+      "aliases": [
+        "POST /api/r3akt/task-skill-requirements"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.task_skill_requirement.list",
+      "group": "R3AKT Teams, People, and Skills",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List task skill requirements.",
+      "aliases": [
+        "GET /api/r3akt/task-skill-requirements"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.asset.upsert",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update an asset.",
+      "aliases": [
+        "POST /api/r3akt/assets"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.asset.get",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "Return one asset.",
+      "aliases": [
+        "GET /api/r3akt/assets/{asset_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.asset.list",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List assets.",
+      "aliases": [
+        "GET /api/r3akt/assets"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.asset.delete",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Delete an asset.",
+      "aliases": [
+        "DELETE /api/r3akt/assets/{asset_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.assignment.upsert",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create or update an assignment.",
+      "aliases": [
+        "POST /api/r3akt/assignments"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.assignment.list",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "query",
+      "transport_variant": "mission_sync",
+      "description": "List assignments.",
+      "aliases": [
+        "GET /api/r3akt/assignments"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.assignment.asset.set",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Replace the assignment asset set.",
+      "aliases": [
+        "PUT /api/r3akt/assignments/{assignment_uid}/assets"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.assignment.asset.link",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Link one asset to an assignment.",
+      "aliases": [
+        "PUT /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "mission.registry.assignment.asset.unlink",
+      "group": "R3AKT Assets and Assignments",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Unlink one asset from an assignment.",
+      "aliases": [
+        "DELETE /api/r3akt/assignments/{assignment_uid}/assets/{asset_uid}"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Assets, skills, and assignments"
+    },
+    {
+      "operation": "checklist.template.list",
+      "group": "Checklists",
+      "kind": "query",
+      "transport_variant": "checklist",
+      "description": "List checklist templates.",
+      "aliases": [
+        "GET /checklists/templates"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Template commands"
+    },
+    {
+      "operation": "checklist.template.get",
+      "group": "Checklists",
+      "kind": "query",
+      "transport_variant": "checklist",
+      "description": "Return one checklist template.",
+      "aliases": [
+        "GET /checklists/templates/{template_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Template commands"
+    },
+    {
+      "operation": "checklist.template.create",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Create a checklist template.",
+      "aliases": [
+        "POST /checklists/templates"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Template commands"
+    },
+    {
+      "operation": "checklist.template.update",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Update a checklist template.",
+      "aliases": [
+        "PATCH /checklists/templates/{template_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Template commands"
+    },
+    {
+      "operation": "checklist.template.clone",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Clone a checklist template.",
+      "aliases": [
+        "POST /checklists/templates/{template_id}/clone"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Template commands"
+    },
+    {
+      "operation": "checklist.template.delete",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Delete a checklist template.",
+      "aliases": [
+        "DELETE /checklists/templates/{template_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Template commands"
+    },
+    {
+      "operation": "checklist.list.active",
+      "group": "Checklists",
+      "kind": "query",
+      "transport_variant": "checklist",
+      "description": "List active checklists.",
+      "aliases": [
+        "GET /checklists"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.create.online",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Create an online checklist.",
+      "aliases": [
+        "POST /checklists"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.create.offline",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Create an offline checklist.",
+      "aliases": [
+        "POST /checklists/offline"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.update",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Update a checklist.",
+      "aliases": [
+        "PATCH /checklists/{checklist_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.delete",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Delete a checklist.",
+      "aliases": [
+        "DELETE /checklists/{checklist_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.import.csv",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Import a checklist from CSV-shaped payload data.",
+      "aliases": [
+        "POST /checklists/import/csv"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.join",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Join a checklist as the sending identity.",
+      "aliases": [
+        "POST /checklists/{checklist_id}/join"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.get",
+      "group": "Checklists",
+      "kind": "query",
+      "transport_variant": "checklist",
+      "description": "Return one checklist.",
+      "aliases": [
+        "GET /checklists/{checklist_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.upload",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Upload a checklist state snapshot.",
+      "aliases": [
+        "POST /checklists/{checklist_id}/upload"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.feed.publish",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Publish a checklist feed update.",
+      "aliases": [
+        "POST /checklists/{checklist_id}/feeds/{feed_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist lifecycle commands"
+    },
+    {
+      "operation": "checklist.task.status.set",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Update task status.",
+      "aliases": [
+        "POST /checklists/{checklist_id}/tasks/{task_id}/status"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist task editing commands"
+    },
+    {
+      "operation": "checklist.task.row.add",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Add a checklist task row.",
+      "aliases": [
+        "POST /checklists/{checklist_id}/tasks"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist task editing commands"
+    },
+    {
+      "operation": "checklist.task.row.delete",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Delete a checklist task row.",
+      "aliases": [
+        "DELETE /checklists/{checklist_id}/tasks/{task_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist task editing commands"
+    },
+    {
+      "operation": "checklist.task.row.style.set",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Update row styling.",
+      "aliases": [
+        "PATCH /checklists/{checklist_id}/tasks/{task_id}/row-style"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist task editing commands"
+    },
+    {
+      "operation": "checklist.task.cell.set",
+      "group": "Checklists",
+      "kind": "command",
+      "transport_variant": "checklist",
+      "description": "Update a single checklist task cell.",
+      "aliases": [
+        "PATCH /checklists/{checklist_id}/tasks/{task_id}/cells/{column_id}"
+      ],
+      "section": "R3AKT checklist LXMF commands",
+      "subsection": "Checklist task editing commands"
+    },
+    {
+      "operation": "ListIdentities",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "List identity moderation state.",
+      "aliases": [
+        "GET /Identities"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "BanIdentity",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Ban an identity.",
+      "aliases": [
+        "POST /Client/{id}/Ban"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "UnbanIdentity",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Remove ban or blackhole state from an identity.",
+      "aliases": [
+        "POST /Client/{id}/Unban"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "BlackholeIdentity",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Blackhole an identity.",
+      "aliases": [
+        "POST /Client/{id}/Blackhole"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "CreateTopic",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Create a topic.",
+      "aliases": [],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "PatchTopic",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Update a topic.",
+      "aliases": [],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "DeleteTopic",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Delete a topic.",
+      "aliases": [],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "AssociateTopicID",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Associate inbound attachments on the same LXMF message with a topic.",
+      "aliases": [
+        "POST /Topic/Associate"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "ListSubscriber",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "List subscriber entries.",
+      "aliases": [
+        "GET /Subscriber"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "CreateSubscriber",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Create a subscriber record. If `Destination` is omitted, the sender is used.",
+      "aliases": [
+        "POST /Subscriber"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "AddSubscriber",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Alias of `CreateSubscriber`.",
+      "aliases": [
+        "POST /Subscriber/Add"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "RetrieveSubscriber",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return one subscriber by ID.",
+      "aliases": [
+        "GET /Subscriber/{id}"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "DeleteSubscriber",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Delete a subscriber.",
+      "aliases": [
+        "DELETE /Subscriber"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "RemoveSubscriber",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Alias of `DeleteSubscriber`.",
+      "aliases": [],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "PatchSubscriber",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Update subscriber metadata.",
+      "aliases": [
+        "PATCH /Subscriber"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "GetConfig",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return the current `config.ini` text.",
+      "aliases": [
+        "GET /Config"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "ValidateConfig",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Validate `config.ini` text without applying it.",
+      "aliases": [
+        "POST /Config/Validate"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "ApplyConfig",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Apply new `config.ini` text.",
+      "aliases": [
+        "PUT /Config"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "RollbackConfig",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Roll back `config.ini` using the latest or specified backup.",
+      "aliases": [
+        "POST /Config/Rollback"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "FlushTelemetry",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Delete stored telemetry snapshots.",
+      "aliases": [
+        "POST /Command/FlushTelemetry"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "ReloadConfig",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "legacy",
+      "description": "Reload config from disk.",
+      "aliases": [
+        "POST /Command/ReloadConfig"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "DumpRouting",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "query",
+      "transport_variant": "legacy",
+      "description": "Return connected destination hashes.",
+      "aliases": [
+        "GET /Command/DumpRouting"
+      ],
+      "section": "Legacy / plugin commands",
+      "subsection": "Protected / admin commands"
+    },
+    {
+      "operation": "topic.create",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Create a topic through the mission-sync API.",
+      "aliases": [
+        "POST /Topic"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
+    },
+    {
+      "operation": "topic.patch",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Patch a topic through the mission-sync API.",
+      "aliases": [
+        "PATCH /Topic"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
+    },
+    {
+      "operation": "topic.delete",
+      "group": "Hub Admin and Legacy Command Parity",
+      "kind": "command",
+      "transport_variant": "mission_sync",
+      "description": "Delete a topic through the mission-sync API.",
+      "aliases": [
+        "DELETE /Topic"
+      ],
+      "section": "R3AKT mission-sync LXMF commands",
+      "subsection": "Mission control and topic bridge"
     }
-  ]
+  ],
+  "alias_count": 111,
+  "query_operation_count": 40,
+  "command_operation_count": 75
 }

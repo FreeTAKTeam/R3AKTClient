@@ -1,0 +1,31 @@
+﻿{
+  "screenshot": {
+    "name": "projects/4350946208414714711/files/cde81199a11941f1902726e1e1bf46ae",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AOfcidWdgcDrT_RsdTTb1fRroBnQxY97nNKkE4QL_w6_eFPZIAxP-ALYcm3r7B1P-4ayQSZ4HKJQjQCCeGMZS6DU1L17vdcRDuxZj_IsZ5cp8d4IicYu5X8OqoR2LUA38jCI06G2U4LAihrxYBVYorVL-wIJwr5JAnpdetr55m7vVlM9IESFwL0GzV6UVVVWw04k5fmXBATIEruGsWBoB9BEoHxq-77fAV7qMDkazmVK_dlSntoQNP2-2hqn"
+  },
+  "htmlCode": {
+    "name": "projects/4350946208414714711/files/a82bfed7ef164e1bb5e7ece9171c688a",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzBjMDk3NWNkNmVlYTRlZTRiMTJlM2U3NTc3MjNjNGE0EgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "5b857a91b02f45bdb787f19c9dbe2885",
+  "generatedBy": "HatterAgent",
+  "width": "780",
+  "height": "1768",
+  "title": "Settings - Clean Header",
+  "prompt": "Update the header: keep the hamburger menu on the far left, center the page title 'SETTINGS', and show only the 'LIVE' indicator badge on the far right. Remove any other buttons from the header.",
+  "name": "projects/4350946208414714711/screens/5b857a91b02f45bdb787f19c9dbe2885",
+  "theme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#25d1f4",
+    "saturation": 3
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "HATTER_AGENT",
+    "status": "COMPLETE"
+  }
+}

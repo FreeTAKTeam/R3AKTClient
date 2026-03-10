@@ -25,6 +25,8 @@ interface NodeRuntimeBridge {
 
     String executeEnvelope(String envelopeJson);
 
+    String sendChatMessage(String requestJson);
+
     String nextEventJson(int timeoutMs);
 
     String takeLastErrorJson();

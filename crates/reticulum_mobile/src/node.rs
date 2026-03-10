@@ -15,6 +15,7 @@ use crate::types::{LogLevel, NodeConfig, NodeError, NodeEvent, NodeStatus};
 
 const APP_DESTINATION_NAME: (&str, &str) = ("r3akt", "emergency");
 const LXMF_DELIVERY_NAME: (&str, &str) = ("lxmf", "delivery");
+const EXECUTION_RESPONSE_TIMEOUT: Duration = Duration::from_secs(60);
 
 struct NodeInner {
     bus: EventBus,
@@ -88,9 +89,9 @@ impl Node {
         NodeLogger::global().set_bus(Some(inner.bus.clone()));
 
         if let Ok(guard) = inner.status.lock() {
-            inner
-                .bus
-                .emit(NodeEvent::StatusChanged { status: guard.clone() });
+            inner.bus.emit(NodeEvent::StatusChanged {
+                status: guard.clone(),
+            });
         }
 
         let runtime = Runtime::new().map_err(|_| NodeError::InternalError {})?;
@@ -136,7 +137,9 @@ impl Node {
 
         if let Ok(mut guard) = status.lock() {
             guard.running = false;
-            bus.emit(NodeEvent::StatusChanged { status: guard.clone() });
+            bus.emit(NodeEvent::StatusChanged {
+                status: guard.clone(),
+            });
         }
 
         Ok(())
@@ -159,13 +162,17 @@ impl Node {
             };
         };
 
-        inner.status.lock().map(|v| v.clone()).unwrap_or(NodeStatus {
-            running: false,
-            name: String::new(),
-            identity_hex: String::new(),
-            app_destination_hex: String::new(),
-            lxmf_destination_hex: String::new(),
-        })
+        inner
+            .status
+            .lock()
+            .map(|v| v.clone())
+            .unwrap_or(NodeStatus {
+                running: false,
+                name: String::new(),
+                identity_hex: String::new(),
+                app_destination_hex: String::new(),
+                lxmf_destination_hex: String::new(),
+            })
     }
 
     pub fn connect_peer(&self, destination_hex: String) -> Result<(), NodeError> {
@@ -227,8 +234,11 @@ impl Node {
         };
 
         let (resp_tx, resp_rx) = cb::bounded(1);
-        tx.send(Command::BroadcastBytes { bytes, resp: resp_tx })
-            .map_err(|_| NodeError::NotRunning {})?;
+        tx.send(Command::BroadcastBytes {
+            bytes,
+            resp: resp_tx,
+        })
+        .map_err(|_| NodeError::NotRunning {})?;
         resp_rx
             .recv_timeout(Duration::from_secs(10))
             .unwrap_or(Err(NodeError::Timeout {}))
@@ -289,9 +299,27 @@ impl Node {
         })
         .map_err(|_| NodeError::NotRunning {})?;
         resp_rx
-            .recv_timeout(Duration::from_secs(30))
+            .recv_timeout(EXECUTION_RESPONSE_TIMEOUT)
             .unwrap_or(Err(NodeError::Timeout {}))
     }
+
+    pub fn send_chat_message(&self, request_json: String) -> Result<String, NodeError> {
+        let tx = {
+            let inner = self.inner.lock().map_err(|_| NodeError::InternalError {})?;
+            inner.cmd_tx.clone().ok_or(NodeError::NotRunning {})?
+        };
+
+        let (resp_tx, resp_rx) = cb::bounded(1);
+        tx.send(Command::SendChatMessage {
+            request_json,
+            resp: resp_tx,
+        })
+        .map_err(|_| NodeError::NotRunning {})?;
+        resp_rx
+            .recv_timeout(EXECUTION_RESPONSE_TIMEOUT)
+            .unwrap_or(Err(NodeError::Timeout {}))
+    }
+
     pub fn refresh_hub_directory(&self) -> Result<(), NodeError> {
         let tx = {
             let inner = self.inner.lock().map_err(|_| NodeError::InternalError {})?;
@@ -302,7 +330,7 @@ impl Node {
         tx.send(Command::RefreshHubDirectory { resp: resp_tx })
             .map_err(|_| NodeError::NotRunning {})?;
         resp_rx
-            .recv_timeout(Duration::from_secs(30))
+            .recv_timeout(EXECUTION_RESPONSE_TIMEOUT)
             .unwrap_or(Err(NodeError::Timeout {}))
     }
 }
@@ -338,5 +366,3 @@ impl EventSubscription {
         self.closed.store(true, Ordering::Relaxed);
     }
 }
-
-

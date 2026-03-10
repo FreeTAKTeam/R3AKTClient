@@ -1,12 +1,7 @@
 import { createMemoryHistory } from "vue-router";
 import { describe, expect, it } from "vitest";
 
-import {
-  createAppRouter,
-  LEGACY_ROUTE_TARGETS,
-  MISSION_DOMAIN_KINDS,
-  ROUTE_TEST_SAMPLES,
-} from "./router";
+import { createAppRouter } from "./router";
 
 async function navigate(path: string): Promise<string> {
   const router = createAppRouter(createMemoryHistory());
@@ -15,38 +10,33 @@ async function navigate(path: string): Promise<string> {
   return router.currentRoute.value.fullPath;
 }
 
-describe("mobile route parity", () => {
-  it("maps static legacy routes", async () => {
-    for (const [legacyPath, targetPath] of Object.entries(LEGACY_ROUTE_TARGETS)) {
-      const result = await navigate(legacyPath);
-      expect(result).toBe(targetPath);
-    }
+describe("mobile live router", () => {
+  it("redirects root to the live home route", async () => {
+    await expect(navigate("/")).resolves.toBe("/dashboard");
   });
 
-  it("maps wildcard mission and users legacy paths", async () => {
-    await expect(navigate("/missions/legacy/path")).resolves.toBe("/missions");
-    await expect(navigate("/users/teams/members")).resolves.toBe(
-      "/ops/users/teams/members",
+  it("supports the primary live feature routes", async () => {
+    await expect(navigate("/dashboard")).resolves.toBe("/dashboard");
+    await expect(navigate("/comms/chat")).resolves.toBe("/comms/chat");
+    await expect(navigate("/missions")).resolves.toBe("/missions");
+    await expect(navigate("/webmap")).resolves.toBe("/webmap");
+    await expect(navigate("/ops")).resolves.toBe("/ops");
+  });
+
+  it("preserves legacy-friendly top-level aliases", async () => {
+    await expect(navigate("/chat")).resolves.toBe("/comms/chat");
+    await expect(navigate("/topics")).resolves.toBe("/comms/topics");
+    await expect(navigate("/checklists")).resolves.toBe("/checklists");
+    await expect(navigate("/settings")).resolves.toBe("/ops/settings");
+  });
+
+  it("supports mission deep-link domain routes", async () => {
+    await expect(navigate("/missions/demo-mission/log-entries")).resolves.toBe(
+      "/missions/demo-mission/log-entries",
     );
   });
 
-  it("supports mission-domain deep links for every domain kind", async () => {
-    for (const kind of MISSION_DOMAIN_KINDS) {
-      const deepLink = `/missions/demo-mission/${kind}`;
-      const resolved = await navigate(deepLink);
-      expect(resolved).toBe(deepLink);
-    }
-  });
-
-  it("redirects /missions/:missionUid to overview domain", async () => {
-    await expect(navigate("/missions/mission-123")).resolves.toBe(
-      ROUTE_TEST_SAMPLES.missionDomainDeepLink,
-    );
-  });
-
-  it("deep-link redirects /users/teams/members into ops stack", async () => {
-    await expect(navigate(ROUTE_TEST_SAMPLES.usersTeamsMembersDeepLink)).resolves.toBe(
-      "/ops/users/teams/members",
-    );
+  it("falls back to the default route for unknown paths", async () => {
+    await expect(navigate("/legacy/unknown/path")).resolves.toBe("/dashboard");
   });
 });

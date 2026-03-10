@@ -42,8 +42,6 @@ struct NodeConfigInput {
     announce_capabilities: Option<String>,
     hub_mode: Option<String>,
     hub_identity_hash: Option<String>,
-    hub_api_base_url: Option<String>,
-    hub_api_key: Option<String>,
     hub_refresh_interval_seconds: Option<u32>,
 }
 
@@ -112,9 +110,13 @@ fn make_jstring_or_null(env: &mut JNIEnv, value: String) -> jstring {
 }
 
 fn parse_hub_mode(value: Option<&str>) -> HubMode {
-    match value.unwrap_or("Disabled").trim().to_ascii_lowercase().as_str() {
+    match value
+        .unwrap_or("Disabled")
+        .trim()
+        .to_ascii_lowercase()
+        .as_str()
+    {
         "rchlxmf" | "rch_lxmf" => HubMode::RchLxmf {},
-        "rchhttp" | "rch_http" => HubMode::RchHttp {},
         _ => HubMode::Disabled {},
     }
 }
@@ -160,22 +162,6 @@ fn parse_node_config(input: NodeConfigInput) -> NodeConfig {
             .unwrap_or_else(|| "R3AKT,EMergencyMessages".to_string()),
         hub_mode: parse_hub_mode(input.hub_mode.as_deref()),
         hub_identity_hash: input.hub_identity_hash.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-        hub_api_base_url: input.hub_api_base_url.and_then(|v| {
-            let trimmed = v.trim().to_string();
-            if trimmed.is_empty() {
-                None
-            } else {
-                Some(trimmed)
-            }
-        }),
-        hub_api_key: input.hub_api_key.and_then(|v| {
             let trimmed = v.trim().to_string();
             if trimmed.is_empty() {
                 None
@@ -711,6 +697,45 @@ pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_executeE
         }
     }
 }
+
+#[no_mangle]
+pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_sendChatMessage(
+    mut env: JNIEnv,
+    _class: JClass,
+    request_json: JString,
+) -> jstring {
+    let request = match jstring_to_rust(&mut env, request_json) {
+        Ok(v) => v,
+        Err(e) => {
+            set_last_error("InvalidConfig", e);
+            return ptr::null_mut();
+        }
+    };
+
+    let guard = match bridge_state().lock() {
+        Ok(v) => v,
+        Err(_) => {
+            set_last_error("InternalError", "bridge lock poisoned");
+            return ptr::null_mut();
+        }
+    };
+    let node = match guard.node.as_ref() {
+        Some(v) => v,
+        None => {
+            set_last_error("NotRunning", "node not initialized");
+            return ptr::null_mut();
+        }
+    };
+
+    match node.send_chat_message(request) {
+        Ok(response) => make_jstring_or_null(&mut env, response),
+        Err(err) => {
+            set_last_node_error(err);
+            ptr::null_mut()
+        }
+    }
+}
+
 #[no_mangle]
 pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_getClientOperationCatalogJson(
     mut env: JNIEnv,
@@ -719,7 +744,10 @@ pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_getClien
     match serde_json::to_string(CLIENT_OPERATION_CATALOG) {
         Ok(response) => make_jstring_or_null(&mut env, response),
         Err(_) => {
-            set_last_error("InternalError", "failed to serialize client operation catalog");
+            set_last_error(
+                "InternalError",
+                "failed to serialize client operation catalog",
+            );
             ptr::null_mut()
         }
     }
@@ -776,5 +804,3 @@ pub extern "system" fn Java_network_reticulum_emergency_ReticulumBridge_takeLast
         Err(_) => ptr::null_mut(),
     }
 }
-
-

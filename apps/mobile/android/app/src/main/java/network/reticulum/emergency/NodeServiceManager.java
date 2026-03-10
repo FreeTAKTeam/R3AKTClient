@@ -362,6 +362,20 @@ public final class NodeServiceManager {
         return "";
     }
 
+    public String sendChatMessage(String requestJson) {
+        String resultJson = bridge.sendChatMessage(requestJson);
+        if (resultJson != null && !resultJson.isEmpty()) {
+            return resultJson;
+        }
+
+        NativeError error = consumeNativeError(
+                "ChatSendFailed",
+                "Failed to send chat message."
+        );
+        updateState(ServiceState.Error, readRunningStatus(), status.isForeground(), error.code, error.message);
+        return "";
+    }
+
     public String getLastErrorJson() {
         ServiceStatusSnapshot snapshot = status;
         if (snapshot.getLastErrorCode().isEmpty() && snapshot.getLastErrorMessage().isEmpty()) {

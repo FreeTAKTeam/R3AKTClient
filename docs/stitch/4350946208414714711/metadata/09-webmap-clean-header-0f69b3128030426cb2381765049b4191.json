@@ -1,0 +1,31 @@
+﻿{
+  "screenshot": {
+    "name": "projects/4350946208414714711/files/d463497841864528bbbe1c1b3fea977e",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/AOfcidVfvAjXgIFUX8ITwQMl7bSNezSdphQxYCJL4epGBW5OyRfHzr6CT4KQvbqVlrYpLpOP7jy3bq76MtY3G7JUXZvryHc2HNgoLORJihTbp3wk_oipRPP9VuF-36KZwSWj4GC7-TcohGKq6MCLHr5iqkxD8_kGe2Lf-Ru6qQUxef60H3LbZDQFfAPghL7tMN3xiiGJbUqR_C_gYfWojG2H6Npw847kukD_wgP-qbnaXpMSWAZKy8mPixILOw"
+  },
+  "htmlCode": {
+    "name": "projects/4350946208414714711/files/68435f1615f940648c514151c0f63163",
+    "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ6Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpZCiVodG1sXzU4Y2UxNjQ5YTk3MTRiZTY4MzViMGQ0YzBmODY3YzljEgoSBhCG65rPGRgBkgEjCgpwcm9qZWN0X2lkEhVCEzQzNTA5NDYyMDg0MTQ3MTQ3MTE&filename=&opi=89354086",
+    "mimeType": "text/html"
+  },
+  "id": "0f69b3128030426cb2381765049b4191",
+  "generatedBy": "HatterAgent",
+  "width": "780",
+  "height": "1768",
+  "title": "Webmap - Clean Header",
+  "prompt": "Update the header: keep the hamburger menu on the far left, center the page title 'WEBMAP', and show only the 'LIVE' indicator badge on the far right. Remove any other buttons from the header.",
+  "name": "projects/4350946208414714711/screens/0f69b3128030426cb2381765049b4191",
+  "theme": {
+    "colorMode": "DARK",
+    "font": "INTER",
+    "roundness": "ROUND_EIGHT",
+    "customColor": "#25d1f4",
+    "saturation": 3
+  },
+  "deviceType": "MOBILE",
+  "screenType": "DESIGN",
+  "screenMetadata": {
+    "agentType": "HATTER_AGENT",
+    "status": "COMPLETE"
+  }
+}

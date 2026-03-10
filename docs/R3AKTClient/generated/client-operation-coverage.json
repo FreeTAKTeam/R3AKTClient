@@ -1,11 +1,19 @@
 {
-  "generated_at": "2026-03-04T23:42:57.370Z",
-  "expected_operation_count": 104,
-  "ts_operation_count": 104,
-  "rust_operation_count": 104,
+  "generated_at": "2026-03-10T14:11:34.041Z",
+  "expected_operation_count": 115,
+  "local_catalog_operation_count": 115,
+  "ts_operation_count": 115,
+  "rust_operation_count": 115,
+  "supported_commands_doc_present": true,
+  "supported_commands_doc_operation_count": 115,
   "passed": true,
+  "missing_in_generated_vs_local": [],
+  "extra_in_generated_vs_local": [],
   "missing_in_ts": [],
   "missing_in_rust": [],
   "extra_in_ts": [],
-  "extra_in_rust": []
+  "extra_in_rust": [],
+  "missing_in_catalog_vs_supported_commands_doc": [],
+  "extra_in_catalog_vs_supported_commands_doc": [],
+  "http_shaped_public_operations": []
 }
