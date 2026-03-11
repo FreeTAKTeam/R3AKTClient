@@ -969,6 +969,305 @@ function buildMockMissionPath(missionUid: string, parentUid?: string) {
   return parentUid ? `${parentUid}/${missionUid}` : missionUid;
 }
 
+const MOCK_MARKER_REGISTRY = [
+  {
+    object_destination_hash: "marker-harbor-1",
+    name: "Harbor Relay",
+    mission_uid: "demo",
+    lat: 44.6488,
+    lon: -63.5752,
+    updated_at: "2026-03-11T11:05:00Z",
+  },
+  {
+    object_destination_hash: "marker-relay-1",
+    name: "Repeater North",
+    mission_uid: "relay-watch",
+    lat: 44.6712,
+    lon: -63.6111,
+    updated_at: "2026-03-11T10:55:00Z",
+  },
+] as const;
+
+interface MockZoneRecord {
+  zone_id: string;
+  name: string;
+  description?: string;
+  mission_uid?: string;
+  updated_at: string;
+  points: Array<{ lat: number; lon: number }>;
+}
+
+function createInitialMockZoneRegistry(): MockZoneRecord[] {
+  return [
+    {
+      zone_id: "harbor-alpha",
+      name: "Harbor Alpha",
+      description: "Primary harbor ingress zone.",
+      mission_uid: "demo",
+      updated_at: "2026-03-11T11:10:00Z",
+      points: [
+        { lat: 44.6488, lon: -63.5752 },
+        { lat: 44.6512, lon: -63.5695 },
+        { lat: 44.6462, lon: -63.5664 },
+      ],
+    },
+    {
+      zone_id: "harbor-beta",
+      name: "Harbor Beta",
+      description: "Secondary dockside approach.",
+      mission_uid: "demo",
+      updated_at: "2026-03-11T11:12:00Z",
+      points: [
+        { lat: 44.6455, lon: -63.5799 },
+        { lat: 44.6472, lon: -63.5731 },
+        { lat: 44.6438, lon: -63.5716 },
+      ],
+    },
+    {
+      zone_id: "relay-north",
+      name: "Relay North",
+      description: "Northern repeater security bubble.",
+      mission_uid: "relay-watch",
+      updated_at: "2026-03-11T10:20:00Z",
+      points: [
+        { lat: 44.6712, lon: -63.6111 },
+        { lat: 44.6744, lon: -63.6045 },
+        { lat: 44.6687, lon: -63.6012 },
+      ],
+    },
+    {
+      zone_id: "staging-free",
+      name: "Staging Free",
+      description: "Unlinked staging perimeter ready for assignment.",
+      updated_at: "2026-03-11T10:05:00Z",
+      points: [
+        { lat: 44.6541, lon: -63.5882 },
+        { lat: 44.6575, lon: -63.5824 },
+        { lat: 44.6529, lon: -63.5798 },
+      ],
+    },
+  ];
+}
+
+let mockZoneRegistry: MockZoneRecord[] = createInitialMockZoneRegistry();
+
+function cloneMockZoneRegistry(): MockZoneRecord[] {
+  return mockZoneRegistry.map((zone) => ({
+    ...zone,
+    points: zone.points.map((point) => ({ ...point })),
+  }));
+}
+
+function findMockZone(zoneId?: string): MockZoneRecord | undefined {
+  if (!zoneId) {
+    return mockZoneRegistry[0];
+  }
+  return mockZoneRegistry.find((entry) => entry.zone_id === zoneId) ?? mockZoneRegistry[0];
+}
+
+function syncMissionZoneIds(missionUid: string) {
+  const nextZoneIds = mockZoneRegistry
+    .filter((zone) => zone.mission_uid === missionUid)
+    .map((zone) => zone.zone_id);
+  mockMissionRegistry = mockMissionRegistry.map((mission) =>
+    mission.mission_uid !== missionUid
+      ? mission
+      : {
+        ...mission,
+        zone_ids: nextZoneIds,
+      });
+}
+
+function assignMockZoneToMission(zoneId: string, missionUid?: string) {
+  mockZoneRegistry = mockZoneRegistry.map((zone) =>
+    zone.zone_id !== zoneId
+      ? zone
+      : {
+        ...zone,
+        mission_uid: missionUid,
+        updated_at: new Date().toISOString(),
+      });
+
+  if (missionUid) {
+    syncMissionZoneIds(missionUid);
+  }
+
+  const detachedMissionIds = mockMissionRegistry
+    .filter((mission) => mission.zone_ids.includes(zoneId) && mission.mission_uid !== missionUid)
+    .map((mission) => mission.mission_uid);
+  for (const detachedMissionId of detachedMissionIds) {
+    syncMissionZoneIds(detachedMissionId);
+  }
+}
+
+interface MockMissionChangeRecord {
+  change_uid: string;
+  mission_uid: string;
+  summary: string;
+  change_type: string;
+  created_at: string;
+}
+
+function createInitialMockMissionChangeRegistry(): MockMissionChangeRecord[] {
+  return [
+    {
+      change_uid: "change-ops-window",
+      mission_uid: "demo",
+      summary: "Ingress window shifted by 15 minutes due to harbor traffic.",
+      change_type: "route-shift",
+      created_at: "2026-03-11T11:18:00Z",
+    },
+    {
+      change_uid: "change-relay-posture",
+      mission_uid: "demo",
+      summary: "Relay posture moved to fallback circuit after signal degradation.",
+      change_type: "status-update",
+      created_at: "2026-03-11T10:42:00Z",
+    },
+    {
+      change_uid: "change-relay-watch",
+      mission_uid: "relay-watch",
+      summary: "Remote repeater inspection reassigned to the night watch cell.",
+      change_type: "reassignment",
+      created_at: "2026-03-11T09:40:00Z",
+    },
+  ];
+}
+
+let mockMissionChangeRegistry = createInitialMockMissionChangeRegistry();
+
+function cloneMockMissionChangeRegistry(): MockMissionChangeRecord[] {
+  return mockMissionChangeRegistry.map((change) => ({ ...change }));
+}
+
+interface MockTeamRecord {
+  team_uid: string;
+  team_name: string;
+  mission_uid?: string;
+  description?: string;
+}
+
+function createInitialMockTeamRegistry(): MockTeamRecord[] {
+  return [
+    {
+      team_uid: "team-harbor",
+      team_name: "Harbor Intercept",
+      mission_uid: "demo",
+      description: "Primary harbor interception team.",
+    },
+    {
+      team_uid: "team-relay",
+      team_name: "Relay Support",
+      mission_uid: "relay-watch",
+      description: "Repeater and uplink support cell.",
+    },
+    {
+      team_uid: "team-reserve",
+      team_name: "Reserve Surge",
+      description: "Unlinked reserve team ready for assignment.",
+    },
+  ];
+}
+
+let mockTeamRegistry = createInitialMockTeamRegistry();
+
+function cloneMockTeamRegistry(): MockTeamRecord[] {
+  return mockTeamRegistry.map((team) => ({ ...team }));
+}
+
+function findMockTeam(teamUid?: string): MockTeamRecord | undefined {
+  if (!teamUid) {
+    return mockTeamRegistry[0];
+  }
+  return mockTeamRegistry.find((entry) => entry.team_uid === teamUid) ?? mockTeamRegistry[0];
+}
+
+interface MockTeamMemberRecord {
+  team_member_uid: string;
+  team_uid?: string;
+  callsign: string;
+  role?: string;
+  client_identity?: string;
+}
+
+function createInitialMockTeamMemberRegistry(): MockTeamMemberRecord[] {
+  return [
+    {
+      team_member_uid: "member-delta",
+      team_uid: "team-harbor",
+      callsign: "Delta",
+      role: "lead",
+      client_identity: "c1a5-delta",
+    },
+    {
+      team_member_uid: "member-echo",
+      team_uid: "team-harbor",
+      callsign: "Echo",
+      role: "operator",
+      client_identity: "c1a5-echo",
+    },
+    {
+      team_member_uid: "member-sierra",
+      team_uid: "team-relay",
+      callsign: "Sierra",
+      role: "relay-tech",
+      client_identity: "c1a5-sierra",
+    },
+  ];
+}
+
+let mockTeamMemberRegistry = createInitialMockTeamMemberRegistry();
+
+function cloneMockTeamMemberRegistry(): MockTeamMemberRecord[] {
+  return mockTeamMemberRegistry.map((member) => ({ ...member }));
+}
+
+interface MockSkillRecord {
+  skill_uid: string;
+  skill_name: string;
+  description?: string;
+}
+
+const MOCK_SKILL_REGISTRY: MockSkillRecord[] = [
+  {
+    skill_uid: "skill-nav",
+    skill_name: "Navigation",
+    description: "Land navigation and route planning.",
+  },
+  {
+    skill_uid: "skill-relay",
+    skill_name: "Relay Ops",
+    description: "Repeater and uplink field support.",
+  },
+  {
+    skill_uid: "skill-medic",
+    skill_name: "Field Medic",
+    description: "Immediate casualty stabilization.",
+  },
+];
+
+interface MockTeamMemberSkillRecord {
+  team_member_skill_uid: string;
+  team_member_uid: string;
+  skill_uid: string;
+  level: string;
+}
+
+const MOCK_TEAM_MEMBER_SKILL_REGISTRY: MockTeamMemberSkillRecord[] = [
+  {
+    team_member_skill_uid: "member-delta:skill-nav",
+    team_member_uid: "member-delta",
+    skill_uid: "skill-nav",
+    level: "advanced",
+  },
+  {
+    team_member_skill_uid: "member-sierra:skill-relay",
+    team_member_uid: "member-sierra",
+    skill_uid: "skill-relay",
+    level: "expert",
+  },
+];
+
 function createInitialMockChecklistRegistry() {
   return [
     {
@@ -1199,6 +1498,304 @@ function buildSyntheticExecutePayload(
     return {
       payload: {
         mission: findMockMission(missionUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.mission_change.list") {
+    return {
+      payload: {
+        mission_changes: cloneMockMissionChangeRegistry().filter((change) => {
+          const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+          return !missionUid || change.mission_uid === missionUid;
+        }),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.mission_change.upsert") {
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]) ?? "demo";
+    const changeUid =
+      readStringCandidate(request, ["change_uid", "changeUid", "uid", "id"])
+      ?? `change-${mockMissionChangeRegistry.length + 1}`;
+    const createdAt =
+      readStringCandidate(request, ["created_at", "createdAt", "updated_at", "updatedAt"])
+      ?? new Date().toISOString();
+    const nextChange: MockMissionChangeRecord = {
+      change_uid: changeUid,
+      mission_uid: missionUid,
+      summary:
+        readStringCandidate(request, ["summary", "description", "message"])
+        ?? "Mission change recorded.",
+      change_type:
+        readStringCandidate(request, ["change_type", "changeType", "type"])
+        ?? "status-update",
+      created_at: createdAt,
+    };
+    const existingIndex = mockMissionChangeRegistry.findIndex((change) => change.change_uid === changeUid);
+    if (existingIndex >= 0) {
+      mockMissionChangeRegistry = mockMissionChangeRegistry.map((change, index) =>
+        index === existingIndex ? nextChange : change);
+    } else {
+      mockMissionChangeRegistry = [nextChange, ...mockMissionChangeRegistry];
+    }
+    return {
+      payload: {
+        change: nextChange,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.mission.zone.link") {
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    const zoneId = readStringCandidate(request, ["zone_id", "zoneId"]);
+    if (missionUid && zoneId) {
+      assignMockZoneToMission(zoneId, missionUid);
+    }
+    return {
+      payload: {
+        mission: findMockMission(missionUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.mission.zone.unlink") {
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    const zoneId = readStringCandidate(request, ["zone_id", "zoneId"]);
+    if (zoneId) {
+      assignMockZoneToMission(zoneId);
+    }
+    return {
+      payload: {
+        mission: findMockMission(missionUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team.list") {
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    if (!missionUid) {
+      mockTeamRegistry = createInitialMockTeamRegistry();
+      mockTeamMemberRegistry = createInitialMockTeamMemberRegistry();
+    }
+    return {
+      payload: {
+        teams: cloneMockTeamRegistry().filter((team) => !missionUid || team.mission_uid === missionUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team.upsert") {
+    const teamUid =
+      readStringCandidate(request, ["team_uid", "teamUid", "uid", "id"])
+      ?? `team-${mockTeamRegistry.length + 1}`;
+    const existing = findMockTeam(teamUid);
+    const nextTeam: MockTeamRecord = {
+      team_uid: teamUid,
+      team_name:
+        readStringCandidate(request, ["team_name", "teamName", "name", "title"])
+        ?? existing?.team_name
+        ?? teamUid,
+      mission_uid:
+        readStringCandidate(request, ["mission_uid", "missionUid"])
+        ?? existing?.mission_uid,
+      description:
+        readStringCandidate(request, ["description", "summary"])
+        ?? existing?.description,
+    };
+    const existingIndex = mockTeamRegistry.findIndex((team) => team.team_uid === teamUid);
+    if (existingIndex >= 0) {
+      mockTeamRegistry = mockTeamRegistry.map((team, index) => (index === existingIndex ? nextTeam : team));
+    } else {
+      mockTeamRegistry = [nextTeam, ...mockTeamRegistry];
+    }
+    return {
+      payload: {
+        team: nextTeam,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team.delete") {
+    const teamUid = readStringCandidate(request, ["team_uid", "teamUid"]);
+    const deletedMemberUids = mockTeamMemberRegistry
+      .filter((member) => member.team_uid === teamUid)
+      .map((member) => member.team_member_uid);
+    if (teamUid) {
+      mockTeamRegistry = mockTeamRegistry.filter((team) => team.team_uid !== teamUid);
+      mockTeamMemberRegistry = mockTeamMemberRegistry.filter((member) => member.team_uid !== teamUid);
+    }
+    return {
+      payload: {
+        team_uid: teamUid,
+        team_member_uids: deletedMemberUids,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team.mission.link") {
+    const teamUid = readStringCandidate(request, ["team_uid", "teamUid"]);
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    if (teamUid && missionUid) {
+      mockTeamRegistry = mockTeamRegistry.map((team) =>
+        team.team_uid !== teamUid
+          ? team
+          : {
+            ...team,
+            mission_uid: missionUid,
+          });
+    }
+    return {
+      payload: {
+        team: findMockTeam(teamUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team.mission.unlink") {
+    const teamUid = readStringCandidate(request, ["team_uid", "teamUid"]);
+    if (teamUid) {
+      mockTeamRegistry = mockTeamRegistry.map((team) =>
+        team.team_uid !== teamUid
+          ? team
+          : {
+            ...team,
+            mission_uid: undefined,
+          });
+    }
+    return {
+      payload: {
+        team: findMockTeam(teamUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team_member.list") {
+    const teamUid = readStringCandidate(request, ["team_uid", "teamUid"]);
+    return {
+      payload: {
+        team_members: cloneMockTeamMemberRegistry().filter(
+          (member) => !teamUid || member.team_uid === teamUid,
+        ),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.skill.list") {
+    return {
+      payload: {
+        skills: MOCK_SKILL_REGISTRY.map((skill) => ({ ...skill })),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team_member_skill.list") {
+    const teamMemberIdentity = readStringCandidate(request, [
+      "team_member_rns_identity",
+      "teamMemberRnsIdentity",
+      "client_identity",
+      "clientIdentity",
+    ]);
+    const matchingMemberUid = teamMemberIdentity
+      ? mockTeamMemberRegistry.find((member) => member.client_identity === teamMemberIdentity)?.team_member_uid
+      : undefined;
+    return {
+      payload: {
+        team_member_skills: MOCK_TEAM_MEMBER_SKILL_REGISTRY
+          .filter((entry) => !matchingMemberUid || entry.team_member_uid === matchingMemberUid)
+          .map((entry) => ({ ...entry })),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.marker.list") {
+    return {
+      payload: {
+        markers: MOCK_MARKER_REGISTRY,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.zone.list") {
+    return {
+      payload: {
+        zones: cloneMockZoneRegistry(),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.zone.create") {
+    const zoneId =
+      readStringCandidate(request, ["zone_id", "zoneId", "uid", "id"])
+      ?? `zone-${mockZoneRegistry.length + 1}`;
+    const createdZone: MockZoneRecord = {
+      zone_id: zoneId,
+      name: readStringCandidate(request, ["name", "title"]) ?? zoneId,
+      description: readStringCandidate(request, ["description", "summary"]),
+      mission_uid: readStringCandidate(request, ["mission_uid", "missionUid"]),
+      updated_at: new Date().toISOString(),
+      points: Array.isArray(request.points)
+        ? request.points.map((point) => ({
+          lat: Number(asRecord(point).lat ?? asRecord(point).latitude ?? 0),
+          lon: Number(asRecord(point).lon ?? asRecord(point).longitude ?? asRecord(point).lng ?? 0),
+        }))
+        : [],
+    };
+    mockZoneRegistry = [...mockZoneRegistry, createdZone];
+    if (createdZone.mission_uid) {
+      syncMissionZoneIds(createdZone.mission_uid);
+    }
+    return {
+      payload: {
+        zone: createdZone,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.zone.patch") {
+    const zoneId = readStringCandidate(request, ["zone_id", "zoneId"]);
+    const nextMissionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    if (zoneId) {
+      mockZoneRegistry = mockZoneRegistry.map((zone) =>
+        zone.zone_id !== zoneId
+          ? zone
+          : {
+            ...zone,
+            name: readStringCandidate(request, ["name", "title"]) ?? zone.name,
+            description: readStringCandidate(request, ["description", "summary"]) ?? zone.description,
+            mission_uid: nextMissionUid ?? zone.mission_uid,
+            points: Array.isArray(request.points)
+              ? request.points.map((point) => ({
+                lat: Number(asRecord(point).lat ?? asRecord(point).latitude ?? 0),
+                lon: Number(asRecord(point).lon ?? asRecord(point).longitude ?? asRecord(point).lng ?? 0),
+              }))
+              : zone.points,
+            updated_at: new Date().toISOString(),
+          });
+      const zone = findMockZone(zoneId);
+      if (zone?.mission_uid) {
+        syncMissionZoneIds(zone.mission_uid);
+      }
+    }
+    return {
+      payload: {
+        zone: findMockZone(zoneId),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.zone.delete") {
+    const zoneId = readStringCandidate(request, ["zone_id", "zoneId"]);
+    const previousMissionUid = findMockZone(zoneId)?.mission_uid;
+    if (zoneId) {
+      mockZoneRegistry = mockZoneRegistry.filter((zone) => zone.zone_id !== zoneId);
+      if (previousMissionUid) {
+        syncMissionZoneIds(previousMissionUid);
+      }
+    }
+    return {
+      payload: {
+        zone_id: zoneId,
       },
     };
   }

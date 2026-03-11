@@ -9,7 +9,7 @@ This file tracks backend capability already present in the RCH/node contract tha
 - `Topics`: list, subscribe, create, patch, delete
 - `Files` / `Images`: backend list + retrieve, plus local upload staging
 - `Missions`: mission list, get, patch, create, delete, parent/RDE assignment, log list/create, zone link state
-- `Mission subroutes`: topic, checklists, teams, assets, zones, log entries
+- `Mission subroutes`: topic, checklists, teams with link/unlink/delete, assets, zones with link/unlink, log entries with change editor
 - `Checklists`: list, get, create, update, task status
 - `Webmap`: marker/zone list and zone delete
 - `Ops Users`: team/member/skill list
@@ -31,14 +31,8 @@ This file tracks backend capability already present in the RCH/node contract tha
 - raw `TelemetryRequest` exploration UI
 - telemetry history/detail panels
 
-### Mission core advanced flows
-
-- mission change create/edit UI beyond log feed visibility
-- mission-zone link/unlink controls from mission detail
-
 ### Teams, people, and skills
 
-- team delete / link / unlink controls
 - team-member create / update / delete controls
 - team-member client link / unlink controls
 - skill create / update controls

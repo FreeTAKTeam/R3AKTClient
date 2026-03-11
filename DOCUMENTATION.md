@@ -46,13 +46,16 @@ Overall state:
 - P4 files/images preview/export/association slice landed
 - P4 checklist detail store-backed parity slice landed
 - P4 mission workspace parent/RDE control slice landed
+- P4 mission workspace zone link/unlink slice landed
+- P4 mission workspace mission-change editor slice landed
+- P4 mission workspace team link/unlink/delete slice landed
 - P5 app-side event/offline/persistence hardening slice landed
 
 Current blocker:
 - live Rust hub probe for `getAppInfo` still returns timeout against both tested hub targets, so the session query path is not yet trustworthy even after link-prewarm and retry changes
 
 Next intended action:
-- continue P4 against the approved mission workspace route for the remaining mission-core controls, most likely mission change create/edit depth or mission-zone link/unlink, while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
+- continue P4 on an approved teams/people/skills route with team-member create/update/delete or member client link/unlink controls, while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
 
 Last updated:
 - 2026-03-11
@@ -649,6 +652,163 @@ Open issues:
 Next recommended step:
 - continue the next approved P4 slice on the mission workspace route with mission change authoring depth or mission-zone link/unlink controls, and keep matching interaction coverage in the same change
 
+### 2026-03-11 - Session 013
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose mission-zone link/unlink controls on the approved mission workspace route using the existing mission-core and map store surfaces
+
+Planned changes:
+- extend the mission workspace composable with linked-zone and available-zone state plus mission-zone link/unlink actions
+- rework the existing `/missions/:missionUid/zones` route so it surfaces linked zones, attachable zones, and truthful mutation status without adding a new route
+- extend the web/mock wrapper path with deterministic mission-zone and map-zone registry state so mission and map stores stay coherent in browser mode
+- add focused Vitest and Playwright coverage for mission-zone linking and unlinking from the approved route
+
+Files touched:
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/missionCoreStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- `/missions/:missionUid/zones` now separates mission link state from destructive zone deletion by showing linked zones, available zones, and first-class link/unlink actions on the approved mission workspace route
+- the synthetic node-client now maintains a coherent mock mission registry plus map-zone registry, so mission zone ids and zone `mission_uid` values stay aligned across wrapper, store, route, and Playwright validation
+- this slice leaves mission change authoring depth as the remaining mission-core UI gap on the approved workspace route
+
+Open issues:
+- mission change create/edit UI beyond the existing log feed is still unsurfaced
+- the live Rust `getAppInfo` timeout remains the main blocker on trusting live session query UX
+
+Next recommended step:
+- continue the next approved P4 slice on the mission workspace route with mission change authoring depth and matching interaction coverage in the same change
+
+### 2026-03-11 - Session 014
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose mission change create/edit controls on the approved mission workspace log route using the existing mission-core store and typed wrapper surface
+
+Planned changes:
+- extend the mission workspace composable with a single create/edit mission-change editor state that saves through `mission.registry.mission_change.upsert`
+- rework the existing `/missions/:missionUid/log-entries` route so it shows a mission-change editor and per-change edit actions without adding a new route
+- extend the web/mock wrapper path with deterministic mission-change list/upsert payloads so browser-mode mission changes stay store-backed
+- add focused Vitest and Playwright coverage for mission change create/edit on the approved log route
+
+Files touched:
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/missionCoreStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- `/missions/:missionUid/log-entries` now surfaces a mission-change editor with create and edit flows on top of the existing mission-change list, instead of only rendering the passive change feed
+- the synthetic node-client now maintains deterministic mission-change list/upsert state, so mission-change editing stays coherent across wrapper, store, route, and Playwright validation in browser mode
+- mission-core advanced flows listed in the backlog are now worked down on approved mission workspace routes; the next P4 gap moves to team/member controls on approved routes
+
+Open issues:
+- team delete / link / unlink controls are still missing from the approved team surfaces
+- team-member create / update / delete and client-link controls remain unsurfaced
+- the live Rust `getAppInfo` timeout remains the main blocker on trusting live session query UX
+
+Next recommended step:
+- continue the next approved P4 slice on a teams/people/skills route, most likely team delete or member link/unlink controls, and keep matching interaction coverage in the same change
+
+### 2026-03-11 - Session 015
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose mission-team link/unlink/delete controls on the approved mission workspace teams route using the existing teams/skills store and typed wrapper surface
+
+Planned changes:
+- extend the mission workspace composable with available-team state plus mission-team link/unlink/delete actions
+- rework the existing `/missions/:missionUid/teams` route so it surfaces linked teams, attachable teams, and truthful action feedback without adding a new route
+- extend the web/mock wrapper path with deterministic team/member/skill registry payloads so the mission teams route and ops users route stay store-backed in browser mode
+- add focused Vitest and Playwright coverage for mission-team linking, unlinking, and deletion from the approved route
+
+Files touched:
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/stores/teamsSkillsStore.ts`
+- `apps/mobile/src/teamsSkillsStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- `/missions/:missionUid/teams` now exposes first-class mission-team link, unlink, and delete controls on the approved route instead of leaving the team card read-only
+- the web/mock node-client path now synthesizes deterministic team, team-member, skill, and member-skill list data, so both the mission teams route and ops users route stay store-backed in browser mode
+- deleting a team now clears the deleted team's cached members from the app store so later route transitions do not surface stale team-member state
+
+Open issues:
+- team-member create / update / delete controls are still missing from approved routes
+- team-member client link / unlink controls remain unsurfaced
+- skill create / update and team-member skill upsert controls remain unsurfaced
+- the live Rust `getAppInfo` timeout remains the main blocker on trusting live session query UX
+
+Next recommended step:
+- continue the next approved P4 slice on a teams/people/skills route with team-member create/update/delete or member client link/unlink controls, and keep matching interaction coverage in the same change
+
 ---
 
 ## Decision log
@@ -850,6 +1010,66 @@ Notes:
 - the approved mission workspace route now exposes parent set/clear and RDE role assignment directly from the mission-core store instead of leaving those allowlisted actions without first-class UI
 - the web/mock node-client path now synthesizes deterministic mission list/get/parent/RDE payloads so mission detail is store-backed in browser mode and remains covered by Vitest plus Playwright
 - the remaining mission-core backlog on this route is mission change authoring depth and mission-zone link/unlink controls
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission workspace zones route now exposes mission-zone link/unlink controls without inventing a new screen or relying on direct plugin calls from the view layer
+- the web/mock node-client path now keeps mission zone ids and map zone mission ownership coherent, so linked-zone UI is store-backed in browser mode and covered by Vitest plus Playwright
+- the remaining mission-core backlog on this route is mission change create/edit depth
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission workspace log route now exposes mission-change create/edit controls through the existing `mission.registry.mission_change.upsert` path instead of showing only a read-only feed
+- the web/mock node-client path now synthesizes deterministic mission-change list/upsert payloads so the mission-change editor is store-backed in browser mode and covered by Vitest plus Playwright
+- the next remaining P4 gap moves out of mission-core and into teams/people/skills controls on approved routes
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission workspace teams route now exposes mission-team link, unlink, and delete controls through the existing teams/skills store instead of showing a read-only list
+- the web/mock node-client path now synthesizes deterministic team, team-member, skill, and member-skill registry payloads so the teams route and ops users route remain store-backed in browser mode and covered by Vitest plus Playwright
+- the next remaining P4 gap within teams/people/skills moves to team-member mutation or client-link controls on approved routes
 
 ---
 

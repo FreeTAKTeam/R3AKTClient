@@ -476,4 +476,153 @@ describe("RchClient grouped feature API", () => {
       },
     });
   });
+
+  it("keeps mock-backed mission zone link state aligned with map zone queries", async () => {
+    const nodeClient = createReticulumNodeClient({ mode: "web" });
+    const client = createRchClient(nodeClient);
+
+    await client.missions.execute("mission.registry.mission.zone.link", {
+      mission_uid: "demo",
+      zone_id: "staging-free",
+    });
+
+    const missionResponse = await client.missions.execute("mission.registry.mission.get", {
+      mission_uid: "demo",
+    });
+    const zoneResponse = await client.map.execute("mission.zone.list", {});
+
+    expect(missionResponse.payload).toMatchObject({
+      mission: {
+        mission_uid: "demo",
+        zone_ids: expect.arrayContaining(["staging-free"]),
+      },
+    });
+    expect(zoneResponse.payload).toMatchObject({
+      zones: expect.arrayContaining([
+        expect.objectContaining({
+          zone_id: "staging-free",
+          mission_uid: "demo",
+        }),
+      ]),
+    });
+
+    await client.missions.execute("mission.registry.mission.zone.unlink", {
+      mission_uid: "demo",
+      zone_id: "staging-free",
+    });
+
+    const unlinkedMission = await client.missions.execute("mission.registry.mission.get", {
+      mission_uid: "demo",
+    });
+    const unlinkedZones = await client.map.execute("mission.zone.list", {});
+
+    expect(unlinkedMission.payload).toMatchObject({
+      mission: {
+        mission_uid: "demo",
+        zone_ids: expect.not.arrayContaining(["staging-free"]),
+      },
+    });
+    expect(unlinkedZones.payload).toMatchObject({
+      zones: expect.arrayContaining([
+        expect.objectContaining({
+          zone_id: "staging-free",
+          mission_uid: undefined,
+        }),
+      ]),
+    });
+  });
+
+  it("supports mock-backed mission change create and update on the web client", async () => {
+    const nodeClient = createReticulumNodeClient({ mode: "web" });
+    const client = createRchClient(nodeClient);
+
+    const initialChanges = await client.missions.execute("mission.registry.mission_change.list", {
+      mission_uid: "demo",
+    });
+    expect(
+      (initialChanges.payload as { mission_changes?: Array<{ change_uid?: string }> }).mission_changes?.length,
+    ).toBeGreaterThan(0);
+
+    await client.missions.execute("mission.registry.mission_change.upsert", {
+      mission_uid: "demo",
+      change_uid: "change-demo-e2e",
+      summary: "Dockside fallback lane activated.",
+      change_type: "route-shift",
+      created_at: "2026-03-11T12:20:00Z",
+    });
+    await client.missions.execute("mission.registry.mission_change.upsert", {
+      mission_uid: "demo",
+      change_uid: "change-demo-e2e",
+      summary: "Rooftop fallback lane activated.",
+      change_type: "route-shift",
+      created_at: "2026-03-11T12:20:00Z",
+    });
+
+    const updatedChanges = await client.missions.execute("mission.registry.mission_change.list", {
+      mission_uid: "demo",
+    });
+    expect(updatedChanges.payload).toMatchObject({
+      mission_changes: expect.arrayContaining([
+        expect.objectContaining({
+          change_uid: "change-demo-e2e",
+          summary: "Rooftop fallback lane activated.",
+          change_type: "route-shift",
+        }),
+      ]),
+    });
+  });
+
+  it("supports mock-backed team list, link, unlink, and delete on the web client", async () => {
+    const nodeClient = createReticulumNodeClient({ mode: "web" });
+    const client = createRchClient(nodeClient);
+
+    const initialTeams = await client.teamsSkills.execute("mission.registry.team.list", {});
+    expect(initialTeams.payload).toMatchObject({
+      teams: expect.arrayContaining([
+        expect.objectContaining({
+          team_uid: "team-harbor",
+          mission_uid: "demo",
+        }),
+        expect.objectContaining({
+          team_uid: "team-reserve",
+        }),
+      ]),
+    });
+
+    await client.teamsSkills.execute("mission.registry.team.mission.link", {
+      team_uid: "team-reserve",
+      mission_uid: "demo",
+    });
+
+    const linkedTeams = await client.teamsSkills.execute("mission.registry.team.list", {
+      mission_uid: "demo",
+    });
+    expect(linkedTeams.payload).toMatchObject({
+      teams: expect.arrayContaining([
+        expect.objectContaining({
+          team_uid: "team-reserve",
+          mission_uid: "demo",
+        }),
+      ]),
+    });
+
+    await client.teamsSkills.execute("mission.registry.team.mission.unlink", {
+      team_uid: "team-harbor",
+      mission_uid: "demo",
+    });
+    await client.teamsSkills.execute("mission.registry.team.delete", {
+      team_uid: "team-harbor",
+    });
+
+    const remainingTeams = await client.teamsSkills.execute("mission.registry.team.list", {
+      mission_uid: "demo",
+    });
+    expect(remainingTeams.payload).not.toMatchObject({
+      teams: expect.arrayContaining([
+        expect.objectContaining({
+          team_uid: "team-harbor",
+        }),
+      ]),
+    });
+  });
 });

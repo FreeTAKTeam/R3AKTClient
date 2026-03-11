@@ -31,6 +31,11 @@ export function useMissionDomainData(missionUid: string) {
   const statusMessage = ref("");
   const missionParentDraft = ref("");
   const missionRdeDraft = ref("");
+  const missionZoneDraft = ref("");
+  const missionTeamDraft = ref("");
+  const missionChangeDraftUid = ref("");
+  const missionChangeSummaryDraft = ref("");
+  const missionChangeTypeDraft = ref("status-update");
 
   const normalizedMissionUid = computed(() => missionUid.trim());
 
@@ -94,6 +99,13 @@ export function useMissionDomainData(missionUid: string) {
     teamsSkillsStore.teams.filter((team) => team.missionUid === normalizedMissionUid.value),
   );
 
+  const availableTeamOptions = computed(() =>
+    teamsSkillsStore.teams.filter((team) =>
+      team.missionUid !== normalizedMissionUid.value
+      && !team.missionUid,
+    ),
+  );
+
   const missionTeamMembers = computed(() => {
     const teamIds = new Set(missionTeams.value.map((team) => team.uid));
     return teamsSkillsStore.teamMembers.filter((member) => member.teamUid && teamIds.has(member.teamUid));
@@ -116,6 +128,27 @@ export function useMissionDomainData(missionUid: string) {
     mapMarkersZonesStore.zones.filter((zone) => zone.missionUid === normalizedMissionUid.value),
   );
 
+  const linkedMissionZoneIds = computed(() => {
+    const ids = new Set<string>(mission.value?.zoneIds ?? []);
+    for (const zone of missionZones.value) {
+      ids.add(zone.zoneId);
+    }
+    return Array.from(ids);
+  });
+
+  const linkedMissionZones = computed(() =>
+    linkedMissionZoneIds.value
+      .map((zoneId) => mapMarkersZonesStore.zonesById[zoneId])
+      .filter((zone): zone is NonNullable<typeof zone> => Boolean(zone)),
+  );
+
+  const availableZoneOptions = computed(() =>
+    mapMarkersZonesStore.zones.filter((zone) =>
+      !linkedMissionZoneIds.value.includes(zone.zoneId)
+      && (!zone.missionUid || zone.missionUid === normalizedMissionUid.value),
+    ),
+  );
+
   const missionMarkers = computed(() =>
     mapMarkersZonesStore.markers.filter((marker) => marker.missionUid === normalizedMissionUid.value),
   );
@@ -135,11 +168,29 @@ export function useMissionDomainData(missionUid: string) {
     }),
   );
 
+  const activeMissionChange = computed(() =>
+    missionChanges.value.find((entry) => entry.uid === missionChangeDraftUid.value) ?? null,
+  );
+
+  const isEditingMissionChange = computed(() => Boolean(missionChangeDraftUid.value));
+
   watch(
     mission,
     (nextMission) => {
       missionParentDraft.value = nextMission?.parentUid ?? "";
       missionRdeDraft.value = nextMission?.rdeRole ?? "";
+      if (
+        missionZoneDraft.value
+        && !availableZoneOptions.value.some((zone) => zone.zoneId === missionZoneDraft.value)
+      ) {
+        missionZoneDraft.value = "";
+      }
+      if (
+        missionTeamDraft.value
+        && !availableTeamOptions.value.some((team) => team.uid === missionTeamDraft.value)
+      ) {
+        missionTeamDraft.value = "";
+      }
     },
     { immediate: true },
   );
@@ -195,7 +246,39 @@ export function useMissionDomainData(missionUid: string) {
         mission_uid: mission.value!.uid,
         description: "Rapid-response team created from the mobile workspace.",
       });
-      await teamsSkillsStore.listTeams(mission.value!.uid);
+      statusMessage.value = "Mission team created.";
+    });
+  }
+
+  async function linkSelectedMissionTeam(): Promise<void> {
+    if (!mission.value || !missionTeamDraft.value.trim()) {
+      errorMessage.value = "Select an unlinked team before attaching it to the mission.";
+      return;
+    }
+
+    const selectedTeamUid = missionTeamDraft.value.trim();
+    await runMutation(async () => {
+      await teamsSkillsStore.linkTeamToMission(selectedTeamUid, mission.value!.uid);
+      statusMessage.value = `Team linked to mission: ${selectedTeamUid}.`;
+      missionTeamDraft.value = "";
+    });
+  }
+
+  async function unlinkMissionTeam(teamUid: string): Promise<void> {
+    if (!mission.value) {
+      return;
+    }
+
+    await runMutation(async () => {
+      await teamsSkillsStore.unlinkTeamFromMission(teamUid, mission.value!.uid);
+      statusMessage.value = `Team unlinked from mission: ${teamUid}.`;
+    });
+  }
+
+  async function deleteMissionTeam(teamUid: string): Promise<void> {
+    await runMutation(async () => {
+      await teamsSkillsStore.deleteTeam(teamUid);
+      statusMessage.value = `Team deleted: ${teamUid}.`;
     });
   }
 
@@ -241,6 +324,50 @@ export function useMissionDomainData(missionUid: string) {
         client_time: new Date().toISOString(),
       });
       await missionCoreStore.listLogEntries({ mission_uid: mission.value!.uid });
+    });
+  }
+
+  function resetMissionChangeEditor(): void {
+    missionChangeDraftUid.value = "";
+    missionChangeSummaryDraft.value = "";
+    missionChangeTypeDraft.value = "status-update";
+  }
+
+  function editMissionChange(changeUid: string): void {
+    const target = missionChanges.value.find((entry) => entry.uid === changeUid);
+    if (!target) {
+      return;
+    }
+    missionChangeDraftUid.value = target.uid;
+    missionChangeSummaryDraft.value = target.summary;
+    missionChangeTypeDraft.value = target.changeType ?? "status-update";
+    errorMessage.value = "";
+    statusMessage.value = `Editing mission change ${target.uid}.`;
+  }
+
+  async function saveMissionChange(): Promise<void> {
+    if (!mission.value || !missionChangeSummaryDraft.value.trim()) {
+      errorMessage.value = "Enter a mission change summary before saving.";
+      return;
+    }
+
+    const summary = missionChangeSummaryDraft.value.trim();
+    const changeType = missionChangeTypeDraft.value.trim() || "status-update";
+    const existing = activeMissionChange.value;
+
+    await runMutation(async () => {
+      await missionCoreStore.createMissionChange({
+        mission_uid: mission.value!.uid,
+        change_uid: existing?.uid || undefined,
+        summary,
+        change_type: changeType,
+        created_at: existing?.createdAt ?? new Date().toISOString(),
+      });
+      await missionCoreStore.listMissionChanges({ mission_uid: mission.value!.uid });
+      statusMessage.value = existing
+        ? `Mission change updated: ${existing.uid}.`
+        : "Mission change created.";
+      resetMissionChangeEditor();
     });
   }
 
@@ -307,6 +434,39 @@ export function useMissionDomainData(missionUid: string) {
     });
   }
 
+  async function linkSelectedMissionZone(): Promise<void> {
+    if (!mission.value || !missionZoneDraft.value.trim()) {
+      errorMessage.value = "Select an available zone before linking it.";
+      return;
+    }
+
+    const selectedZoneId = missionZoneDraft.value.trim();
+    await runMutation(async () => {
+      await missionCoreStore.linkMissionZone(mission.value!.uid, selectedZoneId);
+      await Promise.all([
+        missionCoreStore.getMission(mission.value!.uid, { expand: ["log_entries", "checklists"] }),
+        mapMarkersZonesStore.listZones(),
+      ]);
+      statusMessage.value = `Zone linked to mission: ${selectedZoneId}.`;
+      missionZoneDraft.value = "";
+    });
+  }
+
+  async function unlinkMissionZone(zoneId: string): Promise<void> {
+    if (!mission.value) {
+      return;
+    }
+
+    await runMutation(async () => {
+      await missionCoreStore.unlinkMissionZone(mission.value!.uid, zoneId);
+      await Promise.all([
+        missionCoreStore.getMission(mission.value!.uid, { expand: ["log_entries", "checklists"] }),
+        mapMarkersZonesStore.listZones(),
+      ]);
+      statusMessage.value = `Zone unlinked from mission: ${zoneId}.`;
+    });
+  }
+
   async function removeZone(zoneId: string): Promise<void> {
     await runMutation(async () => {
       await mapMarkersZonesStore.deleteZone(zoneId);
@@ -324,27 +484,45 @@ export function useMissionDomainData(missionUid: string) {
     missionChecklists,
     missionTeams,
     missionTeamMembers,
+    availableTeamOptions,
     missionAssets,
     missionAssignments,
     missionZones,
+    linkedMissionZones,
+    availableZoneOptions,
     missionMarkers,
     missionLogEntries,
     missionChanges,
     missionChannelKey,
+    activeMissionChange,
+    isEditingMissionChange,
     missionParentDraft,
     missionRdeDraft,
+    missionZoneDraft,
+    missionTeamDraft,
+    missionChangeDraftUid,
+    missionChangeSummaryDraft,
+    missionChangeTypeDraft,
     refreshMissionBundle,
     subscribeMissionTopic,
     createMissionChecklist,
     createMissionTeam,
+    linkSelectedMissionTeam,
+    unlinkMissionTeam,
+    deleteMissionTeam,
     createMissionAsset,
     createMissionZone,
     createMissionLogEntry,
+    editMissionChange,
+    resetMissionChangeEditor,
+    saveMissionChange,
     patchMissionSummary,
     deleteCurrentMission,
     applyMissionParent,
     clearMissionParent,
     applyMissionRde,
+    linkSelectedMissionZone,
+    unlinkMissionZone,
     removeZone,
     setActiveChannel: messagingStore.setActiveChannel,
   };

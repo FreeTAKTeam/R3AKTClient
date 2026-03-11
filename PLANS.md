@@ -150,12 +150,15 @@ Notes:
 - completed sub-slice: files/images preview, download/share export, and topic association controls inside the existing comms shell
 - completed sub-slice: store-backed checklist detail route with task status and row-style controls
 - completed sub-slice: mission workspace parent set/clear and RDE role assignment controls on the approved mission-detail route
+- completed sub-slice: mission workspace zone link/unlink controls on the approved mission-detail route
+- completed sub-slice: mission workspace mission-change create/edit controls on the approved log route
+- completed sub-slice: mission workspace team link/unlink/delete controls on the approved teams route
 - merge-sync note: resolving the Playwright PR against `codex/r3aktmobile-parity` required keeping the interaction coverage while also standardizing invalid JSON handling through the shared payload parser across the remaining feature stores
 - transport support note: session/chat delivery now primes the hub link on announce, uses bounded link retries before raw transport fallback, and no longer fires an eager telemetry request during initial store wiring
 - rust-only live probe note: `cargo test -p reticulum_mobile --test live_rch_lxmf live_rch_lxmf_get_app_info_probe -- --ignored --exact --nocapture` still times out on `getAppInfo` against the configured live hub, so the session query path is not yet trustworthy
 - alternate-target note: retesting the same Rust-only probe against `8f455b1c01a6032f6bd740994686f49f` also timed out, and the runtime did not log that target as a reachable announcing hub during the probe window
 - routes without approved Stitch references remain blocked for net-new UI implementation and must not be guessed in code
-- next candidate sub-slice: remaining mission-core actions on the approved mission workspace route, most likely mission change create/edit depth or mission-zone link/unlink with matching interaction coverage
+- next candidate sub-slice: teams/people/skills controls on an approved route, most likely team-member create/update/delete or member client link/unlink with matching interaction coverage
 
 ---
 

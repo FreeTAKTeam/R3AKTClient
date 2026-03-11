@@ -21,27 +21,43 @@ const {
   missionChecklists,
   missionTeams,
   missionTeamMembers,
+  availableTeamOptions,
   missionAssets,
   missionAssignments,
   missionZones,
+  linkedMissionZones,
+  availableZoneOptions,
   missionMarkers,
   missionLogEntries,
   missionChanges,
   missionChannelKey,
+  isEditingMissionChange,
   missionParentDraft,
   missionRdeDraft,
+  missionZoneDraft,
+  missionTeamDraft,
+  missionChangeSummaryDraft,
+  missionChangeTypeDraft,
   refreshMissionBundle,
   subscribeMissionTopic,
   createMissionChecklist,
   createMissionTeam,
+  linkSelectedMissionTeam,
+  unlinkMissionTeam,
+  deleteMissionTeam,
   createMissionAsset,
   createMissionZone,
   createMissionLogEntry,
+  editMissionChange,
+  resetMissionChangeEditor,
+  saveMissionChange,
   patchMissionSummary,
   deleteCurrentMission,
   applyMissionParent,
   clearMissionParent,
   applyMissionRde,
+  linkSelectedMissionZone,
+  unlinkMissionZone,
   removeZone,
   setActiveChannel,
 } = useMissionDomainData(props.missionUid);
@@ -245,14 +261,52 @@ async function openMissionChat(): Promise<void> {
           <h2>Teams &amp; Members</h2>
           <button type="button" :disabled="busy" @click="createMissionTeam">Create</button>
         </div>
-        <div class="mission-domain__list">
-          <article v-for="team in missionTeams" :key="team.uid" class="mission-domain__card">
-            <h3>{{ team.name }}</h3>
-            <p>{{ team.description ?? "Mission-linked response team." }}</p>
-            <span>{{ missionTeamMembers.filter((member) => member.teamUid === team.uid).length }} members</span>
+        <div class="mission-domain__list mission-domain__list--two">
+          <article class="mission-domain__card">
+            <h3>Linked Teams</h3>
+            <ul>
+              <li v-for="team in missionTeams" :key="team.uid">
+                <div class="mission-domain__item-head">
+                  <strong>{{ team.name }}</strong>
+                  <div class="mission-domain__button-row">
+                    <button type="button" :disabled="busy" @click="unlinkMissionTeam(team.uid)">Unlink</button>
+                    <button type="button" class="danger-link" :disabled="busy" @click="deleteMissionTeam(team.uid)">Delete</button>
+                  </div>
+                </div>
+                <span>{{ team.description ?? "Mission-linked response team." }}</span>
+                <span>{{ missionTeamMembers.filter((member) => member.teamUid === team.uid).length }} members</span>
+              </li>
+              <li v-if="missionTeams.length === 0">
+                No teams linked to this mission yet.
+              </li>
+            </ul>
           </article>
-          <article v-if="missionTeams.length === 0" class="mission-domain__card mission-domain__card--empty">
-            <p>No teams linked to this mission yet.</p>
+          <article class="mission-domain__card">
+            <h3>Attach Existing Team</h3>
+            <label class="mission-domain__control">
+              <span>Available Teams</span>
+              <select v-model="missionTeamDraft" :disabled="busy">
+                <option value="">Select unlinked team</option>
+                <option
+                  v-for="team in availableTeamOptions"
+                  :key="team.uid"
+                  :value="team.uid"
+                >
+                  {{ team.name }} ({{ team.uid }})
+                </option>
+              </select>
+            </label>
+            <button type="button" :disabled="busy || !missionTeamDraft" @click="linkSelectedMissionTeam">
+              Link Team
+            </button>
+            <ul>
+              <li v-for="team in availableTeamOptions" :key="team.uid">
+                {{ team.name }} <span>{{ team.uid }}</span>
+              </li>
+              <li v-if="availableTeamOptions.length === 0">
+                No unlinked teams available.
+              </li>
+            </ul>
           </article>
         </div>
       </section>
@@ -289,21 +343,73 @@ async function openMissionChat(): Promise<void> {
         </div>
         <div class="mission-domain__list mission-domain__list--two">
           <article class="mission-domain__card">
-            <h3>Zones</h3>
+            <h3>Linked Zones</h3>
             <ul>
-              <li v-for="zone in missionZones" :key="zone.zoneId">
+              <li v-for="zone in linkedMissionZones" :key="zone.zoneId">
+                <button type="button" :disabled="busy" @click="unlinkMissionZone(zone.zoneId)">Unlink</button>
                 <button type="button" class="danger-link" :disabled="busy" @click="removeZone(zone.zoneId)">Delete</button>
                 {{ zone.name }} <span>{{ zone.points.length }} points</span>
               </li>
+              <li v-if="linkedMissionZones.length === 0">
+                No linked zones yet. Create one or attach an available zone below.
+              </li>
             </ul>
           </article>
+          <article class="mission-domain__card">
+            <h3>Attach Existing Zone</h3>
+            <label class="mission-domain__control">
+              <span>Available Zones</span>
+              <select v-model="missionZoneDraft" :disabled="busy">
+                <option value="">Select unlinked zone</option>
+                <option
+                  v-for="zone in availableZoneOptions"
+                  :key="zone.zoneId"
+                  :value="zone.zoneId"
+                >
+                  {{ zone.name }} ({{ zone.zoneId }})
+                </option>
+              </select>
+            </label>
+            <button type="button" :disabled="busy || !missionZoneDraft" @click="linkSelectedMissionZone">
+              Link Zone
+            </button>
+            <ul>
+              <li v-for="zone in availableZoneOptions" :key="zone.zoneId">
+                {{ zone.name }} <span>{{ zone.zoneId }}</span>
+              </li>
+              <li v-if="availableZoneOptions.length === 0">
+                No unlinked zones available.
+              </li>
+            </ul>
+          </article>
+        </div>
+        <div class="mission-domain__list mission-domain__list--two">
           <article class="mission-domain__card">
             <h3>Markers</h3>
             <ul>
               <li v-for="marker in missionMarkers" :key="marker.markerId">
                 {{ marker.name }} <span>{{ marker.lat ?? "?" }}, {{ marker.lon ?? "?" }}</span>
               </li>
+              <li v-if="missionMarkers.length === 0">
+                No markers linked to this mission yet.
+              </li>
             </ul>
+          </article>
+          <article class="mission-domain__card">
+            <h3>Zone Scope</h3>
+            <p>
+              Mission link state now follows the mission registry instead of treating every zone action as a destructive delete.
+            </p>
+            <dl class="mission-domain__facts">
+              <div>
+                <dt>Linked</dt>
+                <dd>{{ linkedMissionZones.length }}</dd>
+              </div>
+              <div>
+                <dt>Available</dt>
+                <dd>{{ availableZoneOptions.length }}</dd>
+              </div>
+            </dl>
           </article>
         </div>
       </section>
@@ -313,6 +419,35 @@ async function openMissionChat(): Promise<void> {
           <h2>Logs &amp; Changes</h2>
           <button type="button" :disabled="busy" @click="createMissionLogEntry">Post Update</button>
         </div>
+        <article class="mission-domain__card">
+          <div class="mission-domain__section-head">
+            <h3>Change Editor</h3>
+            <button type="button" :disabled="busy" @click="resetMissionChangeEditor">New Draft</button>
+          </div>
+          <label class="mission-domain__control">
+            <span>Change Summary</span>
+            <textarea
+              v-model="missionChangeSummaryDraft"
+              :disabled="busy"
+              rows="3"
+              placeholder="Describe the mission change for operators."
+            />
+          </label>
+          <label class="mission-domain__control">
+            <span>Change Type</span>
+            <input
+              v-model="missionChangeTypeDraft"
+              :disabled="busy"
+              type="text"
+              placeholder="status-update / route-shift / reassignment"
+            />
+          </label>
+          <div class="mission-domain__button-row">
+            <button type="button" :disabled="busy || !missionChangeSummaryDraft.trim()" @click="saveMissionChange">
+              {{ isEditingMissionChange ? "Update Change" : "Save Change" }}
+            </button>
+          </div>
+        </article>
         <div class="mission-domain__list mission-domain__list--two">
           <article class="mission-domain__card">
             <h3>Log Entries</h3>
@@ -320,13 +455,20 @@ async function openMissionChat(): Promise<void> {
               <li v-for="entry in missionLogEntries" :key="entry.uid">
                 {{ entry.content }} <span>{{ entry.updatedAt ?? entry.serverTime ?? entry.createdAt ?? "now" }}</span>
               </li>
+              <li v-if="missionLogEntries.length === 0">
+                No mission log entries yet.
+              </li>
             </ul>
           </article>
           <article class="mission-domain__card">
             <h3>Mission Changes</h3>
             <ul>
               <li v-for="change in missionChanges" :key="change.uid">
+                <button type="button" :disabled="busy" @click="editMissionChange(change.uid)">Edit</button>
                 {{ change.summary }} <span>{{ change.changeType ?? "change" }}</span>
+              </li>
+              <li v-if="missionChanges.length === 0">
+                No mission changes recorded yet.
               </li>
             </ul>
           </article>
@@ -520,13 +662,19 @@ async function openMissionChat(): Promise<void> {
 }
 
 .mission-domain__control input,
-.mission-domain__control select {
+.mission-domain__control select,
+.mission-domain__control textarea {
   background: rgb(4 21 26 / 88%);
   border: 1px solid rgb(37 209 244 / 16%);
   border-radius: 0.8rem;
   color: #f5fbff;
   min-height: 2.6rem;
   padding: 0.7rem 0.85rem;
+}
+
+.mission-domain__control textarea {
+  min-height: 5.8rem;
+  resize: vertical;
 }
 
 .mission-domain__button-row {
@@ -547,6 +695,13 @@ async function openMissionChat(): Promise<void> {
   border-top: 1px solid rgb(37 209 244 / 10%);
   color: #f5fbff;
   padding-top: 0.55rem;
+}
+
+.mission-domain__item-head {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
 }
 
 .mission-domain__card li:first-child {

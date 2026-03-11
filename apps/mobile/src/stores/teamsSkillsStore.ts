@@ -183,6 +183,11 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
         if (uid) {
           delete teamsByUid[uid];
         }
+        for (const memberUid of asArray(value.team_member_uids)) {
+          if (typeof memberUid === "string") {
+            delete teamMembersByUid[memberUid];
+          }
+        }
       }
       return;
     }

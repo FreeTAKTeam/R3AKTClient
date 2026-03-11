@@ -42,10 +42,22 @@ describe("live shell wiring", () => {
     expect(missionSummary.text()).toContain("Parent Mission");
     expect(missionSummary.text()).toContain("RDE Role");
 
+    const missionZones = await mountWithRoute(App, "/missions/demo/zones");
+    expect(missionZones.text()).toContain("Linked Zones");
+    expect(missionZones.text()).toContain("Attach Existing Zone");
+    expect(missionZones.text()).toContain("Available Zones");
+
+    const missionTeams = await mountWithRoute(App, "/missions/demo/teams");
+    expect(missionTeams.text()).toContain("Linked Teams");
+    expect(missionTeams.text()).toContain("Attach Existing Team");
+    expect(missionTeams.text()).toContain("Available Teams");
+
     const missionDomain = await mountWithRoute(App, "/missions/demo/log-entries");
     expect(missionDomain.text()).toContain("Mission Workspace");
     expect(missionDomain.text()).toContain("Mission UID");
     expect(missionDomain.text()).toContain("Logs & Changes");
+    expect(missionDomain.text()).toContain("Change Editor");
+    expect(missionDomain.text()).toContain("Save Change");
   });
 
   it("renders comms routes", async () => {

@@ -21,20 +21,26 @@ test.describe("mobile interaction flows", () => {
     await expect(page.getByTestId("dashboard-screen")).toBeVisible();
 
     await openNavigationDrawer(page);
-    await page.getByLabel("Navigation").getByRole("link", { name: "Missions" }).click();
-    await expect(page).toHaveURL(/\/missions$/);
+    await Promise.all([
+      page.waitForURL(/\/missions$/),
+      page.getByLabel("Navigation").getByRole("link", { name: "Missions" }).first().click(),
+    ]);
     await expect(page.getByTestId("missions-screen")).toBeVisible();
     await expectDrawerClosed(page);
 
     await openNavigationDrawer(page);
-    await page.getByLabel("Navigation").getByRole("link", { name: "Webmap" }).click();
-    await expect(page).toHaveURL(/\/webmap$/);
+    await Promise.all([
+      page.waitForURL(/\/webmap$/),
+      page.getByLabel("Navigation").getByRole("link", { name: "Webmap" }).first().click(),
+    ]);
     await expect(page.getByTestId("webmap-screen")).toBeVisible();
     await expectDrawerClosed(page);
 
     await openNavigationDrawer(page);
-    await page.getByLabel("Navigation").getByRole("link", { name: "Configure" }).click();
-    await expect(page).toHaveURL(/\/ops\/settings$/);
+    await Promise.all([
+      page.waitForURL(/\/ops\/settings$/),
+      page.getByLabel("Navigation").getByRole("link", { name: "Configure" }).first().click(),
+    ]);
     await expect(page.getByTestId("settings-screen")).toBeVisible();
   });
 
@@ -110,5 +116,68 @@ test.describe("mobile interaction flows", () => {
     await page.getByRole("button", { name: "Assign RDE" }).click();
     await expect(page.getByText("RDE role updated to overwatch.")).toBeVisible();
     await expect(page.getByText("overwatch").first()).toBeVisible();
+  });
+
+  test("mission workspace links and unlinks an existing zone from the approved route", async ({ page }) => {
+    await page.goto("/missions/demo/zones");
+    await expect(page.getByTestId("mission-domain-screen")).toBeVisible();
+
+    await expect(page.locator('option[value="staging-free"]')).toHaveCount(1);
+    await page.getByLabel("Available Zones").selectOption("staging-free");
+    await page.getByRole("button", { name: "Link Zone" }).click();
+
+    await expect(page.getByText("Zone linked to mission: staging-free.")).toBeVisible();
+    await expect(page.getByText("Staging Free").first()).toBeVisible();
+
+    const stagingZoneRow = page.locator("li").filter({ hasText: "Staging Free" }).first();
+    await stagingZoneRow.getByRole("button", { name: "Unlink" }).click();
+
+    await expect(page.getByText("Zone unlinked from mission: staging-free.")).toBeVisible();
+    await expect(page.locator('option[value="staging-free"]')).toHaveCount(1);
+  });
+
+  test("mission workspace links, unlinks, and deletes teams from the approved route", async ({ page }) => {
+    await page.goto("/missions/demo/teams");
+    await expect(page.getByTestId("mission-domain-screen")).toBeVisible();
+
+    await expect(page.locator('option[value="team-reserve"]')).toHaveCount(1);
+    await page.getByLabel("Available Teams").selectOption("team-reserve");
+    await page.getByRole("button", { name: "Link Team" }).click();
+
+    await expect(page.getByText("Team linked to mission: team-reserve.")).toBeVisible();
+    const linkedReserveRow = page.locator("li").filter({ hasText: "Reserve Surge" }).first();
+    await expect(linkedReserveRow).toBeVisible();
+
+    const linkedHarborRow = page.locator("li").filter({ hasText: "Harbor Intercept" }).first();
+    await linkedHarborRow.getByRole("button", { name: "Unlink" }).click();
+    await expect(page.getByText("Team unlinked from mission: team-harbor.")).toBeVisible();
+    await expect(page.locator('option[value="team-harbor"]')).toHaveCount(1);
+
+    await linkedReserveRow.getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByText("Team deleted: team-reserve.")).toBeVisible();
+    await expect(page.locator('option[value="team-reserve"]')).toHaveCount(0);
+  });
+
+  test("mission workspace edits a mission change from the approved log route", async ({ page }) => {
+    await page.goto("/missions/demo/log-entries");
+    await expect(page.getByTestId("mission-domain-screen")).toBeVisible();
+
+    const existingChange = page.getByText("Ingress window shifted by 15 minutes due to harbor traffic.").first();
+    await expect(existingChange).toBeVisible();
+
+    const existingChangeRow = page.locator("li").filter({
+      hasText: "Ingress window shifted by 15 minutes due to harbor traffic.",
+    }).first();
+    await existingChangeRow.getByRole("button", { name: "Edit" }).click();
+
+    await page.getByPlaceholder("Describe the mission change for operators.").fill(
+      "Ingress window shifted by 10 minutes due to cleared harbor traffic.",
+    );
+    await page.getByRole("button", { name: "Update Change" }).click();
+
+    await expect(page.getByText("Mission change updated: change-ops-window.")).toBeVisible();
+    await expect(
+      page.getByText("Ingress window shifted by 10 minutes due to cleared harbor traffic.").first(),
+    ).toBeVisible();
   });
 });
