@@ -1,85 +1,45 @@
 <script setup lang="ts">
-import { computed, watch } from "vue";
+import { computed } from "vue";
 import { useRouter } from "vue-router";
 
+import { useChecklistDetail } from "../../composables/useChecklistDetail";
 import { useNavigationDrawer } from "../../composables/useNavigationDrawer";
-import { useDesignChecklistsData } from "../../design/composables/useDesignChecklistsData";
 import { useNodeStore } from "../../stores/nodeStore";
 
 const props = defineProps<{
   checklistId: string;
 }>();
 
-const FALLBACK_DETAIL = {
-  checklistId: "rch-7702",
-  title: "Equipment Check",
-  description: "System Verification",
-  status: "LIVE",
-  taskCount: 4,
-  tasks: [
-    { taskId: "battery", title: "Drone battery check", description: "Verified at 09:45 AM", isComplete: true },
-    { taskId: "signal", title: "Signal encryption test", description: "Cycle pulse sequence active", isComplete: true },
-    { taskId: "integrity", title: "Hardware integrity scan", description: "Awaiting physical link", isComplete: false },
-    { taskId: "gps", title: "GPS module calibration", description: "Outdoor visibility required", isComplete: false },
-  ],
-};
-
 const { toggleNavigationDrawer } = useNavigationDrawer();
 const nodeStore = useNodeStore();
 const router = useRouter();
 const {
-  checklists,
-  progressFor,
-  selectedChecklist,
-  selectedChecklistId,
+  loading,
+  errorMessage,
+  statusMessage,
+  checklist,
+  checklistProgress,
+  completedCount,
+  rowStyleDraftFor,
+  setRowStyleDraft,
+  rowStyleBusy,
   toggleTask,
-} = useDesignChecklistsData();
-
-const hasLiveChecklists = computed(() => checklists.value.length > 0);
-
-watch(
-  () => props.checklistId,
-  (nextId) => {
-    if (!nextId) {
-      return;
-    }
-    if (hasLiveChecklists.value) {
-      selectedChecklistId.value = nextId;
-    }
-  },
-  { immediate: true },
-);
-
-const displayChecklist = computed(() => {
-  if (hasLiveChecklists.value) {
-    return (
-      checklists.value.find((entry) => entry.checklistId === props.checklistId)
-      ?? selectedChecklist.value
-      ?? checklists.value[0]
-    );
-  }
-  return FALLBACK_DETAIL;
-});
-
-const checklistProgress = computed(() => {
-  if (!displayChecklist.value) {
-    return 0;
-  }
-  if (hasLiveChecklists.value) {
-    return progressFor(displayChecklist.value.checklistId);
-  }
-  const completed = displayChecklist.value.tasks.filter((task) => task.isComplete).length;
-  return Math.round((completed / displayChecklist.value.tasks.length) * 100);
-});
+  applyTaskRowStyle,
+} = useChecklistDetail(() => props.checklistId);
 
 const liveLabel = computed(() => (nodeStore.status.running ? "LIVE" : "IDLE"));
-const completedCount = computed(() => displayChecklist.value?.tasks.filter((task) => task.isComplete).length ?? 0);
+const title = computed(() => checklist.value?.title?.toUpperCase() ?? "CHECKLIST");
+const description = computed(() => checklist.value?.description ?? "Checklist detail is loading from the registry.");
 
-async function handleToggleTask(taskId: string): Promise<void> {
-  if (!hasLiveChecklists.value) {
-    return;
+function rowStyleTone(rowStyle?: string): string {
+  const normalized = (rowStyle ?? "").trim().toLowerCase();
+  if (normalized.includes("block") || normalized.includes("danger")) {
+    return "blocked";
   }
-  await toggleTask(taskId);
+  if (normalized.includes("highlight") || normalized.includes("warn")) {
+    return "highlight";
+  }
+  return "default";
 }
 
 function goBack(): void {
@@ -97,7 +57,7 @@ function goBack(): void {
       </div>
 
       <div class="checklist-detail__header-copy">
-        <h1>{{ displayChecklist?.title?.toUpperCase() ?? 'CHECKLIST' }}</h1>
+        <h1>{{ title }}</h1>
       </div>
 
       <div class="checklist-detail__header-side checklist-detail__header-side--end">
@@ -111,10 +71,10 @@ function goBack(): void {
       <section class="checklist-detail__hero">
         <div class="checklist-detail__hero-copy">
           <span>Mission Critical</span>
-          <h2>{{ displayChecklist?.description ?? 'System Verification' }}</h2>
+          <h2>{{ description }}</h2>
         </div>
         <div class="checklist-detail__hero-id">
-          <span>ID: {{ displayChecklist?.checklistId?.toUpperCase() }}</span>
+          <span>ID: {{ checklist?.checklistId?.toUpperCase() ?? checklistId.toUpperCase() }}</span>
         </div>
         <div class="checklist-detail__hero-progress">
           <div class="checklist-detail__hero-bar">
@@ -125,19 +85,49 @@ function goBack(): void {
       </section>
 
       <section class="checklist-detail__tasks-section">
-        <h3>Verification Sub-tasks</h3>
-        <div class="checklist-detail__tasks">
-          <article v-for="task in displayChecklist?.tasks ?? []" :key="task.taskId" class="checklist-detail__task-card" :class="{ complete: task.isComplete }">
+        <div class="checklist-detail__section-head">
+          <h3>Verification Sub-tasks</h3>
+          <span>{{ checklist?.taskCount ?? 0 }} rows</span>
+        </div>
+        <div v-if="checklist" class="checklist-detail__tasks">
+          <article
+            v-for="task in checklist.tasks"
+            :key="task.taskId"
+            class="checklist-detail__task-card"
+            :class="[task.isComplete ? 'complete' : '', `tone-${rowStyleTone(task.rowStyle)}`]"
+          >
             <label class="checklist-detail__task-main">
-              <input :checked="task.isComplete" type="checkbox" @change="handleToggleTask(task.taskId)" />
+              <input :checked="task.isComplete" type="checkbox" @change="toggleTask(task.taskId)" />
               <div>
                 <p>{{ task.title }}</p>
-                <span>{{ task.description }}</span>
+                <span>{{ task.description ?? "No task detail provided." }}</span>
               </div>
             </label>
-            <strong :class="task.isComplete ? 'complete' : 'pending'">{{ task.isComplete ? 'COMPLETED' : 'PENDING' }}</strong>
+            <div class="checklist-detail__task-side">
+              <strong :class="task.isComplete ? 'complete' : 'pending'">{{ task.isComplete ? 'COMPLETED' : 'PENDING' }}</strong>
+              <span v-if="task.rowStyle" class="checklist-detail__row-style-badge" :class="rowStyleTone(task.rowStyle)">
+                {{ task.rowStyle }}
+              </span>
+            </div>
+            <div class="checklist-detail__row-style-editor">
+              <label>
+                <span>Row Style</span>
+                <input
+                  :value="rowStyleDraftFor(task.taskId)"
+                  type="text"
+                  placeholder="highlight / blocked / custom"
+                  @input="setRowStyleDraft(task.taskId, ($event.target as HTMLInputElement).value)"
+                />
+              </label>
+              <button type="button" :disabled="rowStyleBusy(task.taskId)" @click="applyTaskRowStyle(task.taskId)">
+                {{ rowStyleBusy(task.taskId) ? "Applying..." : "Apply Style" }}
+              </button>
+            </div>
           </article>
         </div>
+        <article v-else class="checklist-detail__empty-card">
+          <p>{{ loading ? "Loading checklist detail..." : "Checklist detail is not available yet." }}</p>
+        </article>
       </section>
 
       <section class="checklist-detail__activity">
@@ -148,16 +138,19 @@ function goBack(): void {
           </div>
           <div>
             <p>{{ completedCount }} verification steps confirmed</p>
-            <span>Checklist synchronized with live task state.</span>
+            <span>{{ statusMessage || "Checklist synchronized with live task state." }}</span>
           </div>
         </article>
       </section>
+
+      <p v-if="errorMessage" class="checklist-detail__message checklist-detail__message--error">{{ errorMessage }}</p>
+      <p v-else-if="statusMessage" class="checklist-detail__message checklist-detail__message--status">{{ statusMessage }}</p>
     </main>
 
     <footer class="checklist-detail__footer">
       <button type="button" class="checklist-detail__update" @click="goBack">
-        <span class="material-symbols-outlined">save</span>
-        <span>Update Status</span>
+        <span class="material-symbols-outlined">arrow_back</span>
+        <span>Back to Checklists</span>
       </button>
     </footer>
   </section>
@@ -258,7 +251,9 @@ function goBack(): void {
 }
 .checklist-detail__hero-copy span,
 .checklist-detail__tasks-section h3,
-.checklist-detail__activity h3 {
+.checklist-detail__activity h3,
+.checklist-detail__section-head span,
+.checklist-detail__row-style-editor label span {
   color: #25d1f4;
   font-family: var(--font-ui);
   font-size: 0.62rem;
@@ -270,7 +265,7 @@ function goBack(): void {
 .checklist-detail__hero-copy h2 {
   color: #fff;
   font-family: var(--font-ui);
-  font-size: 1.45rem;
+  font-size: 1.3rem;
   margin: 0.3rem 0 0;
 }
 .checklist-detail__hero-id {
@@ -310,26 +305,36 @@ function goBack(): void {
 }
 .checklist-detail__tasks-section,
 .checklist-detail__activity { margin-top: 1.4rem; }
-.checklist-detail__tasks,
-.checklist-detail__activity { display: grid; gap: 0.75rem; }
-.checklist-detail__task-card {
+.checklist-detail__section-head {
   align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+.checklist-detail__tasks,
+.checklist-detail__activity { display: grid; gap: 0.75rem; margin-top: 0.75rem; }
+.checklist-detail__task-card {
   background: rgb(15 23 42 / 40%);
   border: 1px solid rgb(71 85 105 / 50%);
   border-radius: 0.8rem;
-  display: flex;
-  gap: 0.6rem;
-  justify-content: space-between;
+  display: grid;
+  gap: 0.8rem;
   padding: 0.9rem;
 }
 .checklist-detail__task-card.complete {
   border-color: rgb(37 209 244 / 30%);
 }
+.checklist-detail__task-card.tone-highlight {
+  background: rgb(245 158 11 / 12%);
+  border-color: rgb(245 158 11 / 26%);
+}
+.checklist-detail__task-card.tone-blocked {
+  background: rgb(244 63 94 / 12%);
+  border-color: rgb(244 63 94 / 24%);
+}
 .checklist-detail__task-main {
   align-items: center;
   cursor: pointer;
   display: flex;
-  flex: 1;
   gap: 0.8rem;
 }
 .checklist-detail__task-main input {
@@ -354,13 +359,21 @@ function goBack(): void {
   font-size: 0.72rem;
   margin-top: 0.2rem;
 }
-.checklist-detail__task-card strong {
+.checklist-detail__task-side {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+.checklist-detail__task-card strong,
+.checklist-detail__row-style-badge {
   border-radius: 0.35rem;
   font-family: var(--font-ui);
   font-size: 0.54rem;
   font-weight: 800;
   letter-spacing: 0.08em;
   padding: 0.22rem 0.45rem;
+  text-transform: uppercase;
 }
 .checklist-detail__task-card strong.complete {
   background: rgb(37 209 244 / 20%);
@@ -372,14 +385,69 @@ function goBack(): void {
   border: 1px solid rgb(71 85 105 / 80%);
   color: #94a3b8;
 }
-.checklist-detail__activity-card {
+.checklist-detail__row-style-badge.default {
+  background: rgb(51 65 85 / 90%);
+  border: 1px solid rgb(71 85 105 / 80%);
+  color: #cbd5e1;
+}
+.checklist-detail__row-style-badge.highlight {
+  background: rgb(245 158 11 / 20%);
+  border: 1px solid rgb(245 158 11 / 30%);
+  color: #fbbf24;
+}
+.checklist-detail__row-style-badge.blocked {
+  background: rgb(244 63 94 / 18%);
+  border: 1px solid rgb(244 63 94 / 30%);
+  color: #fda4af;
+}
+.checklist-detail__row-style-editor {
+  align-items: end;
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.checklist-detail__row-style-editor input {
+  background: rgb(9 20 28 / 92%);
+  border: 1px solid rgb(37 209 244 / 18%);
+  border-radius: 0.7rem;
+  color: #e3fbff;
+  font-family: var(--font-body);
+  margin-top: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+.checklist-detail__row-style-editor button,
+.checklist-detail__update {
   align-items: center;
+  background: #25d1f4;
+  border: 0;
+  border-radius: 0.9rem;
+  color: #07161d;
+  display: inline-flex;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 800;
+  gap: 0.5rem;
+  justify-content: center;
+  min-height: 2.8rem;
+  padding: 0 0.9rem;
+  text-transform: uppercase;
+}
+.checklist-detail__row-style-editor button:disabled {
+  opacity: 0.7;
+}
+.checklist-detail__empty-card,
+.checklist-detail__activity-card,
+.checklist-detail__message {
   background: rgb(37 209 244 / 5%);
   border: 1px solid rgb(37 209 244 / 10%);
   border-radius: 0.8rem;
+  padding: 0.9rem;
+}
+.checklist-detail__activity-card {
+  align-items: center;
   display: flex;
   gap: 0.8rem;
-  padding: 0.9rem;
 }
 .checklist-detail__activity-icon {
   align-items: center;
@@ -392,7 +460,9 @@ function goBack(): void {
   justify-content: center;
   width: 2.5rem;
 }
-.checklist-detail__activity-card p {
+.checklist-detail__activity-card p,
+.checklist-detail__empty-card p,
+.checklist-detail__message {
   color: #e7fbff;
   font-family: var(--font-body);
   font-size: 0.84rem;
@@ -406,25 +476,33 @@ function goBack(): void {
   font-size: 0.72rem;
   margin-top: 0.18rem;
 }
+.checklist-detail__message {
+  margin-top: 1rem;
+}
+.checklist-detail__message--error {
+  background: rgb(251 113 133 / 10%);
+  border-color: rgb(251 113 133 / 20%);
+  color: #fda4af;
+}
+.checklist-detail__message--status {
+  color: #a7f3d0;
+}
 .checklist-detail__footer {
   background: linear-gradient(180deg, rgb(2 19 23 / 0%), rgb(2 19 23 / 94%));
   padding: 0.9rem 1rem calc(env(safe-area-inset-bottom) + 1rem);
 }
 .checklist-detail__update {
-  align-items: center;
-  background: #25d1f4;
-  border: 0;
-  border-radius: 0.9rem;
   box-shadow: 0 0 20px rgb(37 209 244 / 40%);
-  color: #07161d;
-  display: inline-flex;
-  font-family: var(--font-ui);
-  font-size: 0.78rem;
-  font-weight: 800;
-  gap: 0.5rem;
-  justify-content: center;
   min-height: 3.5rem;
-  text-transform: uppercase;
   width: 100%;
+}
+@media (max-width: 420px) {
+  .checklist-detail__row-style-editor {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .checklist-detail__task-side {
+    align-items: start;
+    flex-direction: column;
+  }
 }
 </style>

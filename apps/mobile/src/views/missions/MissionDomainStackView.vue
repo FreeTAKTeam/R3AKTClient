@@ -14,7 +14,9 @@ const router = useRouter();
 const {
   busy,
   errorMessage,
+  statusMessage,
   mission,
+  parentMissionOptions,
   missionTopic,
   missionChecklists,
   missionTeams,
@@ -26,6 +28,8 @@ const {
   missionLogEntries,
   missionChanges,
   missionChannelKey,
+  missionParentDraft,
+  missionRdeDraft,
   refreshMissionBundle,
   subscribeMissionTopic,
   createMissionChecklist,
@@ -35,6 +39,9 @@ const {
   createMissionLogEntry,
   patchMissionSummary,
   deleteCurrentMission,
+  applyMissionParent,
+  clearMissionParent,
+  applyMissionRde,
   removeZone,
   setActiveChannel,
 } = useMissionDomainData(props.missionUid);
@@ -135,7 +142,48 @@ async function openMissionChat(): Promise<void> {
               <dt>Changes</dt>
               <dd>{{ missionChanges.length }}</dd>
             </div>
+            <div>
+              <dt>Parent</dt>
+              <dd>{{ mission?.parentUid ?? "None" }}</dd>
+            </div>
+            <div>
+              <dt>RDE</dt>
+              <dd>{{ mission?.rdeRole ?? "Unassigned" }}</dd>
+            </div>
           </dl>
+          <div class="mission-domain__control-grid">
+            <label class="mission-domain__control">
+              <span>Parent Mission</span>
+              <select v-model="missionParentDraft" :disabled="busy">
+                <option value="">Select parent mission</option>
+                <option
+                  v-for="candidate in parentMissionOptions"
+                  :key="candidate.uid"
+                  :value="candidate.uid"
+                >
+                  {{ candidate.name }} ({{ candidate.uid }})
+                </option>
+              </select>
+            </label>
+            <div class="mission-domain__button-row">
+              <button type="button" :disabled="busy || !missionParentDraft" @click="applyMissionParent">
+                Apply Parent
+              </button>
+              <button type="button" :disabled="busy" @click="clearMissionParent">Clear Parent</button>
+            </div>
+            <label class="mission-domain__control">
+              <span>RDE Role</span>
+              <input
+                v-model="missionRdeDraft"
+                :disabled="busy"
+                type="text"
+                placeholder="lead / support / overwatch"
+              />
+            </label>
+            <button type="button" :disabled="busy || !missionRdeDraft.trim()" @click="applyMissionRde">
+              Assign RDE
+            </button>
+          </div>
           <button type="button" class="danger" :disabled="busy" @click="deleteCurrentMission">
             Delete Mission
           </button>
@@ -287,6 +335,7 @@ async function openMissionChat(): Promise<void> {
     </main>
 
     <p v-if="errorMessage" class="mission-domain__error">{{ errorMessage }}</p>
+    <p v-if="statusMessage" class="mission-domain__status">{{ statusMessage }}</p>
   </section>
 </template>
 
@@ -451,6 +500,41 @@ async function openMissionChat(): Promise<void> {
   margin: 0.2rem 0 0;
 }
 
+.mission-domain__control-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mission-domain__control {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.mission-domain__control span {
+  color: #89aebb;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mission-domain__control input,
+.mission-domain__control select {
+  background: rgb(4 21 26 / 88%);
+  border: 1px solid rgb(37 209 244 / 16%);
+  border-radius: 0.8rem;
+  color: #f5fbff;
+  min-height: 2.6rem;
+  padding: 0.7rem 0.85rem;
+}
+
+.mission-domain__button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
 .mission-domain__card ul {
   display: grid;
   gap: 0.55rem;
@@ -475,6 +559,15 @@ async function openMissionChat(): Promise<void> {
   border: 1px solid rgb(251 113 133 / 20%);
   border-radius: 1rem;
   color: #fda4af;
+  margin: 0;
+  padding: 0.9rem 1rem;
+}
+
+.mission-domain__status {
+  background: rgb(37 209 244 / 8%);
+  border: 1px solid rgb(37 209 244 / 16%);
+  border-radius: 1rem;
+  color: #8ce7f8;
   margin: 0;
   padding: 0.9rem 1rem;
 }

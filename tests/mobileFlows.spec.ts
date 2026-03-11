@@ -81,4 +81,34 @@ test.describe("mobile interaction flows", () => {
     await expect(page.getByRole("button", { name: "Share" })).toBeVisible();
     await expect(page.getByText("Topic Association")).toBeVisible();
   });
+
+  test("checklist detail toggles task status and applies row styling", async ({ page }) => {
+    await page.goto("/checklists/reconnaissance");
+    await expect(page.getByTestId("checklist-detail-screen")).toBeVisible();
+
+    await page.getByText("Mission Briefing").click();
+    await expect(page.getByText("Task completed locally.").first()).toBeVisible();
+
+    const styleInputs = page.getByPlaceholder("highlight / blocked / custom");
+    await styleInputs.first().fill("highlight");
+    await page.getByRole("button", { name: "Apply Style" }).first().click();
+
+    await expect(page.getByText("Row style updated to highlight.").first()).toBeVisible();
+    await expect(page.getByText("highlight").first()).toBeVisible();
+  });
+
+  test("mission workspace assigns parent and RDE role from the approved route", async ({ page }) => {
+    await page.goto("/missions/demo/mission");
+    await expect(page.getByTestId("mission-domain-screen")).toBeVisible();
+
+    await expect(page.locator('option[value="relay-watch"]')).toHaveCount(1);
+    await page.getByLabel("Parent Mission").selectOption("relay-watch");
+    await page.getByRole("button", { name: "Apply Parent" }).click();
+    await expect(page.getByText("Parent mission set to relay-watch.")).toBeVisible();
+
+    await page.getByLabel("RDE Role").fill("overwatch");
+    await page.getByRole("button", { name: "Assign RDE" }).click();
+    await expect(page.getByText("RDE role updated to overwatch.")).toBeVisible();
+    await expect(page.getByText("overwatch").first()).toBeVisible();
+  });
 });

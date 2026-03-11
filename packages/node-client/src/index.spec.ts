@@ -443,4 +443,37 @@ describe("RchClient grouped feature API", () => {
 
     unsubscribe();
   });
+
+  it("supports mock-backed mission parent and RDE updates on the web client", async () => {
+    const nodeClient = createReticulumNodeClient({ mode: "web" });
+    const client = createRchClient(nodeClient);
+
+    const listResponse = await client.missions.execute("mission.registry.mission.list", {});
+    expect(
+      (listResponse.payload as { missions?: Array<{ mission_uid?: string }> }).missions?.some(
+        (mission) => mission.mission_uid === "demo",
+      ),
+    ).toBe(true);
+
+    await client.missions.execute("mission.registry.mission.parent.set", {
+      mission_uid: "demo",
+      parent_uid: "relay-watch",
+    });
+    await client.missions.execute("mission.registry.mission.rde.set", {
+      mission_uid: "demo",
+      role: "overwatch",
+    });
+
+    const missionResponse = await client.missions.execute("mission.registry.mission.get", {
+      mission_uid: "demo",
+    });
+    expect(missionResponse.payload).toMatchObject({
+      mission: {
+        mission_uid: "demo",
+        parent_uid: "relay-watch",
+        rde_role: "overwatch",
+        path: "relay-watch/demo",
+      },
+    });
+  });
 });

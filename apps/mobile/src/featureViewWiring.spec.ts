@@ -37,6 +37,11 @@ describe("live shell wiring", () => {
     expect(missions.text()).toContain("MISSIONS");
     expect(missions.text()).toContain("Mission Directory");
 
+    const missionSummary = await mountWithRoute(App, "/missions/demo/mission");
+    expect(missionSummary.text()).toContain("Mission Workspace");
+    expect(missionSummary.text()).toContain("Parent Mission");
+    expect(missionSummary.text()).toContain("RDE Role");
+
     const missionDomain = await mountWithRoute(App, "/missions/demo/log-entries");
     expect(missionDomain.text()).toContain("Mission Workspace");
     expect(missionDomain.text()).toContain("Mission UID");
@@ -55,6 +60,13 @@ describe("live shell wiring", () => {
     expect(files.text()).toContain("FILE REGISTRY");
     expect(files.text()).toContain("Active Channel");
     expect(files.text()).toContain("Refresh");
+  });
+
+  it("renders checklist detail routes inside the live shell", async () => {
+    const checklistDetail = await mountWithRoute(App, "/checklists/reconnaissance");
+    expect(checklistDetail.text()).toContain("Verification Sub-tasks");
+    expect(checklistDetail.text()).toContain("Recent Activity");
+    expect(checklistDetail.text()).toContain("Row Style");
   });
 
   it("renders map and ops settings routes", async () => {

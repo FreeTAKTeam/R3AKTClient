@@ -44,6 +44,7 @@ export interface ChecklistTaskRecord {
 }
 
 export type ChecklistTaskStatus = "COMPLETE" | "PENDING";
+export type ChecklistTaskRowStyle = string;
 
 export interface ChecklistRecord {
   checklistId: string;
@@ -461,6 +462,25 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
     });
   }
 
+  async function setTaskRowStyle(
+    checklistId: string,
+    taskId: string,
+    rowStyle: ChecklistTaskRowStyle,
+  ): Promise<void> {
+    const normalizedChecklistId = checklistId.trim();
+    const normalizedTaskId = taskId.trim();
+    const normalizedRowStyle = rowStyle.trim();
+    if (!normalizedChecklistId || !normalizedTaskId || !normalizedRowStyle) {
+      return;
+    }
+
+    await execute(CHECKLIST_TASK_ROW_STYLE_OPERATION, {
+      checklist_id: normalizedChecklistId,
+      task_id: normalizedTaskId,
+      row_style: normalizedRowStyle,
+    });
+  }
+
   async function wire(): Promise<void> {
     if (wired.value) {
       return;
@@ -501,6 +521,7 @@ export const useChecklistsStore = defineStore("rch-checklists", () => {
     patchChecklist,
     createTask,
     setTaskStatus,
+    setTaskRowStyle,
     wire,
   };
 });

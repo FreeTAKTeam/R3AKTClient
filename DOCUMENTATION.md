@@ -44,13 +44,15 @@ Overall state:
 - P4 interaction Playwright coverage landed
 - P4 Slice A dashboard/settings parity landed
 - P4 files/images preview/export/association slice landed
+- P4 checklist detail store-backed parity slice landed
+- P4 mission workspace parent/RDE control slice landed
 - P5 app-side event/offline/persistence hardening slice landed
 
 Current blocker:
 - live Rust hub probe for `getAppInfo` still returns timeout against both tested hub targets, so the session query path is not yet trustworthy even after link-prewarm and retry changes
 
 Next intended action:
-- continue P4 against the next approved mission/checklist/admin UI slice while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
+- continue P4 against the approved mission workspace route for the remaining mission-core controls, most likely mission change create/edit depth or mission-zone link/unlink, while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
 
 Last updated:
 - 2026-03-11
@@ -543,6 +545,110 @@ Open issues:
 Next recommended step:
 - continue the next approved P4 slice on a Stitch-backed mission/checklist/admin route and add matching interaction coverage in the same change
 
+### 2026-03-11 - Session 011
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- replace the checklist detail route's design-only fallback with store-backed checklist data and expose one real advanced checklist action, task row styling, on the existing approved route
+
+Planned changes:
+- add a public `setTaskRowStyle` path in the checklist store on top of the already allowlisted checklist task styling operation
+- add a store-backed checklist-detail composable and rewire the checklist detail route to consume live checklist state, task progress, and mutation status directly from Pinia
+- extend the mock/web wrapper path with deterministic checklist list/get/task mutation payloads so the checklist routes remain verifiable in browser mode
+- add focused Vitest and Playwright coverage for checklist detail load, task status toggling, and row-style application
+
+Files touched:
+- `apps/mobile/src/stores/checklistsStore.ts`
+- `apps/mobile/src/composables/useChecklistDetail.ts`
+- `apps/mobile/src/views/checklists/ChecklistDetailView.vue`
+- `apps/mobile/src/checklistsStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- `/checklists/:checklistId` now reads live checklist data from the checklist store instead of using the design fallback detail payload, and it surfaces optimistic task completion plus row-style mutation state directly on the route
+- the new row-style control intentionally uses a free-text style value because the current source-of-truth docs allow the operation but do not define a closed enum for accepted style tokens
+- the shared web/mock client now synthesizes checklist list/get/status/style responses, which means both checklist list and checklist detail can exercise the typed wrapper/store path during local browser and Playwright validation
+
+Open issues:
+- checklist task delete and cell-edit controls remain unsurfaced on the mobile route
+- checklist list still retains its hybrid design fallback shell when no live data is available; this slice only converted the detail route
+- the live Rust `getAppInfo` timeout remains the main blocker on trusting live session query UX
+
+Next recommended step:
+- continue the next approved P4 slice on the mission workspace route, most likely mission parent/RDE controls or mission-zone link management, and add matching interaction coverage in the same change
+
+### 2026-03-11 - Session 012
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose mission parent set/clear and RDE role assignment on the approved mission workspace route using the existing mission-core store and typed wrapper surface
+
+Planned changes:
+- extend the mission workspace composable so the route can bootstrap the local node, load mission detail deterministically, and submit parent/RDE mutations through the mission-core store
+- add compact parent and RDE controls to the existing mission summary card instead of introducing a new route
+- extend the web/mock wrapper path with deterministic mission list/get/parent/RDE payloads so browser-mode mission detail is store-backed
+- add focused Vitest and Playwright coverage for mission parent/RDE mutation flow on the approved route
+
+Files touched:
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/missionCoreStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- `/missions/:missionUid/mission` now boots the local node when needed, loads deterministic mission detail in web/mock mode, and exposes parent mission selection plus RDE role assignment from the live mission store path
+- the mission route now surfaces truthful mutation feedback inside the existing mission summary card, and the synthetic node-client mission registry keeps parent/path/RDE updates consistent across store, route, and Playwright validation
+- this slice intentionally stops at parent/RDE controls; mission change authoring depth and mission-zone link/unlink remain the next mission-core UI gaps on the approved route
+
+Open issues:
+- mission change create/edit UI beyond the existing log feed is still unsurfaced
+- mission-zone link/unlink controls are still missing from the mission detail route
+- the live Rust `getAppInfo` timeout remains the main blocker on trusting live session query UX
+
+Next recommended step:
+- continue the next approved P4 slice on the mission workspace route with mission change authoring depth or mission-zone link/unlink controls, and keep matching interaction coverage in the same change
+
 ---
 
 ## Decision log
@@ -704,6 +810,46 @@ Notes:
 - the existing comms files/images shell now exposes retrieved-record preview, download, share, and topic association controls without adding a new route
 - the shared mock/web client now synthesizes file/image registry and retrieve payloads so the files/images route is covered by both Vitest and Playwright
 - Android native sync picked up the new `@capacitor/filesystem` plugin; full iOS sync remains environment-blocked on this Windows machine because CocoaPods is unavailable
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- checklist detail now uses the live checklist store path in web/mock mode instead of the design-only fallback detail payload
+- the checklist store exposes row-style updates on top of the existing allowlisted `checklist.task.row.style.set` command, and the route surfaces that control without inventing a new screen
+- Playwright now exercises the checklist detail task-status and row-style workflow alongside the existing dashboard/chat/files interaction coverage
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission workspace route now exposes parent set/clear and RDE role assignment directly from the mission-core store instead of leaving those allowlisted actions without first-class UI
+- the web/mock node-client path now synthesizes deterministic mission list/get/parent/RDE payloads so mission detail is store-backed in browser mode and remains covered by Vitest plus Playwright
+- the remaining mission-core backlog on this route is mission change authoring depth and mission-zone link/unlink controls
 
 ---
 

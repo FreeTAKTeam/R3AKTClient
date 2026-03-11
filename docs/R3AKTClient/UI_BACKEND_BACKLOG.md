@@ -8,7 +8,7 @@ This file tracks backend capability already present in the RCH/node contract tha
 - `Chat`: `messagingStore` backed by LXMF send + topic/direct channels
 - `Topics`: list, subscribe, create, patch, delete
 - `Files` / `Images`: backend list + retrieve, plus local upload staging
-- `Missions`: mission list, get, patch, create, delete, log list/create, zone link state
+- `Missions`: mission list, get, patch, create, delete, parent/RDE assignment, log list/create, zone link state
 - `Mission subroutes`: topic, checklists, teams, assets, zones, log entries
 - `Checklists`: list, get, create, update, task status
 - `Webmap`: marker/zone list and zone delete
@@ -33,8 +33,6 @@ This file tracks backend capability already present in the RCH/node contract tha
 
 ### Mission core advanced flows
 
-- mission parent set / clear UI
-- mission RDE role assignment UI
 - mission change create/edit UI beyond log feed visibility
 - mission-zone link/unlink controls from mission detail
 
@@ -57,7 +55,7 @@ This file tracks backend capability already present in the RCH/node contract tha
 
 - template list / get / create / update / clone / delete
 - checklist delete / clone / import / join / upload / feed publish
-- task delete / row-style / cell edit screens
+- task delete / cell edit screens
 
 ### Map editing
 

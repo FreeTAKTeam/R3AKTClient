@@ -28,15 +28,15 @@ export function useMissionDomainData(missionUid: string) {
 
   const busy = ref(false);
   const errorMessage = ref("");
+  const statusMessage = ref("");
+  const missionParentDraft = ref("");
+  const missionRdeDraft = ref("");
 
   const normalizedMissionUid = computed(() => missionUid.trim());
 
   async function wireStores(): Promise<void> {
-    if (!nodeStore.status.running) {
-      return;
-    }
-
     errorMessage.value = "";
+    await nodeStore.ensureNodeStarted();
     await Promise.allSettled([
       missionCoreStore.wire(),
       topicsStore.wire(),
@@ -60,7 +60,6 @@ export function useMissionDomainData(missionUid: string) {
   }
 
   onMounted(() => {
-    nodeStore.init().catch(() => undefined);
     void wireStores();
   });
 
@@ -76,6 +75,10 @@ export function useMissionDomainData(missionUid: string) {
 
   const mission = computed(
     () => missionCoreStore.missionsByUid[normalizedMissionUid.value] ?? null,
+  );
+
+  const parentMissionOptions = computed(() =>
+    missionCoreStore.missions.filter((entry) => entry.uid !== normalizedMissionUid.value),
   );
 
   const missionTopic = computed(() => {
@@ -132,9 +135,19 @@ export function useMissionDomainData(missionUid: string) {
     }),
   );
 
+  watch(
+    mission,
+    (nextMission) => {
+      missionParentDraft.value = nextMission?.parentUid ?? "";
+      missionRdeDraft.value = nextMission?.rdeRole ?? "";
+    },
+    { immediate: true },
+  );
+
   async function runMutation(action: () => Promise<void>): Promise<void> {
     busy.value = true;
     errorMessage.value = "";
+    statusMessage.value = "";
     try {
       await action();
     } catch (error: unknown) {
@@ -242,6 +255,7 @@ export function useMissionDomainData(missionUid: string) {
           minute: "2-digit",
         })}`,
       });
+      statusMessage.value = "Mission summary updated.";
     });
   }
 
@@ -251,19 +265,61 @@ export function useMissionDomainData(missionUid: string) {
     }
     await runMutation(async () => {
       await missionCoreStore.deleteMission(mission.value!.uid);
+      statusMessage.value = "Mission delete requested.";
+    });
+  }
+
+  async function applyMissionParent(): Promise<void> {
+    if (!mission.value || !missionParentDraft.value.trim()) {
+      errorMessage.value = "Select a parent mission before applying the link.";
+      return;
+    }
+
+    await runMutation(async () => {
+      await missionCoreStore.setMissionParent(mission.value!.uid, missionParentDraft.value);
+      await missionCoreStore.getMission(mission.value!.uid, { expand: ["log_entries", "checklists"] });
+      statusMessage.value = `Parent mission set to ${missionParentDraft.value}.`;
+    });
+  }
+
+  async function clearMissionParent(): Promise<void> {
+    if (!mission.value) {
+      return;
+    }
+
+    await runMutation(async () => {
+      await missionCoreStore.setMissionParent(mission.value!.uid);
+      await missionCoreStore.getMission(mission.value!.uid, { expand: ["log_entries", "checklists"] });
+      statusMessage.value = "Parent mission cleared.";
+    });
+  }
+
+  async function applyMissionRde(): Promise<void> {
+    if (!mission.value || !missionRdeDraft.value.trim()) {
+      errorMessage.value = "Enter an RDE role before assigning it.";
+      return;
+    }
+
+    await runMutation(async () => {
+      await missionCoreStore.setMissionRde(mission.value!.uid, missionRdeDraft.value);
+      await missionCoreStore.getMission(mission.value!.uid, { expand: ["log_entries", "checklists"] });
+      statusMessage.value = `RDE role updated to ${missionRdeDraft.value.trim()}.`;
     });
   }
 
   async function removeZone(zoneId: string): Promise<void> {
     await runMutation(async () => {
       await mapMarkersZonesStore.deleteZone(zoneId);
+      statusMessage.value = "Zone delete requested.";
     });
   }
 
   return {
     busy,
     errorMessage,
+    statusMessage,
     mission,
+    parentMissionOptions,
     missionTopic,
     missionChecklists,
     missionTeams,
@@ -275,6 +331,8 @@ export function useMissionDomainData(missionUid: string) {
     missionLogEntries,
     missionChanges,
     missionChannelKey,
+    missionParentDraft,
+    missionRdeDraft,
     refreshMissionBundle,
     subscribeMissionTopic,
     createMissionChecklist,
@@ -284,6 +342,9 @@ export function useMissionDomainData(missionUid: string) {
     createMissionLogEntry,
     patchMissionSummary,
     deleteCurrentMission,
+    applyMissionParent,
+    clearMissionParent,
+    applyMissionRde,
     removeZone,
     setActiveChannel: messagingStore.setActiveChannel,
   };

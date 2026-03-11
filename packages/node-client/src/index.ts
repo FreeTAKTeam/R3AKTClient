@@ -890,6 +890,161 @@ const MOCK_IMAGE_REGISTRY = [
   },
 ] as const;
 
+function createInitialMockMissionRegistry() {
+  return [
+    {
+      mission_uid: "demo",
+      mission_name: "Demo Mission",
+      description: "Harbor corridor stabilization and relay coordination.",
+      topic_id: "missions.active",
+      path: "ops-command/demo",
+      classification: "FOUO",
+      mission_status: "ACTIVE",
+      mission_priority: 4,
+      parent_uid: "ops-command",
+      rde_role: "lead",
+      updated_at: "2026-03-11T11:20:00Z",
+      created_at: "2026-03-11T09:00:00Z",
+      zone_ids: ["harbor-alpha", "harbor-beta"],
+      invite_only: false,
+      keywords: ["harbor", "relay"],
+      feeds: ["missions.active"],
+    },
+    {
+      mission_uid: "ops-command",
+      mission_name: "Ops Command",
+      description: "Regional coordination cell for distributed mission support.",
+      topic_id: "ops.alerts",
+      path: "ops-command",
+      classification: "SECRET",
+      mission_status: "ACTIVE",
+      mission_priority: 7,
+      rde_role: "command",
+      updated_at: "2026-03-11T10:45:00Z",
+      created_at: "2026-03-10T18:30:00Z",
+      zone_ids: [],
+      invite_only: true,
+      keywords: ["command", "coordination"],
+      feeds: ["ops.alerts"],
+    },
+    {
+      mission_uid: "relay-watch",
+      mission_name: "Relay Watch",
+      description: "Monitor remote repeaters and uplink resilience.",
+      topic_id: "logistics.supply",
+      path: "relay-watch",
+      classification: "UNCLASSIFIED",
+      mission_status: "STAGED",
+      mission_priority: 2,
+      rde_role: "support",
+      updated_at: "2026-03-11T10:15:00Z",
+      created_at: "2026-03-10T20:00:00Z",
+      zone_ids: ["relay-north"],
+      invite_only: false,
+      keywords: ["relay", "monitoring"],
+      feeds: ["logistics.supply"],
+    },
+  ];
+}
+
+let mockMissionRegistry = createInitialMockMissionRegistry();
+
+function cloneMockMissionRegistry() {
+  return mockMissionRegistry.map((mission) => ({
+    ...mission,
+    zone_ids: [...(mission.zone_ids ?? [])],
+    keywords: [...(mission.keywords ?? [])],
+    feeds: [...(mission.feeds ?? [])],
+  }));
+}
+
+function findMockMission(missionUid?: string) {
+  if (!missionUid) {
+    return mockMissionRegistry[0];
+  }
+  return mockMissionRegistry.find((entry) => entry.mission_uid === missionUid) ?? mockMissionRegistry[0];
+}
+
+function buildMockMissionPath(missionUid: string, parentUid?: string) {
+  return parentUid ? `${parentUid}/${missionUid}` : missionUid;
+}
+
+function createInitialMockChecklistRegistry() {
+  return [
+    {
+      checklist_id: "reconnaissance",
+      checklist_name: "Reconnaissance",
+      description: "Sector 7 Extraction Protocol",
+      status: "LIVE",
+      updated_at: "2026-03-11T11:00:00Z",
+      task_count: 3,
+      tasks: [
+        {
+          task_id: "briefing",
+          title: "Mission Briefing",
+          description: "Review objective and exfiltration routes.",
+          status: "PENDING",
+          row_style: "default",
+        },
+        {
+          task_id: "equipment",
+          title: "Equipment Check",
+          description: "Verify field gear and communication encryption.",
+          status: "COMPLETE",
+          row_style: "highlight",
+        },
+        {
+          task_id: "grid",
+          title: "Grid Authorization",
+          description: "Request access codes from central hub.",
+          status: "PENDING",
+          row_style: "blocked",
+        },
+      ],
+    },
+    {
+      checklist_id: "infiltration-alpha",
+      checklist_name: "Infiltration Alpha",
+      description: "Nakamoto Plaza Penetration",
+      status: "PENDING",
+      updated_at: "2026-03-11T10:45:00Z",
+      task_count: 2,
+      tasks: [
+        {
+          task_id: "scope",
+          title: "Scope route",
+          description: "Confirm rooftop ingress window.",
+          status: "COMPLETE",
+          row_style: "default",
+        },
+        {
+          task_id: "relay",
+          title: "Relay sync",
+          description: "Pair short-range repeater with hub uplink.",
+          status: "PENDING",
+          row_style: "highlight",
+        },
+      ],
+    },
+  ];
+}
+
+let mockChecklistRegistry = createInitialMockChecklistRegistry();
+
+function cloneMockChecklistRegistry() {
+  return mockChecklistRegistry.map((checklist) => ({
+    ...checklist,
+    tasks: checklist.tasks.map((task) => ({ ...task })),
+  }));
+}
+
+function findMockChecklist(checklistId?: string) {
+  if (!checklistId) {
+    return mockChecklistRegistry[0];
+  }
+  return mockChecklistRegistry.find((entry) => entry.checklist_id === checklistId) ?? mockChecklistRegistry[0];
+}
+
 function buildSyntheticExecutePayload(
   mode: "web" | "mock",
   envelope: RchEnvelope<unknown>,
@@ -985,6 +1140,137 @@ function buildSyntheticExecutePayload(
         topic_id: readStringCandidate(request, ["topic_id", "topicId"]),
         attachment_id:
           readStringCandidate(request, ["attachment_id", "attachmentId", "file_id", "image_id", "id"]),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.mission.list") {
+    mockMissionRegistry = createInitialMockMissionRegistry();
+    return {
+      payload: {
+        missions: cloneMockMissionRegistry(),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.mission.get") {
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    return {
+      payload: {
+        mission: findMockMission(missionUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.mission.parent.set") {
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    const parentUid = readStringCandidate(request, ["parent_uid", "parentUid"]);
+    if (missionUid) {
+      mockMissionRegistry = mockMissionRegistry.map((mission) =>
+        mission.mission_uid !== missionUid
+          ? mission
+          : {
+            ...mission,
+            parent_uid: parentUid,
+            path: buildMockMissionPath(missionUid, parentUid),
+            updated_at: new Date().toISOString(),
+          });
+    }
+    return {
+      payload: {
+        mission: findMockMission(missionUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.mission.rde.set") {
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    const role = readStringCandidate(request, ["role", "rde_role", "rdeRole"]);
+    if (missionUid && role) {
+      mockMissionRegistry = mockMissionRegistry.map((mission) =>
+        mission.mission_uid !== missionUid
+          ? mission
+          : {
+            ...mission,
+            rde_role: role,
+            updated_at: new Date().toISOString(),
+          });
+    }
+    return {
+      payload: {
+        mission: findMockMission(missionUid),
+      },
+    };
+  }
+
+  if (envelope.type === "checklist.list.active") {
+    mockChecklistRegistry = createInitialMockChecklistRegistry();
+    return {
+      payload: {
+        checklists: cloneMockChecklistRegistry(),
+      },
+    };
+  }
+
+  if (envelope.type === "checklist.get") {
+    const checklistId = readStringCandidate(request, ["checklist_id", "checklistId"]);
+    return {
+      payload: {
+        checklist: findMockChecklist(checklistId),
+      },
+    };
+  }
+
+  if (envelope.type === "checklist.task.status.set") {
+    const checklistId = readStringCandidate(request, ["checklist_id", "checklistId"]);
+    const taskId = readStringCandidate(request, ["task_id", "taskId"]);
+    const nextStatus = readStringCandidate(request, ["status", "task_status"]) ?? "PENDING";
+    const checklist = findMockChecklist(checklistId);
+    if (checklist && taskId) {
+      mockChecklistRegistry = mockChecklistRegistry.map((entry) =>
+        entry.checklist_id !== checklist.checklist_id
+          ? entry
+          : {
+            ...entry,
+            tasks: entry.tasks.map((task) =>
+              task.task_id !== taskId
+                ? task
+                : {
+                  ...task,
+                  status: nextStatus,
+                }),
+          });
+    }
+    return {
+      payload: {
+        checklist: findMockChecklist(checklistId),
+      },
+    };
+  }
+
+  if (envelope.type === "checklist.task.row.style.set") {
+    const checklistId = readStringCandidate(request, ["checklist_id", "checklistId"]);
+    const taskId = readStringCandidate(request, ["task_id", "taskId"]);
+    const nextRowStyle = readStringCandidate(request, ["row_style", "rowStyle"]) ?? "default";
+    const checklist = findMockChecklist(checklistId);
+    if (checklist && taskId) {
+      mockChecklistRegistry = mockChecklistRegistry.map((entry) =>
+        entry.checklist_id !== checklist.checklist_id
+          ? entry
+          : {
+            ...entry,
+            tasks: entry.tasks.map((task) =>
+              task.task_id !== taskId
+                ? task
+                : {
+                  ...task,
+                  row_style: nextRowStyle,
+                }),
+          });
+    }
+    return {
+      payload: {
+        checklist: findMockChecklist(checklistId),
       },
     };
   }
