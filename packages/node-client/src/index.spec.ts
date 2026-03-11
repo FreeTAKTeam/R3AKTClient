@@ -258,6 +258,35 @@ describe("RchClient grouped feature API", () => {
     ).toBeUndefined();
   });
 
+  it("supports mock-backed skill create and update on the web client", async () => {
+    const client = createReticulumNodeClient({ mockMode: "web" });
+    const rchClient = createRchClient(client);
+
+    await rchClient.teamsSkills.execute("mission.registry.skill.upsert", {
+      skill_uid: "skill-signal-planning",
+      skill_name: "Signal Planning",
+      description: "HF relay coordination and route planning.",
+    });
+
+    const createdSkills = await rchClient.teamsSkills.execute("mission.registry.skill.list", {});
+    expect(
+      ((createdSkills.payload as { skills?: Array<{ skill_uid?: string; description?: string }> }).skills ?? [])
+        .find((skill) => skill.skill_uid === "skill-signal-planning")?.description,
+    ).toBe("HF relay coordination and route planning.");
+
+    await rchClient.teamsSkills.execute("mission.registry.skill.upsert", {
+      skill_uid: "skill-signal-planning",
+      skill_name: "Signal Planning",
+      description: "Updated signal planning guidance.",
+    });
+
+    const updatedSkills = await rchClient.teamsSkills.execute("mission.registry.skill.list", {});
+    expect(
+      ((updatedSkills.payload as { skills?: Array<{ skill_uid?: string; description?: string }> }).skills ?? [])
+        .find((skill) => skill.skill_uid === "skill-signal-planning")?.description,
+    ).toBe("Updated signal planning guidance.");
+  });
+
   it("classifies documented direct southbound query operations correctly", async () => {
     const fake = new FakeNodeClient();
     const client = createRchClient(fake);

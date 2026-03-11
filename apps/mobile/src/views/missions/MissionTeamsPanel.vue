@@ -23,6 +23,7 @@ const props = defineProps<{
   missionMemberSkills: TeamMemberSkillRecord[];
   isEditingMissionMember: boolean;
   isEditingMissionMemberClient: boolean;
+  isEditingMissionSkill: boolean;
   isEditingMissionMemberSkill: boolean;
 }>();
 
@@ -32,6 +33,8 @@ const memberNameDraft = defineModel<string>("memberNameDraft", { required: true 
 const memberRoleDraft = defineModel<string>("memberRoleDraft", { required: true });
 const memberClientMemberDraft = defineModel<string>("memberClientMemberDraft", { required: true });
 const memberClientIdentityDraft = defineModel<string>("memberClientIdentityDraft", { required: true });
+const skillNameDraft = defineModel<string>("skillNameDraft", { required: true });
+const skillDescriptionDraft = defineModel<string>("skillDescriptionDraft", { required: true });
 const memberSkillMemberDraft = defineModel<string>("memberSkillMemberDraft", { required: true });
 const memberSkillUidDraft = defineModel<string>("memberSkillUidDraft", { required: true });
 const memberSkillLevelDraft = defineModel<string>("memberSkillLevelDraft", { required: true });
@@ -49,6 +52,9 @@ const emit = defineEmits<{
   saveMemberClient: [];
   resetMemberClientEditor: [];
   unlinkMemberClient: [teamMemberUid: string];
+  editSkill: [skillUid: string];
+  saveSkill: [];
+  resetSkillEditor: [];
   editMemberSkill: [teamMemberSkillUid: string];
   saveMemberSkill: [];
   resetMemberSkillEditor: [];
@@ -254,6 +260,59 @@ function skillsForMember(teamMemberUid: string): Array<{
       </div>
     </div>
   </article>
+  <div class="mission-domain__list mission-domain__list--two">
+    <article class="mission-domain__card">
+      <h3>Skill Catalog</h3>
+      <ul>
+        <li v-for="skill in missionSkills" :key="skill.uid">
+          <div class="mission-domain__item-head">
+            <strong>{{ skill.name }}</strong>
+            <button type="button" :disabled="busy" @click="emit('editSkill', skill.uid)">Edit</button>
+          </div>
+          <span>{{ skill.description ?? "No skill description recorded." }}</span>
+          <span>{{ skill.uid }}</span>
+        </li>
+        <li v-if="missionSkills.length === 0">
+          No skill definitions recorded yet.
+        </li>
+      </ul>
+    </article>
+    <article class="mission-domain__card">
+      <div class="mission-domain__section-head">
+        <h3>Skill Editor</h3>
+        <button type="button" :disabled="busy" @click="emit('resetSkillEditor')">New Skill</button>
+      </div>
+      <div class="mission-domain__control-grid">
+        <label class="mission-domain__control">
+          <span>Skill Name</span>
+          <input
+            v-model="skillNameDraft"
+            :disabled="busy"
+            type="text"
+            placeholder="Navigation / Relay Ops / Field Medic"
+          />
+        </label>
+        <label class="mission-domain__control">
+          <span>Description</span>
+          <input
+            v-model="skillDescriptionDraft"
+            :disabled="busy"
+            type="text"
+            placeholder="Describe the skill for operators."
+          />
+        </label>
+        <div class="mission-domain__button-row">
+          <button
+            type="button"
+            :disabled="busy || !skillNameDraft.trim()"
+            @click="emit('saveSkill')"
+          >
+            {{ isEditingMissionSkill ? "Update Skill" : "Save Skill" }}
+          </button>
+        </div>
+      </div>
+    </article>
+  </div>
   <article class="mission-domain__card">
     <div class="mission-domain__section-head">
       <h3>Member Skill Editor</h3>

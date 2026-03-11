@@ -70,6 +70,25 @@ describe("teams skills store", () => {
     expect(store.teamMembersByUid["member-delta"]?.clientIdentity).toBeUndefined();
   });
 
+  it("creates and updates skills through the canonical skill command", async () => {
+    const store = useTeamsSkillsStore();
+
+    await store.wire();
+    await store.upsertSkill({
+      skill_uid: "skill-signal-planning",
+      skill_name: "Signal Planning",
+      description: "HF relay coordination and route planning.",
+    });
+    expect(store.skillsByUid["skill-signal-planning"]?.name).toBe("Signal Planning");
+
+    await store.upsertSkill({
+      skill_uid: "skill-signal-planning",
+      skill_name: "Signal Planning",
+      description: "Updated signal planning guidance.",
+    });
+    expect(store.skillsByUid["skill-signal-planning"]?.description).toBe("Updated signal planning guidance.");
+  });
+
   it("creates and updates team-member skills through the canonical member-skill command", async () => {
     const store = useTeamsSkillsStore();
 

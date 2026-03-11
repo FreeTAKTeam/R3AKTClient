@@ -22,6 +22,7 @@ const TEAM_MEMBER_UPSERT_OPERATION: TeamsSkillsOperation = "mission.registry.tea
 const TEAM_MEMBER_DELETE_OPERATION: TeamsSkillsOperation = "mission.registry.team_member.delete";
 const TEAM_MEMBER_CLIENT_LINK_OPERATION: TeamsSkillsOperation = "mission.registry.team_member.client.link";
 const TEAM_MEMBER_CLIENT_UNLINK_OPERATION: TeamsSkillsOperation = "mission.registry.team_member.client.unlink";
+const SKILL_UPSERT_OPERATION: TeamsSkillsOperation = "mission.registry.skill.upsert";
 const SKILL_LIST_OPERATION: TeamsSkillsOperation = "mission.registry.skill.list";
 const TEAM_MEMBER_SKILL_LIST_OPERATION: TeamsSkillsOperation = "mission.registry.team_member_skill.list";
 const TEAM_MEMBER_SKILL_UPSERT_OPERATION: TeamsSkillsOperation = "mission.registry.team_member_skill.upsert";
@@ -229,7 +230,16 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
       return;
     }
 
-    if (operation === SKILL_LIST_OPERATION) {
+    if (operation === SKILL_LIST_OPERATION || operation === SKILL_UPSERT_OPERATION) {
+      const skill =
+        normalizeSkillRecord(value.skill ?? value)
+        ?? normalizeSkillRecord((asArray(value.skills)[0] ?? null) as unknown);
+      if (skill) {
+        skillsByUid[skill.uid] = skill;
+      }
+      if (operation === SKILL_UPSERT_OPERATION) {
+        return;
+      }
       upsertItems(
         skillsByUid,
         asArray(value.skills ?? value.items ?? value.entries)
@@ -366,6 +376,10 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     await execute(SKILL_LIST_OPERATION, {});
   }
 
+  async function upsertSkill(payload: Record<string, unknown>): Promise<void> {
+    await execute(SKILL_UPSERT_OPERATION, payload);
+  }
+
   async function listTeamMemberSkills(teamMemberRnsIdentity?: string): Promise<void> {
     await execute(
       TEAM_MEMBER_SKILL_LIST_OPERATION,
@@ -429,6 +443,7 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     linkTeamMemberClient,
     unlinkTeamMemberClient,
     listSkills,
+    upsertSkill,
     listTeamMemberSkills,
     upsertTeamMemberSkill,
     wire,

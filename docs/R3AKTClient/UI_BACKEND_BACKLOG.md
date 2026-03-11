@@ -33,7 +33,6 @@ This file tracks backend capability already present in the RCH/node contract tha
 
 ### Teams, people, and skills
 
-- skill create / update controls
 - task skill requirement screens
 
 ### Assets and assignments

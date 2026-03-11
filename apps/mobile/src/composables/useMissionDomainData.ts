@@ -40,6 +40,9 @@ export function useMissionDomainData(missionUid: string) {
   const missionMemberClientDraftUid = ref("");
   const missionMemberClientMemberDraft = ref("");
   const missionMemberClientIdentityDraft = ref("");
+  const missionSkillDraftUid = ref("");
+  const missionSkillNameDraft = ref("");
+  const missionSkillDescriptionDraft = ref("");
   const missionMemberSkillDraftUid = ref("");
   const missionMemberSkillMemberDraft = ref("");
   const missionMemberSkillUidDraft = ref("");
@@ -215,6 +218,10 @@ export function useMissionDomainData(missionUid: string) {
     missionTeamMembers.value.find((entry) => entry.uid === missionMemberClientDraftUid.value) ?? null,
   );
   const isEditingMissionMemberClient = computed(() => Boolean(missionMemberClientDraftUid.value));
+  const activeMissionSkill = computed(() =>
+    missionSkills.value.find((entry) => entry.uid === missionSkillDraftUid.value) ?? null,
+  );
+  const isEditingMissionSkill = computed(() => Boolean(missionSkillDraftUid.value));
   const activeMissionMemberSkill = computed(() =>
     missionMemberSkills.value.find((entry) => entry.uid === missionMemberSkillDraftUid.value) ?? null,
   );
@@ -242,6 +249,14 @@ export function useMissionDomainData(missionUid: string) {
         && !missionMemberTeamOptions.value.some((team) => team.uid === missionMemberTeamDraft.value)
       ) {
         missionMemberTeamDraft.value = missionMemberTeamOptions.value[0]?.uid ?? "";
+      }
+      if (
+        missionSkillDraftUid.value
+        && !missionSkills.value.some((skill) => skill.uid === missionSkillDraftUid.value)
+      ) {
+        missionSkillDraftUid.value = "";
+        missionSkillNameDraft.value = "";
+        missionSkillDescriptionDraft.value = "";
       }
       if (
         missionMemberSkillMemberDraft.value
@@ -297,6 +312,12 @@ export function useMissionDomainData(missionUid: string) {
   watch(
     missionSkills,
     (nextSkills) => {
+      if (
+        missionSkillDraftUid.value
+        && !nextSkills.some((skill) => skill.uid === missionSkillDraftUid.value)
+      ) {
+        missionSkillDraftUid.value = "";
+      }
       if (!missionMemberSkillDraftUid.value && !missionMemberSkillUidDraft.value) {
         missionMemberSkillUidDraft.value = nextSkills[0]?.uid ?? "";
       }
@@ -511,6 +532,44 @@ export function useMissionDomainData(missionUid: string) {
         resetMissionMemberClientEditor();
       }
       statusMessage.value = `Client identity unlinked from member: ${teamMemberUid}.`;
+    });
+  }
+
+  function resetMissionSkillEditor(): void {
+    missionSkillDraftUid.value = "";
+    missionSkillNameDraft.value = "";
+    missionSkillDescriptionDraft.value = "";
+  }
+
+  function editMissionSkill(skillUid: string): void {
+    const target = missionSkills.value.find((entry) => entry.uid === skillUid);
+    if (!target) {
+      return;
+    }
+    missionSkillDraftUid.value = target.uid;
+    missionSkillNameDraft.value = target.name;
+    missionSkillDescriptionDraft.value = target.description ?? "";
+    errorMessage.value = "";
+    statusMessage.value = `Editing skill ${target.uid}.`;
+  }
+
+  async function saveMissionSkill(): Promise<void> {
+    if (!missionSkillNameDraft.value.trim()) {
+      errorMessage.value = "Enter a skill name before saving.";
+      return;
+    }
+
+    const existing = activeMissionSkill.value;
+    await runMutation(async () => {
+      await teamsSkillsStore.upsertSkill({
+        skill_uid: existing?.uid || undefined,
+        skill_name: missionSkillNameDraft.value.trim(),
+        description: missionSkillDescriptionDraft.value.trim() || undefined,
+      });
+      statusMessage.value = existing
+        ? `Skill updated: ${existing.uid}.`
+        : "Skill recorded.";
+      resetMissionSkillEditor();
     });
   }
 
@@ -783,9 +842,11 @@ export function useMissionDomainData(missionUid: string) {
     activeMissionChange,
     activeMissionMember,
     activeMissionMemberClient,
+    activeMissionSkill,
     isEditingMissionChange,
     isEditingMissionMember,
     isEditingMissionMemberClient,
+    isEditingMissionSkill,
     activeMissionMemberSkill,
     isEditingMissionMemberSkill,
     missionParentDraft,
@@ -799,6 +860,9 @@ export function useMissionDomainData(missionUid: string) {
     missionMemberClientDraftUid,
     missionMemberClientMemberDraft,
     missionMemberClientIdentityDraft,
+    missionSkillDraftUid,
+    missionSkillNameDraft,
+    missionSkillDescriptionDraft,
     missionMemberSkillDraftUid,
     missionMemberSkillMemberDraft,
     missionMemberSkillUidDraft,
@@ -821,6 +885,9 @@ export function useMissionDomainData(missionUid: string) {
     resetMissionMemberClientEditor,
     saveMissionMemberClient,
     unlinkMissionMemberClient,
+    editMissionSkill,
+    resetMissionSkillEditor,
+    saveMissionSkill,
     editMissionMemberSkill,
     resetMissionMemberSkillEditor,
     saveMissionMemberSkill,

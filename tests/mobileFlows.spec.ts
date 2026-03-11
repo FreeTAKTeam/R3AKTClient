@@ -231,6 +231,32 @@ test.describe("mobile interaction flows", () => {
     await expect(echoRow.getByText("c1a5-echo-restored")).toBeVisible();
   });
 
+  test("mission workspace records and updates skill definitions from the approved route", async ({ page }) => {
+    await page.goto("/missions/demo/teams");
+    await expect(page.getByTestId("mission-domain-screen")).toBeVisible();
+
+    const skillEditor = page.locator("article").filter({ hasText: "Skill Editor" }).first();
+    await skillEditor.getByPlaceholder("Navigation / Relay Ops / Field Medic").fill("Signal Planning");
+    await skillEditor.getByPlaceholder("Describe the skill for operators.").fill(
+      "HF relay coordination and route planning.",
+    );
+    await skillEditor.getByRole("button", { name: "Save Skill", exact: true }).click();
+
+    await expect(page.getByText("Skill recorded.")).toBeVisible();
+    const skillCatalog = page.locator("article").filter({ hasText: "Skill Catalog" }).first();
+    const signalPlanningRow = skillCatalog.locator("li").filter({ hasText: /^Signal Planning/ }).first();
+    await expect(signalPlanningRow).toContainText("HF relay coordination and route planning.");
+
+    await signalPlanningRow.getByRole("button", { name: "Edit" }).click();
+    await skillEditor.getByPlaceholder("Describe the skill for operators.").fill(
+      "Updated signal planning guidance.",
+    );
+    await skillEditor.getByRole("button", { name: "Update Skill" }).click();
+
+    await expect(page.getByText(/Skill updated:/)).toBeVisible();
+    await expect(signalPlanningRow).toContainText("Updated signal planning guidance.");
+  });
+
   test("mission workspace edits a mission change from the approved log route", async ({ page }) => {
     await page.goto("/missions/demo/log-entries");
     await expect(page.getByTestId("mission-domain-screen")).toBeVisible();

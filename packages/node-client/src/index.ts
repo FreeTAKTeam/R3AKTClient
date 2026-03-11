@@ -1228,23 +1228,31 @@ interface MockSkillRecord {
   description?: string;
 }
 
-const MOCK_SKILL_REGISTRY: MockSkillRecord[] = [
-  {
-    skill_uid: "skill-nav",
-    skill_name: "Navigation",
-    description: "Land navigation and route planning.",
-  },
-  {
-    skill_uid: "skill-relay",
-    skill_name: "Relay Ops",
-    description: "Repeater and uplink field support.",
-  },
-  {
-    skill_uid: "skill-medic",
-    skill_name: "Field Medic",
-    description: "Immediate casualty stabilization.",
-  },
-];
+function createInitialMockSkillRegistry(): MockSkillRecord[] {
+  return [
+    {
+      skill_uid: "skill-nav",
+      skill_name: "Navigation",
+      description: "Land navigation and route planning.",
+    },
+    {
+      skill_uid: "skill-relay",
+      skill_name: "Relay Ops",
+      description: "Repeater and uplink field support.",
+    },
+    {
+      skill_uid: "skill-medic",
+      skill_name: "Field Medic",
+      description: "Immediate casualty stabilization.",
+    },
+  ];
+}
+
+let mockSkillRegistry = createInitialMockSkillRegistry();
+
+function cloneMockSkillRegistry(): MockSkillRecord[] {
+  return mockSkillRegistry.map((skill) => ({ ...skill }));
+}
 
 interface MockTeamMemberSkillRecord {
   team_member_skill_uid: string;
@@ -1585,6 +1593,7 @@ function buildSyntheticExecutePayload(
     if (!missionUid) {
       mockTeamRegistry = createInitialMockTeamRegistry();
       mockTeamMemberRegistry = createInitialMockTeamMemberRegistry();
+      mockSkillRegistry = createInitialMockSkillRegistry();
       mockTeamMemberSkillRegistry = createInitialMockTeamMemberSkillRegistry();
     }
     return {
@@ -1786,7 +1795,34 @@ function buildSyntheticExecutePayload(
   if (envelope.type === "mission.registry.skill.list") {
     return {
       payload: {
-        skills: MOCK_SKILL_REGISTRY.map((skill) => ({ ...skill })),
+        skills: cloneMockSkillRegistry(),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.skill.upsert") {
+    const skillUid =
+      readStringCandidate(request, ["skill_uid", "skillUid", "uid", "id"])
+      ?? `skill-${mockSkillRegistry.length + 1}`;
+    const existing = mockSkillRegistry.find((skill) => skill.skill_uid === skillUid);
+    const nextSkill: MockSkillRecord = {
+      skill_uid: skillUid,
+      skill_name:
+        readStringCandidate(request, ["skill_name", "skillName", "name", "title"])
+        ?? existing?.skill_name
+        ?? skillUid,
+      description: readStringCandidate(request, ["description", "summary"]) ?? existing?.description,
+    };
+    const existingIndex = mockSkillRegistry.findIndex((skill) => skill.skill_uid === skillUid);
+    if (existingIndex >= 0) {
+      mockSkillRegistry = mockSkillRegistry.map((skill, index) =>
+        index === existingIndex ? nextSkill : skill);
+    } else {
+      mockSkillRegistry = [nextSkill, ...mockSkillRegistry];
+    }
+    return {
+      payload: {
+        skill: nextSkill,
       },
     };
   }
@@ -1819,7 +1855,7 @@ function buildSyntheticExecutePayload(
     const nextSkillRecord: MockTeamMemberSkillRecord = {
       team_member_skill_uid: teamMemberSkillUid,
       team_member_uid: teamMemberUid ?? existing?.team_member_uid ?? mockTeamMemberRegistry[0]?.team_member_uid ?? "",
-      skill_uid: skillUid ?? existing?.skill_uid ?? MOCK_SKILL_REGISTRY[0]?.skill_uid ?? "",
+      skill_uid: skillUid ?? existing?.skill_uid ?? mockSkillRegistry[0]?.skill_uid ?? "",
       level: readStringCandidate(request, ["level", "proficiency", "status"]) ?? existing?.level ?? "basic",
     };
     const existingIndex = mockTeamMemberSkillRegistry.findIndex(

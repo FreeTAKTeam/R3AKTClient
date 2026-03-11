@@ -39,6 +39,7 @@ const {
   isEditingMissionChange,
   isEditingMissionMember,
   isEditingMissionMemberClient,
+  isEditingMissionSkill,
   isEditingMissionMemberSkill,
   missionParentDraft,
   missionRdeDraft,
@@ -49,6 +50,8 @@ const {
   missionMemberRoleDraft,
   missionMemberClientMemberDraft,
   missionMemberClientIdentityDraft,
+  missionSkillNameDraft,
+  missionSkillDescriptionDraft,
   missionMemberSkillMemberDraft,
   missionMemberSkillUidDraft,
   missionMemberSkillLevelDraft,
@@ -69,6 +72,9 @@ const {
   resetMissionMemberClientEditor,
   saveMissionMemberClient,
   unlinkMissionMemberClient,
+  editMissionSkill,
+  resetMissionSkillEditor,
+  saveMissionSkill,
   editMissionMemberSkill,
   resetMissionMemberSkillEditor,
   saveMissionMemberSkill,
@@ -295,6 +301,7 @@ async function openMissionChat(): Promise<void> {
           :mission-member-skills="missionMemberSkills"
           :is-editing-mission-member="isEditingMissionMember"
           :is-editing-mission-member-client="isEditingMissionMemberClient"
+          :is-editing-mission-skill="isEditingMissionSkill"
           :is-editing-mission-member-skill="isEditingMissionMemberSkill"
           v-model:team-draft="missionTeamDraft"
           v-model:member-team-draft="missionMemberTeamDraft"
@@ -302,6 +309,8 @@ async function openMissionChat(): Promise<void> {
           v-model:member-role-draft="missionMemberRoleDraft"
           v-model:member-client-member-draft="missionMemberClientMemberDraft"
           v-model:member-client-identity-draft="missionMemberClientIdentityDraft"
+          v-model:skill-name-draft="missionSkillNameDraft"
+          v-model:skill-description-draft="missionSkillDescriptionDraft"
           v-model:member-skill-member-draft="missionMemberSkillMemberDraft"
           v-model:member-skill-uid-draft="missionMemberSkillUidDraft"
           v-model:member-skill-level-draft="missionMemberSkillLevelDraft"
@@ -317,6 +326,9 @@ async function openMissionChat(): Promise<void> {
           @save-member-client="saveMissionMemberClient"
           @reset-member-client-editor="resetMissionMemberClientEditor"
           @unlink-member-client="unlinkMissionMemberClient"
+          @edit-skill="editMissionSkill"
+          @save-skill="saveMissionSkill"
+          @reset-skill-editor="resetMissionSkillEditor"
           @edit-member-skill="editMissionMemberSkill"
           @save-member-skill="saveMissionMemberSkill"
           @reset-member-skill-editor="resetMissionMemberSkillEditor"
