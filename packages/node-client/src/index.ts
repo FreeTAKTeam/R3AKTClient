@@ -848,6 +848,48 @@ const MOCK_CHAT_TOPICS = [
   },
 ] as const;
 
+const MOCK_FILE_REGISTRY = [
+  {
+    file_id: "field-manual",
+    name: "Field Manual Packet",
+    mime_type: "text/plain",
+    size_bytes: 24,
+    topic_id: "ops.alerts",
+    updated_at: "2026-03-10T09:30:00Z",
+    data_base64: "RmllbGQgbWFudWFsIHBhY2tldA==",
+  },
+  {
+    file_id: "relay-map",
+    name: "Relay Corridor Overlay",
+    mime_type: "application/pdf",
+    size_bytes: 980224,
+    topic_id: "missions.active",
+    updated_at: "2026-03-10T09:45:00Z",
+    data_base64: "JVBERi0xLjQKJUZha2UgUkNLIFBERg==",
+  },
+] as const;
+
+const MOCK_IMAGE_REGISTRY = [
+  {
+    image_id: "drone-scan",
+    name: "Drone Sweep Alpha",
+    mime_type: "image/png",
+    size_bytes: 68,
+    topic_id: "ops.alerts",
+    updated_at: "2026-03-10T09:50:00Z",
+    data_base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wn9n0sAAAAASUVORK5CYII=",
+  },
+  {
+    image_id: "thermal-grid",
+    name: "Thermal Grid 04",
+    mime_type: "image/png",
+    size_bytes: 68,
+    topic_id: "missions.active",
+    updated_at: "2026-03-10T09:55:00Z",
+    data_base64: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAoMBgN8SW3QAAAAASUVORK5CYII=",
+  },
+] as const;
+
 function buildSyntheticExecutePayload(
   mode: "web" | "mock",
   envelope: RchEnvelope<unknown>,
@@ -887,6 +929,62 @@ function buildSyntheticExecutePayload(
     return {
       payload: {
         topics: MOCK_CHAT_TOPICS,
+      },
+    };
+  }
+
+  if (envelope.type === "ListFiles") {
+    return {
+      payload: {
+        files: MOCK_FILE_REGISTRY,
+      },
+    };
+  }
+
+  if (envelope.type === "ListImages") {
+    return {
+      payload: {
+        images: MOCK_IMAGE_REGISTRY,
+      },
+    };
+  }
+
+  if (envelope.type === "RetrieveFile") {
+    const fileId =
+      readStringCandidate(request, ["file_id", "fileId", "FileID"])
+      ?? MOCK_FILE_REGISTRY[0]?.file_id;
+    const matched =
+      MOCK_FILE_REGISTRY.find((entry) => entry.file_id === fileId)
+      ?? MOCK_FILE_REGISTRY[0];
+    return {
+      payload: {
+        file: matched,
+      },
+    };
+  }
+
+  if (envelope.type === "RetrieveImage") {
+    const imageId =
+      readStringCandidate(request, ["file_id", "fileId", "FileID", "image_id", "imageId"])
+      ?? MOCK_IMAGE_REGISTRY[0]?.image_id;
+    const matched =
+      MOCK_IMAGE_REGISTRY.find((entry) => entry.image_id === imageId)
+      ?? MOCK_IMAGE_REGISTRY[0];
+    return {
+      payload: {
+        image: matched,
+      },
+    };
+  }
+
+  if (envelope.type === "AssociateTopicID") {
+    return {
+      payload: {
+        status: "mocked",
+        mode,
+        topic_id: readStringCandidate(request, ["topic_id", "topicId"]),
+        attachment_id:
+          readStringCandidate(request, ["attachment_id", "attachmentId", "file_id", "image_id", "id"]),
       },
     };
   }

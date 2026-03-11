@@ -4,9 +4,17 @@ import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 import { useNavigationDrawer } from "../../composables/useNavigationDrawer";
+import {
+  buildPreviewUrl,
+  canPreviewMediaRecord,
+  downloadMediaRecord,
+  previewMediaRecord,
+  shareMediaRecord,
+} from "../../services/mediaRecords";
 import { useFilesMediaStore } from "../../stores/filesMediaStore";
 import { useMessagingStore } from "../../stores/messagingStore";
 import { useNodeStore } from "../../stores/nodeStore";
+import { useTopicsStore } from "../../stores/topicsStore";
 
 interface RegistryFallbackItem {
   id: string;
@@ -69,6 +77,7 @@ const props = withDefaults(defineProps<{
 const filesStore = useFilesMediaStore();
 const messagingStore = useMessagingStore();
 const nodeStore = useNodeStore();
+const topicsStore = useTopicsStore();
 const { toggleNavigationDrawer } = useNavigationDrawer();
 const router = useRouter();
 
@@ -78,6 +87,10 @@ const activeTab = ref<"files" | "images">(props.initialTab);
 
 const liveLabel = computed(() => (nodeStore.status.running ? "LIVE" : "IDLE"));
 const selectedRegistryId = ref("");
+const selectedTopicId = ref("");
+const actionStatus = ref("");
+const actionError = ref("");
+const actionBusy = ref<"" | "preview" | "download" | "share" | "associate">("");
 const hasTransfers = computed(() => filesStore.transfers.length > 0);
 const hasBackendFiles = computed(() => filesStore.fileRegistry.length > 0);
 const hasBackendImages = computed(() => filesStore.imageRegistry.length > 0);
@@ -133,7 +146,58 @@ const imageItems = computed(() => {
   return FALLBACK_ITEMS.filter((entry) => entry.kind === "image");
 });
 
-const selectedPreview = computed(() => filesStore.registryById[selectedRegistryId.value]);
+const selectedPreview = computed(() => {
+  const registryRecord = filesStore.registryById[selectedRegistryId.value];
+  if (registryRecord) {
+    return registryRecord;
+  }
+
+  const fallback = [...fileItems.value, ...imageItems.value].find(
+    (entry) => entry.id === selectedRegistryId.value,
+  );
+  if (!fallback) {
+    return null;
+  }
+
+  return {
+    id: fallback.id,
+    name: fallback.name,
+    kind: fallback.kind as "file" | "image",
+    mimeType: fallback.mimeType,
+    sizeBytes: undefined,
+    topicId: undefined,
+    updatedAt: undefined,
+    downloadedAtMs: undefined,
+    dataBase64: undefined,
+    previewUrl: fallback.previewUrl,
+    raw: {},
+  };
+});
+
+const topicOptions = computed(() =>
+  topicsStore.topics.map((topic) => ({
+    id: topic.topicId,
+    label: topic.topicName ?? topic.topicPath ?? topic.topicId,
+  })),
+);
+
+const selectedCommandRecord = computed(() =>
+  selectedPreview.value ? filesStore.commandRecordForEntity(selectedPreview.value.id) : null,
+);
+
+const canPreviewSelected = computed(() =>
+  selectedPreview.value ? canPreviewMediaRecord(selectedPreview.value) : false,
+);
+
+const canDownloadSelected = computed(() => Boolean(selectedPreview.value?.dataBase64));
+const canShareSelected = computed(() => Boolean(selectedPreview.value?.dataBase64));
+const selectedPreviewImageUrl = computed(() => {
+  const record = selectedPreview.value;
+  if (!record || record.kind !== "image") {
+    return "";
+  }
+  return buildPreviewUrl(record);
+});
 
 watch(
   () => props.initialTab,
@@ -149,11 +213,25 @@ watch(activeTab, (value) => {
   }
 });
 
+watch(
+  () => selectedPreview.value?.topicId,
+  (topicId) => {
+    if (topicId?.trim()) {
+      selectedTopicId.value = topicId;
+      return;
+    }
+    if (!selectedTopicId.value && topicOptions.value.length > 0) {
+      selectedTopicId.value = topicOptions.value[0]!.id;
+    }
+  },
+  { immediate: true },
+);
+
 function openPicker(): void {
   fileInput.value?.click();
 }
 
-void filesStore.wire().catch(() => undefined);
+void Promise.allSettled([filesStore.wire(), topicsStore.wire()]).catch(() => undefined);
 
 async function stageTransfer(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement;
@@ -189,12 +267,77 @@ async function refreshRegistry(): Promise<void> {
 
 async function openFileRecord(id: string): Promise<void> {
   selectedRegistryId.value = id;
+  actionStatus.value = "";
+  actionError.value = "";
   await filesStore.retrieveFile(id).catch(() => undefined);
 }
 
 async function openImageRecord(id: string): Promise<void> {
   selectedRegistryId.value = id;
+  actionStatus.value = "";
+  actionError.value = "";
   await filesStore.retrieveImage(id).catch(() => undefined);
+}
+
+async function runRecordAction(
+  kind: "" | "preview" | "download" | "share" | "associate",
+  handler: () => Promise<void>,
+): Promise<void> {
+  actionBusy.value = kind;
+  actionError.value = "";
+  try {
+    await handler();
+  } catch (error: unknown) {
+    actionError.value = error instanceof Error ? error.message : String(error);
+  } finally {
+    actionBusy.value = "";
+  }
+}
+
+async function previewSelectedRecord(): Promise<void> {
+  const record = selectedPreview.value;
+  if (!record) {
+    return;
+  }
+  await runRecordAction("preview", async () => {
+    await previewMediaRecord(record);
+  });
+}
+
+async function downloadSelectedRecord(): Promise<void> {
+  const record = selectedPreview.value;
+  if (!record) {
+    return;
+  }
+  await runRecordAction("download", async () => {
+    const savedTo = await downloadMediaRecord(record);
+    actionStatus.value = `Saved ${record.name} to ${savedTo}.`;
+  });
+}
+
+async function shareSelectedRecord(): Promise<void> {
+  const record = selectedPreview.value;
+  if (!record) {
+    return;
+  }
+  await runRecordAction("share", async () => {
+    await shareMediaRecord(record);
+    actionStatus.value = `Share sheet opened for ${record.name}.`;
+  });
+}
+
+async function associateSelectedRecord(): Promise<void> {
+  const record = selectedPreview.value;
+  if (!record) {
+    return;
+  }
+  await runRecordAction("associate", async () => {
+    const conversationId = await filesStore.associateTopic(
+      record.id,
+      selectedTopicId.value,
+    );
+    actionStatus.value = `Topic association submitted (${conversationId}).`;
+  });
 }
 </script>
 
@@ -283,14 +426,49 @@ async function openImageRecord(id: string): Promise<void> {
       </section>
 
       <section v-if="selectedPreview" class="registry-screen__preview-card">
-        <div>
+        <div class="registry-screen__preview-copy">
           <span>Selected {{ selectedPreview.kind }}</span>
           <strong>{{ selectedPreview.name }}</strong>
           <p>{{ selectedPreview.topicId ? `Topic ${selectedPreview.topicId}` : "Unscoped registry record" }}</p>
+          <div class="registry-screen__preview-meta">
+            <span>{{ selectedPreview.mimeType || "unknown mime" }}</span>
+            <span>{{ selectedPreview.dataBase64 ? "Retrieved" : "Preview metadata only" }}</span>
+          </div>
+          <div class="registry-screen__preview-actions">
+            <button type="button" :disabled="!canPreviewSelected || actionBusy !== ''" @click="previewSelectedRecord">
+              {{ actionBusy === 'preview' ? 'Opening...' : 'Preview' }}
+            </button>
+            <button type="button" :disabled="!canDownloadSelected || actionBusy !== ''" @click="downloadSelectedRecord">
+              {{ actionBusy === 'download' ? 'Saving...' : 'Download' }}
+            </button>
+            <button type="button" :disabled="!canShareSelected || actionBusy !== ''" @click="shareSelectedRecord">
+              {{ actionBusy === 'share' ? 'Sharing...' : 'Share' }}
+            </button>
+          </div>
+          <div class="registry-screen__associate-row">
+            <label>
+              <span>Topic Association</span>
+              <select v-model="selectedTopicId" :disabled="topicOptions.length === 0 || actionBusy !== ''">
+                <option v-for="topic in topicOptions" :key="topic.id" :value="topic.id">{{ topic.label }}</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              :disabled="!selectedTopicId || topicOptions.length === 0 || actionBusy !== ''"
+              @click="associateSelectedRecord"
+            >
+              {{ actionBusy === 'associate' ? 'Submitting...' : 'Associate' }}
+            </button>
+          </div>
+          <p v-if="selectedCommandRecord" class="registry-screen__command-state">
+            {{ selectedCommandRecord.dispatchState }} / {{ selectedCommandRecord.resolutionState }}
+          </p>
+          <p v-if="actionStatus" class="registry-screen__status">{{ actionStatus }}</p>
+          <p v-if="actionError || filesStore.lastError" class="registry-screen__error">{{ actionError || filesStore.lastError }}</p>
         </div>
         <img
-          v-if="selectedPreview.previewUrl"
-          :src="selectedPreview.previewUrl"
+          v-if="selectedPreviewImageUrl"
+          :src="selectedPreviewImageUrl"
           :alt="selectedPreview.name"
         />
       </section>
@@ -487,6 +665,9 @@ async function openImageRecord(id: string): Promise<void> {
   margin-top: 1rem;
   padding: 0.9rem;
 }
+.registry-screen__preview-copy {
+  min-width: 0;
+}
 .registry-screen__preview-card span {
   color: #8ea5b0;
   display: block;
@@ -506,6 +687,78 @@ async function openImageRecord(id: string): Promise<void> {
   color: #9db6bf;
   font-size: 0.74rem;
   margin: 0.3rem 0 0;
+}
+.registry-screen__preview-meta {
+  color: #7d909a;
+  display: flex;
+  flex-wrap: wrap;
+  font-family: var(--font-ui);
+  font-size: 0.54rem;
+  font-weight: 700;
+  gap: 0.55rem;
+  letter-spacing: 0.08em;
+  margin-top: 0.55rem;
+  text-transform: uppercase;
+}
+.registry-screen__preview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+.registry-screen__preview-actions button,
+.registry-screen__associate-row button {
+  background: rgb(37 209 244 / 12%);
+  border: 1px solid rgb(37 209 244 / 22%);
+  border-radius: 0.7rem;
+  color: #25d1f4;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  min-height: 2.3rem;
+  padding: 0 0.8rem;
+  text-transform: uppercase;
+}
+.registry-screen__preview-actions button:disabled,
+.registry-screen__associate-row button:disabled {
+  color: #5f7c88;
+  opacity: 0.65;
+}
+.registry-screen__associate-row {
+  align-items: end;
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 0.85rem;
+}
+.registry-screen__associate-row label {
+  min-width: 0;
+}
+.registry-screen__associate-row select {
+  background: rgb(9 20 28 / 92%);
+  border: 1px solid rgb(37 209 244 / 18%);
+  border-radius: 0.7rem;
+  color: #e3fbff;
+  font-family: var(--font-body);
+  margin-top: 0.3rem;
+  padding: 0.55rem 0.7rem;
+  width: 100%;
+}
+.registry-screen__command-state {
+  color: #d7f7ff;
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  margin-top: 0.7rem;
+  text-transform: uppercase;
+}
+.registry-screen__status {
+  color: #8ef7c8;
+}
+.registry-screen__error {
+  color: #ff9d9d;
 }
 .registry-screen__preview-card img {
   border-radius: 0.8rem;
@@ -634,5 +887,17 @@ async function openImageRecord(id: string): Promise<void> {
 .registry-screen__fab .material-symbols-outlined {
   font-size: 1.6rem;
   font-variation-settings: "wght" 700;
+}
+@media (max-width: 420px) {
+  .registry-screen__preview-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .registry-screen__associate-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .registry-screen__preview-card img {
+    height: 9rem;
+    width: 100%;
+  }
 }
 </style>

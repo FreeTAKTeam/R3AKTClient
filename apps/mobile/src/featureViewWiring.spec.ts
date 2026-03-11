@@ -50,6 +50,11 @@ describe("live shell wiring", () => {
 
     const chat = await mountWithRoute(App, "/comms/chat");
     expect(chat.text()).toContain("CHAT");
+
+    const files = await mountWithRoute(App, "/comms/files");
+    expect(files.text()).toContain("FILE REGISTRY");
+    expect(files.text()).toContain("Active Channel");
+    expect(files.text()).toContain("Refresh");
   });
 
   it("renders map and ops settings routes", async () => {

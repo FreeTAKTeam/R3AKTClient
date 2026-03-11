@@ -147,12 +147,13 @@ Depends on:
 Notes:
 - completed sub-slice: Slice A dashboard/settings session parity + telemetry drill-down
 - completed sub-slice: interaction-focused Playwright coverage for drawer navigation, dashboard parity panels, and chat send flow
+- completed sub-slice: files/images preview, download/share export, and topic association controls inside the existing comms shell
 - merge-sync note: resolving the Playwright PR against `codex/r3aktmobile-parity` required keeping the interaction coverage while also standardizing invalid JSON handling through the shared payload parser across the remaining feature stores
 - transport support note: session/chat delivery now primes the hub link on announce, uses bounded link retries before raw transport fallback, and no longer fires an eager telemetry request during initial store wiring
 - rust-only live probe note: `cargo test -p reticulum_mobile --test live_rch_lxmf live_rch_lxmf_get_app_info_probe -- --ignored --exact --nocapture` still times out on `getAppInfo` against the configured live hub, so the session query path is not yet trustworthy
 - alternate-target note: retesting the same Rust-only probe against `8f455b1c01a6032f6bd740994686f49f` also timed out, and the runtime did not log that target as a reachable announcing hub during the probe window
 - routes without approved Stitch references remain blocked for net-new UI implementation and must not be guessed in code
-- next candidate sub-slice: files/images workflow completion only after explicit Stitch coverage review confirms existing chat/topics shells are sufficient or new Stitch screens are provided
+- next candidate sub-slice: mission/checklist/admin parity actions on already-approved Stitch-backed routes, with matching interaction coverage added alongside the UI slice
 
 ---
 
@@ -243,7 +244,7 @@ Depends on:
 ## Current focus
 Current milestone: P4
 Owner: Codex / agent
-Last updated: 2026-03-10
+Last updated: 2026-03-11
 
 ## Rules for updating this file
 

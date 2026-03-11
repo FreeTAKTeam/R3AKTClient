@@ -43,16 +43,17 @@ Overall state:
 - P4 acceptance harness landed
 - P4 interaction Playwright coverage landed
 - P4 Slice A dashboard/settings parity landed
+- P4 files/images preview/export/association slice landed
 - P5 app-side event/offline/persistence hardening slice landed
 
 Current blocker:
 - live Rust hub probe for `getAppInfo` still returns timeout against both tested hub targets, so the session query path is not yet trustworthy even after link-prewarm and retry changes
 
 Next intended action:
-- continue P4 against the next approved UI slice while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
+- continue P4 against the next approved mission/checklist/admin UI slice while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
 
 Last updated:
-- 2026-03-10
+- 2026-03-11
 
 ---
 
@@ -488,6 +489,60 @@ Open issues:
 Next recommended step:
 - add matching interaction-focused Playwright coverage whenever the next approved P4 UI slice lands, especially for files/images or mission-admin flows once their Stitch-backed surfaces are confirmed
 
+### 2026-03-11 - Session 010
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- complete the existing files/images shell by adding retrieved-record preview/download/share actions plus explicit topic association controls without inventing a new route surface
+
+Planned changes:
+- add app-side media export helpers that can preview, save, and share retrieved base64-backed file/image records
+- extend the files/media store with `AssociateTopicID` command tracking through the shared projection ledger
+- wire the existing comms files/images panel to expose preview/download/share and topic association controls with truthful pending/error state
+- add deterministic mock file/image payloads and matching Vitest/Playwright coverage so the slice is exercised in web mode
+
+Files touched:
+- `apps/mobile/package.json`
+- `apps/mobile/src/components/comms/CommsFilesPanel.vue`
+- `apps/mobile/src/services/mediaRecords.ts`
+- `apps/mobile/src/stores/filesMediaStore.ts`
+- `apps/mobile/src/filesMediaStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm run node-client:build`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run mobile:build`
+- `npm run test:e2e`
+- `npx cap sync android`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- the files/images shell now retrieves mock/live registry records into the existing store, exposes first-class preview/download/share controls, and lets operators submit topic association requests from the selected record card
+- the new download/share path uses `@capacitor/filesystem` so Android can save/share retrieved records from the native build rather than only from browser blob downloads
+- `AssociateTopicID` is tracked through the shared projection ledger, so the UI exposes accepted/pending state instead of claiming completion solely from command acceptance
+- full `npx cap sync` on this Windows environment still fails on iOS because `pod` is unavailable, but Android sync completed successfully and remains the repository's primary delivery target
+
+Open issues:
+- file/image delete actions and any richer attachment-topic confirmation event flow are still outside this slice
+- the live Rust `getAppInfo` timeout remains the main blocker on trusting live session query UX
+
+Next recommended step:
+- continue the next approved P4 slice on a Stitch-backed mission/checklist/admin route and add matching interaction coverage in the same change
+
 ---
 
 ## Decision log
@@ -628,6 +683,27 @@ Result:
 Notes:
 - resolved the open PR merge against `codex/r3aktmobile-parity` on `main` without dropping the Playwright/mobile-shell additions
 - aligned the remaining feature-store `executeFromJson` entrypoints to the shared `InvalidPayloadJsonError` contract so invalid JSON now fails consistently across the tested feature families
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm run node-client:build`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run mobile:build`
+- `npm run test:e2e`
+- `npx cap sync android`
+
+Result:
+- pass
+
+Notes:
+- the existing comms files/images shell now exposes retrieved-record preview, download, share, and topic association controls without adding a new route
+- the shared mock/web client now synthesizes file/image registry and retrieve payloads so the files/images route is covered by both Vitest and Playwright
+- Android native sync picked up the new `@capacitor/filesystem` plugin; full iOS sync remains environment-blocked on this Windows machine because CocoaPods is unavailable
 
 ---
 

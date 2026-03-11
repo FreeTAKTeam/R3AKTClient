@@ -68,4 +68,17 @@ test.describe("mobile interaction flows", () => {
     await expect(page.getByText("Playwright E2E relay", { exact: true })).toBeVisible();
     await expect(page.getByText("Operative 01")).toBeVisible();
   });
+
+  test("files panel retrieves a mock-backed record and exposes preview actions", async ({ page }) => {
+    await page.goto("/comms/files");
+    await expect(page.getByTestId("comms-files-screen")).toBeVisible();
+
+    await page.getByText("Field Manual Packet").click();
+
+    await expect(page.getByText("Selected file")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Preview" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Download" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Share" })).toBeVisible();
+    await expect(page.getByText("Topic Association")).toBeVisible();
+  });
 });

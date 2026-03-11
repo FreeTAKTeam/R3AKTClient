@@ -11,15 +11,18 @@ import { computed, reactive, ref, shallowRef } from "vue";
 
 import { createAppPersistenceNamespace } from "../persistence/appPersistence";
 import { InvalidPayloadJsonError, tryParsePayload } from "./payloadParser";
+import { useProjectionStore } from "./projectionStore";
 import { useRchClientStore } from "./rchClientStore";
 import { asArray, asRecord, readNumber, readString } from "./rchPayloadUtils";
 
 type FilesMediaOperation = (typeof FILES_MEDIA_OPERATIONS)[number];
+type SupportedFilesMediaOperation = FilesMediaOperation | "AssociateTopicID";
 
 const LIST_FILES_OPERATION: FilesMediaOperation = "ListFiles";
 const LIST_IMAGES_OPERATION: FilesMediaOperation = "ListImages";
 const RETRIEVE_FILE_OPERATION: FilesMediaOperation = "RetrieveFile";
 const RETRIEVE_IMAGE_OPERATION: FilesMediaOperation = "RetrieveImage";
+const ASSOCIATE_TOPIC_OPERATION = "AssociateTopicID" as const;
 const TRANSFERS_STORAGE_KEY = "transfers.v1";
 const REGISTRY_STORAGE_KEY = "registry.v1";
 const filesMediaPersistence = createAppPersistenceNamespace("rch-files-media");
@@ -123,13 +126,14 @@ function sortRegistry(left: MediaRegistryRecord, right: MediaRegistryRecord): nu
 
 export const useFilesMediaStore = defineStore("rch-files-media", () => {
   const rchClientStore = useRchClientStore();
+  const projectionStore = useProjectionStore();
 
   const operations = FILES_MEDIA_OPERATIONS;
   const wired = ref(false);
   const busy = ref(false);
   const hydrated = ref(false);
   const lastError = ref("");
-  const lastOperation = shallowRef<FilesMediaOperation | null>(null);
+  const lastOperation = shallowRef<SupportedFilesMediaOperation | null>(null);
   const lastResponse = shallowRef<RchEnvelopeResponse<unknown> | null>(null);
 
   const transfersById = reactive<Record<string, FileTransferRecord>>({});
@@ -259,6 +263,90 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
       return response;
     } catch (error: unknown) {
       lastError.value = toErrorMessage(error);
+      throw error;
+    } finally {
+      busy.value = false;
+    }
+  }
+
+  function buildAssociationConversationId(recordId: string): string {
+    return `files-media-associate:${recordId}:${Date.now()}`;
+  }
+
+  function buildAssociationPayload(
+    record: MediaRegistryRecord,
+    topicId: string,
+  ): Record<string, unknown> {
+    return {
+      topic_id: topicId,
+      topicId,
+      file_id: record.kind === "file" ? record.id : undefined,
+      image_id: record.kind === "image" ? record.id : undefined,
+      attachment_id: record.id,
+      attachmentId: record.id,
+      id: record.id,
+      name: record.name,
+      kind: record.kind,
+    };
+  }
+
+  async function associateTopic(recordId: string, topicId: string): Promise<string> {
+    const normalizedRecordId = recordId.trim();
+    const normalizedTopicId = topicId.trim();
+    if (!normalizedRecordId || !normalizedTopicId) {
+      throw new Error("Select a record and topic before associating.");
+    }
+
+    const record = registryById[normalizedRecordId];
+    if (!record) {
+      throw new Error("Retrieve the record before associating it with a topic.");
+    }
+
+    await projectionStore.init();
+    const conversationId = buildAssociationConversationId(normalizedRecordId);
+    const payload = buildAssociationPayload(record, normalizedTopicId);
+    const context = {
+      conversationId,
+      feature: "filesMedia" as const,
+      aggregateRef: {
+        feature: "filesMedia" as const,
+        entityType: record.kind,
+        entityId: record.id,
+      },
+      requestSummary: `Associate ${record.name} with ${normalizedTopicId}`,
+    };
+
+    busy.value = true;
+    lastError.value = "";
+    try {
+      await projectionStore.recordCommandRequest(ASSOCIATE_TOPIC_OPERATION, payload, context);
+      const client = await rchClientStore.requireClient();
+      const response = await client.execute(ASSOCIATE_TOPIC_OPERATION, payload);
+      lastOperation.value = ASSOCIATE_TOPIC_OPERATION;
+      lastResponse.value = response;
+      await projectionStore.recordCommandResponse(ASSOCIATE_TOPIC_OPERATION, response, context);
+
+      if (record.kind === "file") {
+        await retrieveFile(record.id);
+      } else {
+        await retrieveImage(record.id);
+      }
+
+      if (registryById[record.id]?.topicId === normalizedTopicId) {
+        await projectionStore.recordCommandResponse(
+          ASSOCIATE_TOPIC_OPERATION,
+          response,
+          {
+            ...context,
+            authoritative: true,
+          },
+        );
+      }
+
+      return conversationId;
+    } catch (error: unknown) {
+      lastError.value = toErrorMessage(error);
+      await projectionStore.recordCommandFailure(conversationId, lastError.value);
       throw error;
     } finally {
       busy.value = false;
@@ -477,6 +565,18 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     lastResponse.value ? JSON.stringify(lastResponse.value, null, 2) : "",
   );
 
+  function commandRecordForEntity(entityId: string) {
+    const normalizedEntityId = entityId.trim();
+    if (!normalizedEntityId) {
+      return null;
+    }
+    return projectionStore.commandLedger.find(
+      (entry) =>
+        entry.operation === ASSOCIATE_TOPIC_OPERATION
+        && entry.aggregateRef?.entityId === normalizedEntityId,
+    ) ?? null;
+  }
+
   return {
     operations,
     wired,
@@ -503,5 +603,7 @@ export const useFilesMediaStore = defineStore("rch-files-media", () => {
     listImages,
     retrieveFile,
     retrieveImage,
+    associateTopic,
+    commandRecordForEntity,
   };
 });

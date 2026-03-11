@@ -31,11 +31,6 @@ This file tracks backend capability already present in the RCH/node contract tha
 - raw `TelemetryRequest` exploration UI
 - telemetry history/detail panels
 
-### Files and images
-
-- preview/download/share UX for retrieved backend records
-- explicit attachment-topic association controls
-
 ### Mission core advanced flows
 
 - mission parent set / clear UI
