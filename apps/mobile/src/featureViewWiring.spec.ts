@@ -53,6 +53,8 @@ describe("live shell wiring", () => {
     expect(missionTeams.text()).toContain("Available Teams");
     expect(missionTeams.text()).toContain("Member Editor");
     expect(missionTeams.text()).toContain("Save Member");
+    expect(missionTeams.text()).toContain("Member Client Link");
+    expect(missionTeams.text()).toContain("Link Client");
     expect(missionTeams.text()).toContain("Member Skill Editor");
     expect(missionTeams.text()).toContain("Save Skill");
 

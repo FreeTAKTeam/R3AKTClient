@@ -149,7 +149,7 @@ test.describe("mobile interaction flows", () => {
     await expect(linkedReserveRow).toBeVisible();
 
     const linkedHarborRow = page.locator("li").filter({ hasText: "Harbor Intercept" }).first();
-    await linkedHarborRow.getByRole("button", { name: "Unlink" }).click();
+    await linkedHarborRow.getByRole("button", { name: "Unlink", exact: true }).click();
     await expect(page.getByText("Team unlinked from mission: team-harbor.")).toBeVisible();
     await expect(page.locator('option[value="team-harbor"]')).toHaveCount(1);
 
@@ -196,17 +196,39 @@ test.describe("mobile interaction flows", () => {
     await skillEditor.getByRole("button", { name: "Save Skill" }).click();
 
     await expect(page.getByText("Member skill recorded.")).toBeVisible();
-    const deltaRow = page.locator("li").filter({ hasText: /^Delta/ }).first();
+    const linkedTeamsCard = page.locator("article").filter({ hasText: "Linked Teams" }).first();
+    const deltaRow = linkedTeamsCard.locator("li").filter({ hasText: /^Delta/ }).first();
     await expect(deltaRow.getByText("Relay Ops")).toBeVisible();
-    await expect(deltaRow.getByText("advanced")).toBeVisible();
+    const relaySkillRow = deltaRow.locator("li").filter({ hasText: /^Relay Ops/ }).first();
+    await expect(relaySkillRow.getByText("advanced", { exact: true })).toBeVisible();
 
-    const relaySkillRow = page.locator("li").filter({ hasText: "Relay Ops" }).first();
     await relaySkillRow.getByRole("button", { name: "Edit" }).click();
     await skillEditor.getByPlaceholder("basic / advanced / expert").fill("expert");
     await skillEditor.getByRole("button", { name: "Update Skill" }).click();
 
     await expect(page.getByText(/Member skill updated:/)).toBeVisible();
     await expect(page.getByText("expert").first()).toBeVisible();
+  });
+
+  test("mission workspace links and unlinks member client identities from the approved route", async ({ page }) => {
+    await page.goto("/missions/demo/teams");
+    await expect(page.getByTestId("mission-domain-screen")).toBeVisible();
+
+    const linkedTeamsCard = page.locator("article").filter({ hasText: "Linked Teams" }).first();
+    const echoRow = linkedTeamsCard.locator("li").filter({ hasText: /^Echo/ }).first();
+    await expect(echoRow.getByText("c1a5-echo")).toBeVisible();
+
+    await echoRow.getByRole("button", { name: "Unlink Client" }).click();
+    await expect(page.getByText("Client identity unlinked from member: member-echo.")).toBeVisible();
+    await expect(echoRow.getByText("No client identity link")).toBeVisible();
+
+    const clientEditor = page.locator("article").filter({ hasText: "Member Client Link" }).first();
+    await clientEditor.getByRole("combobox").selectOption("member-echo");
+    await clientEditor.getByPlaceholder("c1a5-delta / 9f3c-client").fill("c1a5-echo-restored");
+    await clientEditor.getByRole("button", { name: "Link Client" }).click();
+
+    await expect(page.getByText("Client identity linked to member: member-echo.")).toBeVisible();
+    await expect(echoRow.getByText("c1a5-echo-restored")).toBeVisible();
   });
 
   test("mission workspace edits a mission change from the approved log route", async ({ page }) => {

@@ -20,6 +20,8 @@ const TEAM_UNLINK_OPERATION: TeamsSkillsOperation = "mission.registry.team.missi
 const TEAM_MEMBER_LIST_OPERATION: TeamsSkillsOperation = "mission.registry.team_member.list";
 const TEAM_MEMBER_UPSERT_OPERATION: TeamsSkillsOperation = "mission.registry.team_member.upsert";
 const TEAM_MEMBER_DELETE_OPERATION: TeamsSkillsOperation = "mission.registry.team_member.delete";
+const TEAM_MEMBER_CLIENT_LINK_OPERATION: TeamsSkillsOperation = "mission.registry.team_member.client.link";
+const TEAM_MEMBER_CLIENT_UNLINK_OPERATION: TeamsSkillsOperation = "mission.registry.team_member.client.unlink";
 const SKILL_LIST_OPERATION: TeamsSkillsOperation = "mission.registry.skill.list";
 const TEAM_MEMBER_SKILL_LIST_OPERATION: TeamsSkillsOperation = "mission.registry.team_member_skill.list";
 const TEAM_MEMBER_SKILL_UPSERT_OPERATION: TeamsSkillsOperation = "mission.registry.team_member_skill.upsert";
@@ -192,7 +194,13 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
       return;
     }
 
-    if (operation === TEAM_MEMBER_LIST_OPERATION || operation === TEAM_MEMBER_UPSERT_OPERATION || operation === TEAM_MEMBER_DELETE_OPERATION) {
+    if (
+      operation === TEAM_MEMBER_LIST_OPERATION
+      || operation === TEAM_MEMBER_UPSERT_OPERATION
+      || operation === TEAM_MEMBER_DELETE_OPERATION
+      || operation === TEAM_MEMBER_CLIENT_LINK_OPERATION
+      || operation === TEAM_MEMBER_CLIENT_UNLINK_OPERATION
+    ) {
       const member =
         normalizeTeamMemberRecord(value.team_member ?? value.member ?? value)
         ?? normalizeTeamMemberRecord((asArray(value.team_members)[0] ?? null) as unknown);
@@ -330,6 +338,30 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     await execute(TEAM_MEMBER_DELETE_OPERATION, { team_member_uid: normalized });
   }
 
+  async function linkTeamMemberClient(teamMemberUid: string, clientIdentity: string): Promise<void> {
+    const normalizedMemberUid = teamMemberUid.trim();
+    const normalizedIdentity = clientIdentity.trim();
+    if (!normalizedMemberUid || !normalizedIdentity) {
+      return;
+    }
+    await execute(TEAM_MEMBER_CLIENT_LINK_OPERATION, {
+      team_member_uid: normalizedMemberUid,
+      client_identity: normalizedIdentity,
+    });
+  }
+
+  async function unlinkTeamMemberClient(teamMemberUid: string, clientIdentity?: string): Promise<void> {
+    const normalizedMemberUid = teamMemberUid.trim();
+    const normalizedIdentity = clientIdentity?.trim() || teamMembersByUid[normalizedMemberUid]?.clientIdentity;
+    if (!normalizedMemberUid || !normalizedIdentity) {
+      return;
+    }
+    await execute(TEAM_MEMBER_CLIENT_UNLINK_OPERATION, {
+      team_member_uid: normalizedMemberUid,
+      client_identity: normalizedIdentity,
+    });
+  }
+
   async function listSkills(): Promise<void> {
     await execute(SKILL_LIST_OPERATION, {});
   }
@@ -394,6 +426,8 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     listTeamMembers,
     upsertTeamMember,
     deleteTeamMember,
+    linkTeamMemberClient,
+    unlinkTeamMemberClient,
     listSkills,
     listTeamMemberSkills,
     upsertTeamMemberSkill,

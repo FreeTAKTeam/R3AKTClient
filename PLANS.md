@@ -154,12 +154,15 @@ Notes:
 - completed sub-slice: mission workspace mission-change create/edit controls on the approved log route
 - completed sub-slice: mission workspace team link/unlink/delete controls on the approved teams route
 - completed sub-slice: mission workspace team-member create/update/delete controls on the approved teams route
+- completed sub-slice: mission workspace team-member skill upsert controls on the approved teams route
+- completed sub-slice: mission workspace team-member client link/unlink controls on the approved teams route
+- stability note: the mission workspace member-skill Playwright flow now scopes to the nested `Relay Ops` skill row under the linked-team member list so repeated level text does not trigger Playwright strict-mode collisions in CI
 - merge-sync note: resolving the Playwright PR against `codex/r3aktmobile-parity` required keeping the interaction coverage while also standardizing invalid JSON handling through the shared payload parser across the remaining feature stores
 - transport support note: session/chat delivery now primes the hub link on announce, uses bounded link retries before raw transport fallback, and no longer fires an eager telemetry request during initial store wiring
 - rust-only live probe note: `cargo test -p reticulum_mobile --test live_rch_lxmf live_rch_lxmf_get_app_info_probe -- --ignored --exact --nocapture` still times out on `getAppInfo` against the configured live hub, so the session query path is not yet trustworthy
 - alternate-target note: retesting the same Rust-only probe against `8f455b1c01a6032f6bd740994686f49f` also timed out, and the runtime did not log that target as a reachable announcing hub during the probe window
 - routes without approved Stitch references remain blocked for net-new UI implementation and must not be guessed in code
-- next candidate sub-slice: teams/people/skills controls on an approved route, most likely member client link/unlink or team-member skill upsert with matching interaction coverage
+- next candidate sub-slice: teams/people/skills controls on an approved route, most likely skill create/update with matching interaction coverage
 
 ---
 

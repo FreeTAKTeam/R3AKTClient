@@ -37,6 +37,9 @@ export function useMissionDomainData(missionUid: string) {
   const missionMemberTeamDraft = ref("");
   const missionMemberNameDraft = ref("");
   const missionMemberRoleDraft = ref("");
+  const missionMemberClientDraftUid = ref("");
+  const missionMemberClientMemberDraft = ref("");
+  const missionMemberClientIdentityDraft = ref("");
   const missionMemberSkillDraftUid = ref("");
   const missionMemberSkillMemberDraft = ref("");
   const missionMemberSkillUidDraft = ref("");
@@ -208,6 +211,10 @@ export function useMissionDomainData(missionUid: string) {
     missionTeamMembers.value.find((entry) => entry.uid === missionMemberDraftUid.value) ?? null,
   );
   const isEditingMissionMember = computed(() => Boolean(missionMemberDraftUid.value));
+  const activeMissionMemberClient = computed(() =>
+    missionTeamMembers.value.find((entry) => entry.uid === missionMemberClientDraftUid.value) ?? null,
+  );
+  const isEditingMissionMemberClient = computed(() => Boolean(missionMemberClientDraftUid.value));
   const activeMissionMemberSkill = computed(() =>
     missionMemberSkills.value.find((entry) => entry.uid === missionMemberSkillDraftUid.value) ?? null,
   );
@@ -265,6 +272,21 @@ export function useMissionDomainData(missionUid: string) {
   watch(
     missionMemberOptions,
     (nextOptions) => {
+      if (
+        missionMemberClientMemberDraft.value
+        && !nextOptions.some((member) => member.uid === missionMemberClientMemberDraft.value)
+      ) {
+        missionMemberClientMemberDraft.value = nextOptions[0]?.uid ?? "";
+      }
+      if (!missionMemberClientDraftUid.value && !missionMemberClientMemberDraft.value) {
+        missionMemberClientMemberDraft.value = nextOptions[0]?.uid ?? "";
+      }
+      if (
+        missionMemberSkillMemberDraft.value
+        && !nextOptions.some((member) => member.uid === missionMemberSkillMemberDraft.value)
+      ) {
+        missionMemberSkillMemberDraft.value = nextOptions[0]?.uid ?? "";
+      }
       if (!missionMemberSkillDraftUid.value && !missionMemberSkillMemberDraft.value) {
         missionMemberSkillMemberDraft.value = nextOptions[0]?.uid ?? "";
       }
@@ -423,7 +445,72 @@ export function useMissionDomainData(missionUid: string) {
       if (missionMemberDraftUid.value === teamMemberUid) {
         resetMissionMemberEditor();
       }
+      if (missionMemberClientDraftUid.value === teamMemberUid) {
+        resetMissionMemberClientEditor();
+      }
       statusMessage.value = `Team member deleted: ${teamMemberUid}.`;
+    });
+  }
+
+  function resetMissionMemberClientEditor(): void {
+    missionMemberClientDraftUid.value = "";
+    missionMemberClientMemberDraft.value = missionMemberOptions.value[0]?.uid ?? "";
+    missionMemberClientIdentityDraft.value = "";
+  }
+
+  function editMissionMemberClient(teamMemberUid: string): void {
+    const target = missionTeamMembers.value.find((entry) => entry.uid === teamMemberUid);
+    if (!target) {
+      return;
+    }
+    missionMemberClientDraftUid.value = target.uid;
+    missionMemberClientMemberDraft.value = target.uid;
+    missionMemberClientIdentityDraft.value = target.clientIdentity ?? "";
+    errorMessage.value = "";
+    statusMessage.value = target.clientIdentity
+      ? `Editing client link for ${target.uid}.`
+      : `Linking client identity for ${target.uid}.`;
+  }
+
+  async function saveMissionMemberClient(): Promise<void> {
+    if (!missionMemberClientMemberDraft.value.trim()) {
+      errorMessage.value = "Select a mission team member before linking a client identity.";
+      return;
+    }
+    if (!missionMemberClientIdentityDraft.value.trim()) {
+      errorMessage.value = "Enter a client identity before linking it to a team member.";
+      return;
+    }
+
+    const selectedMemberUid = missionMemberClientMemberDraft.value.trim();
+    const existing = activeMissionMemberClient.value;
+
+    await runMutation(async () => {
+      await teamsSkillsStore.linkTeamMemberClient(
+        selectedMemberUid,
+        missionMemberClientIdentityDraft.value.trim(),
+      );
+      statusMessage.value = existing?.clientIdentity
+        ? `Member client link updated: ${selectedMemberUid}.`
+        : `Client identity linked to member: ${selectedMemberUid}.`;
+      resetMissionMemberClientEditor();
+    });
+  }
+
+  async function unlinkMissionMemberClient(teamMemberUid: string): Promise<void> {
+    const target = missionTeamMembers.value.find((entry) => entry.uid === teamMemberUid);
+    const clientIdentity = target?.clientIdentity?.trim();
+    if (!clientIdentity) {
+      errorMessage.value = "Selected team member does not have a linked client identity.";
+      return;
+    }
+
+    await runMutation(async () => {
+      await teamsSkillsStore.unlinkTeamMemberClient(teamMemberUid, clientIdentity);
+      if (missionMemberClientDraftUid.value === teamMemberUid) {
+        resetMissionMemberClientEditor();
+      }
+      statusMessage.value = `Client identity unlinked from member: ${teamMemberUid}.`;
     });
   }
 
@@ -695,8 +782,10 @@ export function useMissionDomainData(missionUid: string) {
     missionChannelKey,
     activeMissionChange,
     activeMissionMember,
+    activeMissionMemberClient,
     isEditingMissionChange,
     isEditingMissionMember,
+    isEditingMissionMemberClient,
     activeMissionMemberSkill,
     isEditingMissionMemberSkill,
     missionParentDraft,
@@ -707,6 +796,9 @@ export function useMissionDomainData(missionUid: string) {
     missionMemberTeamDraft,
     missionMemberNameDraft,
     missionMemberRoleDraft,
+    missionMemberClientDraftUid,
+    missionMemberClientMemberDraft,
+    missionMemberClientIdentityDraft,
     missionMemberSkillDraftUid,
     missionMemberSkillMemberDraft,
     missionMemberSkillUidDraft,
@@ -725,6 +817,10 @@ export function useMissionDomainData(missionUid: string) {
     resetMissionMemberEditor,
     saveMissionMember,
     deleteMissionMember,
+    editMissionMemberClient,
+    resetMissionMemberClientEditor,
+    saveMissionMemberClient,
+    unlinkMissionMemberClient,
     editMissionMemberSkill,
     resetMissionMemberSkillEditor,
     saveMissionMemberSkill,

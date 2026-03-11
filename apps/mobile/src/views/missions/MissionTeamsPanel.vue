@@ -22,6 +22,7 @@ const props = defineProps<{
   missionSkills: SkillRecord[];
   missionMemberSkills: TeamMemberSkillRecord[];
   isEditingMissionMember: boolean;
+  isEditingMissionMemberClient: boolean;
   isEditingMissionMemberSkill: boolean;
 }>();
 
@@ -29,6 +30,8 @@ const teamDraft = defineModel<string>("teamDraft", { required: true });
 const memberTeamDraft = defineModel<string>("memberTeamDraft", { required: true });
 const memberNameDraft = defineModel<string>("memberNameDraft", { required: true });
 const memberRoleDraft = defineModel<string>("memberRoleDraft", { required: true });
+const memberClientMemberDraft = defineModel<string>("memberClientMemberDraft", { required: true });
+const memberClientIdentityDraft = defineModel<string>("memberClientIdentityDraft", { required: true });
 const memberSkillMemberDraft = defineModel<string>("memberSkillMemberDraft", { required: true });
 const memberSkillUidDraft = defineModel<string>("memberSkillUidDraft", { required: true });
 const memberSkillLevelDraft = defineModel<string>("memberSkillLevelDraft", { required: true });
@@ -42,6 +45,10 @@ const emit = defineEmits<{
   saveMember: [];
   resetMemberEditor: [];
   deleteMember: [teamMemberUid: string];
+  editMemberClient: [teamMemberUid: string];
+  saveMemberClient: [];
+  resetMemberClientEditor: [];
+  unlinkMemberClient: [teamMemberUid: string];
   editMemberSkill: [teamMemberSkillUid: string];
   saveMemberSkill: [];
   resetMemberSkillEditor: [];
@@ -97,7 +104,22 @@ function skillsForMember(teamMemberUid: string): Array<{
                 </div>
               </div>
               <span>{{ member.role ?? "operator" }}</span>
-              <span>{{ member.clientIdentity ?? "No client identity link" }}</span>
+              <div class="mission-domain__item-head">
+                <span>{{ member.clientIdentity ?? "No client identity link" }}</span>
+                <div class="mission-domain__button-row">
+                  <button type="button" :disabled="busy" @click="emit('editMemberClient', member.uid)">
+                    {{ member.clientIdentity ? "Edit Link" : "Link Client" }}
+                  </button>
+                  <button
+                    v-if="member.clientIdentity"
+                    type="button"
+                    :disabled="busy"
+                    @click="emit('unlinkMemberClient', member.uid)"
+                  >
+                    Unlink Client
+                  </button>
+                </div>
+              </div>
               <ul class="mission-domain__sub-list mission-domain__sub-list--skills">
                 <li v-for="memberSkill in skillsForMember(member.uid)" :key="memberSkill.uid">
                   <div class="mission-domain__item-head">
@@ -189,6 +211,45 @@ function skillsForMember(teamMemberUid: string): Array<{
       <div class="mission-domain__button-row">
         <button type="button" :disabled="busy || !memberNameDraft.trim() || !memberTeamDraft" @click="emit('saveMember')">
           {{ isEditingMissionMember ? "Update Member" : "Save Member" }}
+        </button>
+      </div>
+    </div>
+  </article>
+  <article class="mission-domain__card">
+    <div class="mission-domain__section-head">
+      <h3>Member Client Link</h3>
+      <button type="button" :disabled="busy" @click="emit('resetMemberClientEditor')">New Link</button>
+    </div>
+    <div class="mission-domain__control-grid">
+      <label class="mission-domain__control">
+        <span>Team Member</span>
+        <select v-model="memberClientMemberDraft" :disabled="busy">
+          <option value="">Select mission member</option>
+          <option
+            v-for="member in missionMemberOptions"
+            :key="member.uid"
+            :value="member.uid"
+          >
+            {{ member.name }} ({{ member.uid }})
+          </option>
+        </select>
+      </label>
+      <label class="mission-domain__control">
+        <span>Client Identity</span>
+        <input
+          v-model="memberClientIdentityDraft"
+          :disabled="busy"
+          type="text"
+          placeholder="c1a5-delta / 9f3c-client"
+        />
+      </label>
+      <div class="mission-domain__button-row">
+        <button
+          type="button"
+          :disabled="busy || !memberClientMemberDraft || !memberClientIdentityDraft.trim()"
+          @click="emit('saveMemberClient')"
+        >
+          {{ isEditingMissionMemberClient ? "Update Link" : "Link Client" }}
         </button>
       </div>
     </div>

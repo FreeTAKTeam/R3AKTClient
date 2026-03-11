@@ -231,6 +231,33 @@ describe("RchClient grouped feature API", () => {
     expect(fake.lastEnvelope?.payload).toEqual({ identity: "abcd" });
   });
 
+  it("supports mock-backed team-member client link and unlink on the web client", async () => {
+    const client = createReticulumNodeClient({ mockMode: "web" });
+    const rchClient = createRchClient(client);
+
+    await rchClient.teamsSkills.execute("mission.registry.team_member.client.link", {
+      team_member_uid: "member-delta",
+      client_identity: "c1a5-delta-updated",
+    });
+
+    const linkedMembers = await rchClient.teamsSkills.execute("mission.registry.team_member.list", {});
+    expect(
+      ((linkedMembers.payload as { team_members?: Array<{ team_member_uid?: string; client_identity?: string }> }).team_members ?? [])
+        .find((member) => member.team_member_uid === "member-delta")?.client_identity,
+    ).toBe("c1a5-delta-updated");
+
+    await rchClient.teamsSkills.execute("mission.registry.team_member.client.unlink", {
+      team_member_uid: "member-delta",
+      client_identity: "c1a5-delta-updated",
+    });
+
+    const unlinkedMembers = await rchClient.teamsSkills.execute("mission.registry.team_member.list", {});
+    expect(
+      ((unlinkedMembers.payload as { team_members?: Array<{ team_member_uid?: string; client_identity?: string }> }).team_members ?? [])
+        .find((member) => member.team_member_uid === "member-delta")?.client_identity,
+    ).toBeUndefined();
+  });
+
   it("classifies documented direct southbound query operations correctly", async () => {
     const fake = new FakeNodeClient();
     const client = createRchClient(fake);

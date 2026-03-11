@@ -50,13 +50,15 @@ Overall state:
 - P4 mission workspace mission-change editor slice landed
 - P4 mission workspace team link/unlink/delete slice landed
 - P4 mission workspace team-member CRUD slice landed
+- P4 mission workspace team-member skill upsert slice landed
+- P4 mission workspace team-member client link/unlink slice landed
 - P5 app-side event/offline/persistence hardening slice landed
 
 Current blocker:
 - live Rust hub probe for `getAppInfo` still returns timeout against both tested hub targets, so the session query path is not yet trustworthy even after link-prewarm and retry changes
 
 Next intended action:
-- continue P4 on an approved teams/people/skills route with member client link/unlink or team-member skill upsert controls, while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
+- continue P4 on an approved teams/people/skills route with skill create/update controls, while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
 
 Last updated:
 - 2026-03-11
@@ -865,6 +867,147 @@ Open issues:
 Next recommended step:
 - continue the next approved P4 slice on a teams/people/skills route with member client link/unlink or team-member skill upsert controls, and keep matching interaction coverage in the same change
 
+### 2026-03-11 - Session 017
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose team-member skill create/update controls on the approved mission workspace teams route using the existing teams/skills store and typed wrapper surface
+
+Planned changes:
+- extend the mission workspace composable with a team-member skill editor state plus save/edit actions
+- reuse the focused teams child panel so `/missions/:missionUid/teams` can show per-member skills and a member-skill editor without adding a new route
+- extend the web/mock wrapper path with deterministic team-member skill upsert behavior so the route stays store-backed in browser mode
+- add focused Vitest and Playwright coverage for team-member skill creation and update from the approved route
+
+Files touched:
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/views/missions/MissionTeamsPanel.vue`
+- `apps/mobile/src/teamsSkillsStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- the approved mission workspace teams route now exposes team-member skill create and update controls through the existing teams/skills store instead of leaving member-skill actions stranded behind the ops-only list view
+- the route keeps the mission view thin by reusing the focused `MissionTeamsPanel` child for the nested skill list and editor, with typed props, emits, and `v-model` bindings
+- the web/mock node-client path now synthesizes deterministic team-member skill upsert behavior so browser-mode mission teams flows remain store-backed and fully covered by Vitest plus Playwright
+
+Open issues:
+- the remaining teams/people/skills backlog on approved routes is now member client link/unlink, skill create/update, and task skill requirement surfaces
+
+Next recommended step:
+- continue the next approved P4 slice on a teams/people/skills route with member client link/unlink controls, and keep matching interaction coverage in the same change
+
+### 2026-03-11 - Session 018
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose team-member client link/unlink controls on the approved mission workspace teams route using the existing teams/skills store and typed wrapper surface
+
+Planned changes:
+- extend the teams/skills store with canonical `mission.registry.team_member.client.link` and `.unlink` helpers
+- extend the mission workspace composable with a focused member-client editor state plus link/unlink actions
+- reuse the existing `MissionTeamsPanel` child so `/missions/:missionUid/teams` can show per-member client links and a member-client editor without adding a new route
+- extend the web/mock wrapper path with deterministic team-member client link/unlink behavior and add focused Vitest/Playwright coverage
+
+Files touched:
+- `apps/mobile/src/stores/teamsSkillsStore.ts`
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/views/missions/MissionTeamsPanel.vue`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/teamsSkillsStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- the approved mission workspace teams route now exposes member-client link and unlink controls through the canonical teams/skills commands instead of overloading team-member upsert or leaving the action stranded in backend parity
+- the route stays a composition surface by reusing `MissionTeamsPanel` for per-member client link affordances plus a focused member-client editor card
+- the web/mock node-client path now keeps team-member client identities mutable, so the teams route remains store-backed in browser mode and covered by Vitest plus Playwright
+
+Open issues:
+- the remaining teams/people/skills backlog on approved routes is now skill create/update controls and task skill requirement surfaces
+
+Next recommended step:
+- continue the next approved P4 slice on a teams/people/skills route with skill create/update controls, and keep matching interaction coverage in the same change
+
+### 2026-03-11 - Session 019
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- repair the CI Playwright failure on the mission workspace member-skill flow by removing an ambiguous strict-mode text lookup from the approved route coverage
+
+Planned changes:
+- inspect the failing assertion in `tests/mobileFlows.spec.ts`
+- scope the level assertion and edit action to the specific nested `Relay Ops` skill row under the `Delta` member entry instead of querying repeated level text across the broader member row
+- rerun the targeted member-skill Playwright case and then the full end-to-end suite
+
+Files touched:
+- `tests/mobileFlows.spec.ts`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npx playwright test tests/mobileFlows.spec.ts --grep "member skills"`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- the failing assertion used `deltaRow.getByText("advanced")`, which became ambiguous once the member row contained more than one visible `advanced` label
+- the test now scopes both the level assertion and edit click to the nested `Relay Ops` skill row inside the linked-teams card, which matches the actual user-visible hierarchy and avoids Playwright strict-mode collisions
+
+Open issues:
+- this change fixes the selector instability only; the standing live-hub `getAppInfo` timeout remains unrelated and unresolved
+
+Next recommended step:
+- keep future Playwright additions on the mission teams route anchored to the linked-team/member/skill sub-lists rather than broad row-level text lookups when duplicate labels are possible
+
 ---
 
 ## Decision log
@@ -1146,6 +1289,62 @@ Notes:
 - the approved mission workspace teams route now exposes team-member create, update, and delete controls through the existing teams/skills store rather than only showing member counts and static metadata
 - the route-level mission view now composes a focused `MissionTeamsPanel` child so the expanded teams/member UI stays isolated without pushing more orchestration into the route component
 - the next remaining P4 gap within teams/people/skills now narrows to member client link/unlink or team-member skill controls on approved routes
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission workspace teams route now exposes team-member skill create and update controls through the existing teams/skills store rather than leaving those actions available only through backend parity
+- the teams panel now renders per-member skill state and edit affordances while keeping the mission route as a composition surface instead of moving more UI logic into the route component
+- the next remaining P4 gap within teams/people/skills now narrows to member client link/unlink, skill create/update, or task skill requirement controls on approved routes
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission workspace teams route now exposes team-member client link and unlink controls through the canonical teams/skills store methods instead of leaving client identity association as read-only metadata
+- the teams panel now renders per-member client link affordances and a focused editor card while keeping the mission route itself as a composition surface
+- the next remaining P4 gap within teams/people/skills now narrows to skill create/update or task skill requirement controls on approved routes
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npx playwright test tests/mobileFlows.spec.ts --grep "member skills"`
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the member-skill Playwright flow now scopes its `advanced` level assertion to the nested `Relay Ops` skill row under `Delta`, avoiding the strict-mode violation that occurred when repeated level text existed in the broader member row
+- the full Playwright suite remained green after the selector change, so the fix addressed the CI failure without changing app behavior or widening the route surface
 
 ---
 

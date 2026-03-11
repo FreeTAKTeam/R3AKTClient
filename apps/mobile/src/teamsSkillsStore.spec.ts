@@ -59,6 +59,17 @@ describe("teams skills store", () => {
     expect(store.teamMembersByUid["member-foxtrot"]).toBeUndefined();
   });
 
+  it("links and unlinks team members to client identities through the canonical member-client commands", async () => {
+    const store = useTeamsSkillsStore();
+
+    await store.wire();
+    await store.linkTeamMemberClient("member-delta", "c1a5-delta-updated");
+    expect(store.teamMembersByUid["member-delta"]?.clientIdentity).toBe("c1a5-delta-updated");
+
+    await store.unlinkTeamMemberClient("member-delta", "c1a5-delta-updated");
+    expect(store.teamMembersByUid["member-delta"]?.clientIdentity).toBeUndefined();
+  });
+
   it("creates and updates team-member skills through the canonical member-skill command", async () => {
     const store = useTeamsSkillsStore();
 

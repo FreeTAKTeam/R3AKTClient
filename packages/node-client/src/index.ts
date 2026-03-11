@@ -1744,6 +1744,45 @@ function buildSyntheticExecutePayload(
     };
   }
 
+  if (envelope.type === "mission.registry.team_member.client.link") {
+    const teamMemberUid = readStringCandidate(request, ["team_member_uid", "teamMemberUid"]);
+    const clientIdentity = readStringCandidate(request, ["client_identity", "clientIdentity"]);
+    if (teamMemberUid && clientIdentity) {
+      mockTeamMemberRegistry = mockTeamMemberRegistry.map((member) =>
+        member.team_member_uid !== teamMemberUid
+          ? member
+          : {
+            ...member,
+            client_identity: clientIdentity,
+          });
+    }
+    return {
+      payload: {
+        team_member: mockTeamMemberRegistry.find((member) => member.team_member_uid === teamMemberUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team_member.client.unlink") {
+    const teamMemberUid = readStringCandidate(request, ["team_member_uid", "teamMemberUid"]);
+    const clientIdentity = readStringCandidate(request, ["client_identity", "clientIdentity"]);
+    if (teamMemberUid) {
+      mockTeamMemberRegistry = mockTeamMemberRegistry.map((member) =>
+        member.team_member_uid !== teamMemberUid
+        || (clientIdentity && member.client_identity && member.client_identity !== clientIdentity)
+          ? member
+          : {
+            ...member,
+            client_identity: undefined,
+          });
+    }
+    return {
+      payload: {
+        team_member: mockTeamMemberRegistry.find((member) => member.team_member_uid === teamMemberUid),
+      },
+    };
+  }
+
   if (envelope.type === "mission.registry.skill.list") {
     return {
       payload: {
