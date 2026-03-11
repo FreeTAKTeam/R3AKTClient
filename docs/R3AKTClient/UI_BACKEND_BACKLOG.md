@@ -33,7 +33,6 @@ This file tracks backend capability already present in the RCH/node contract tha
 
 ### Teams, people, and skills
 
-- team-member create / update / delete controls
 - team-member client link / unlink controls
 - skill create / update controls
 - team-member skill upsert controls

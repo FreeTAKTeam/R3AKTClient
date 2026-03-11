@@ -33,6 +33,14 @@ export function useMissionDomainData(missionUid: string) {
   const missionRdeDraft = ref("");
   const missionZoneDraft = ref("");
   const missionTeamDraft = ref("");
+  const missionMemberDraftUid = ref("");
+  const missionMemberTeamDraft = ref("");
+  const missionMemberNameDraft = ref("");
+  const missionMemberRoleDraft = ref("");
+  const missionMemberSkillDraftUid = ref("");
+  const missionMemberSkillMemberDraft = ref("");
+  const missionMemberSkillUidDraft = ref("");
+  const missionMemberSkillLevelDraft = ref("");
   const missionChangeDraftUid = ref("");
   const missionChangeSummaryDraft = ref("");
   const missionChangeTypeDraft = ref("status-update");
@@ -111,6 +119,29 @@ export function useMissionDomainData(missionUid: string) {
     return teamsSkillsStore.teamMembers.filter((member) => member.teamUid && teamIds.has(member.teamUid));
   });
 
+  const missionMemberTeamOptions = computed(() =>
+    missionTeams.value.map((team) => ({
+      uid: team.uid,
+      name: team.name,
+    })),
+  );
+
+  const missionMemberOptions = computed(() =>
+    missionTeamMembers.value.map((member) => ({
+      uid: member.uid,
+      name: member.name,
+      teamUid: member.teamUid,
+    })),
+  );
+
+  const missionSkills = computed(() => teamsSkillsStore.skills);
+  const missionMemberSkills = computed(() => {
+    const missionMemberIds = new Set(missionTeamMembers.value.map((member) => member.uid));
+    return teamsSkillsStore.memberSkills.filter((entry) =>
+      entry.teamMemberUid && missionMemberIds.has(entry.teamMemberUid),
+    );
+  });
+
   const missionAssets = computed(() => {
     const memberIds = new Set(missionTeamMembers.value.map((member) => member.uid));
     return assetsAssignmentsStore.assets.filter((asset) =>
@@ -173,6 +204,14 @@ export function useMissionDomainData(missionUid: string) {
   );
 
   const isEditingMissionChange = computed(() => Boolean(missionChangeDraftUid.value));
+  const activeMissionMember = computed(() =>
+    missionTeamMembers.value.find((entry) => entry.uid === missionMemberDraftUid.value) ?? null,
+  );
+  const isEditingMissionMember = computed(() => Boolean(missionMemberDraftUid.value));
+  const activeMissionMemberSkill = computed(() =>
+    missionMemberSkills.value.find((entry) => entry.uid === missionMemberSkillDraftUid.value) ?? null,
+  );
+  const isEditingMissionMemberSkill = computed(() => Boolean(missionMemberSkillDraftUid.value));
 
   watch(
     mission,
@@ -190,6 +229,54 @@ export function useMissionDomainData(missionUid: string) {
         && !availableTeamOptions.value.some((team) => team.uid === missionTeamDraft.value)
       ) {
         missionTeamDraft.value = "";
+      }
+      if (
+        missionMemberTeamDraft.value
+        && !missionMemberTeamOptions.value.some((team) => team.uid === missionMemberTeamDraft.value)
+      ) {
+        missionMemberTeamDraft.value = missionMemberTeamOptions.value[0]?.uid ?? "";
+      }
+      if (
+        missionMemberSkillMemberDraft.value
+        && !missionMemberOptions.value.some((member) => member.uid === missionMemberSkillMemberDraft.value)
+      ) {
+        missionMemberSkillMemberDraft.value = missionMemberOptions.value[0]?.uid ?? "";
+      }
+      if (
+        missionMemberSkillUidDraft.value
+        && !missionSkills.value.some((skill) => skill.uid === missionMemberSkillUidDraft.value)
+      ) {
+        missionMemberSkillUidDraft.value = missionSkills.value[0]?.uid ?? "";
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    missionMemberTeamOptions,
+    (nextOptions) => {
+      if (!missionMemberDraftUid.value && !missionMemberTeamDraft.value) {
+        missionMemberTeamDraft.value = nextOptions[0]?.uid ?? "";
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    missionMemberOptions,
+    (nextOptions) => {
+      if (!missionMemberSkillDraftUid.value && !missionMemberSkillMemberDraft.value) {
+        missionMemberSkillMemberDraft.value = nextOptions[0]?.uid ?? "";
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    missionSkills,
+    (nextSkills) => {
+      if (!missionMemberSkillDraftUid.value && !missionMemberSkillUidDraft.value) {
+        missionMemberSkillUidDraft.value = nextSkills[0]?.uid ?? "";
       }
     },
     { immediate: true },
@@ -279,6 +366,114 @@ export function useMissionDomainData(missionUid: string) {
     await runMutation(async () => {
       await teamsSkillsStore.deleteTeam(teamUid);
       statusMessage.value = `Team deleted: ${teamUid}.`;
+    });
+  }
+
+  function resetMissionMemberEditor(): void {
+    missionMemberDraftUid.value = "";
+    missionMemberTeamDraft.value = missionMemberTeamOptions.value[0]?.uid ?? "";
+    missionMemberNameDraft.value = "";
+    missionMemberRoleDraft.value = "";
+  }
+
+  function editMissionMember(teamMemberUid: string): void {
+    const target = missionTeamMembers.value.find((entry) => entry.uid === teamMemberUid);
+    if (!target) {
+      return;
+    }
+    missionMemberDraftUid.value = target.uid;
+    missionMemberTeamDraft.value = target.teamUid ?? missionMemberTeamOptions.value[0]?.uid ?? "";
+    missionMemberNameDraft.value = target.name;
+    missionMemberRoleDraft.value = target.role ?? "";
+    errorMessage.value = "";
+    statusMessage.value = `Editing team member ${target.uid}.`;
+  }
+
+  async function saveMissionMember(): Promise<void> {
+    if (!missionMemberTeamDraft.value.trim()) {
+      errorMessage.value = "Select a linked team before saving a member.";
+      return;
+    }
+    if (!missionMemberNameDraft.value.trim()) {
+      errorMessage.value = "Enter a callsign before saving a member.";
+      return;
+    }
+
+    const existing = activeMissionMember.value;
+    const nextName = missionMemberNameDraft.value.trim();
+    const nextRole = missionMemberRoleDraft.value.trim();
+
+    await runMutation(async () => {
+      await teamsSkillsStore.upsertTeamMember({
+        team_member_uid: existing?.uid || undefined,
+        team_uid: missionMemberTeamDraft.value.trim(),
+        callsign: nextName,
+        role: nextRole || undefined,
+      });
+      statusMessage.value = existing
+        ? `Team member updated: ${existing.uid}.`
+        : "Team member created.";
+      resetMissionMemberEditor();
+    });
+  }
+
+  async function deleteMissionMember(teamMemberUid: string): Promise<void> {
+    await runMutation(async () => {
+      await teamsSkillsStore.deleteTeamMember(teamMemberUid);
+      if (missionMemberDraftUid.value === teamMemberUid) {
+        resetMissionMemberEditor();
+      }
+      statusMessage.value = `Team member deleted: ${teamMemberUid}.`;
+    });
+  }
+
+  function resetMissionMemberSkillEditor(): void {
+    missionMemberSkillDraftUid.value = "";
+    missionMemberSkillMemberDraft.value = missionMemberOptions.value[0]?.uid ?? "";
+    missionMemberSkillUidDraft.value = missionSkills.value[0]?.uid ?? "";
+    missionMemberSkillLevelDraft.value = "";
+  }
+
+  function editMissionMemberSkill(memberSkillUid: string): void {
+    const target = missionMemberSkills.value.find((entry) => entry.uid === memberSkillUid);
+    if (!target) {
+      return;
+    }
+    missionMemberSkillDraftUid.value = target.uid;
+    missionMemberSkillMemberDraft.value = target.teamMemberUid ?? missionMemberOptions.value[0]?.uid ?? "";
+    missionMemberSkillUidDraft.value = target.skillUid ?? missionSkills.value[0]?.uid ?? "";
+    missionMemberSkillLevelDraft.value = target.level ?? "";
+    errorMessage.value = "";
+    statusMessage.value = `Editing member skill ${target.uid}.`;
+  }
+
+  async function saveMissionMemberSkill(): Promise<void> {
+    if (!missionMemberSkillMemberDraft.value.trim()) {
+      errorMessage.value = "Select a mission team member before saving a skill.";
+      return;
+    }
+    if (!missionMemberSkillUidDraft.value.trim()) {
+      errorMessage.value = "Select a skill before saving a member skill record.";
+      return;
+    }
+    if (!missionMemberSkillLevelDraft.value.trim()) {
+      errorMessage.value = "Enter a proficiency level before saving a member skill record.";
+      return;
+    }
+
+    const existing = activeMissionMemberSkill.value;
+
+    await runMutation(async () => {
+      await teamsSkillsStore.upsertTeamMemberSkill({
+        team_member_skill_uid: existing?.uid || undefined,
+        team_member_uid: missionMemberSkillMemberDraft.value.trim(),
+        skill_uid: missionMemberSkillUidDraft.value.trim(),
+        level: missionMemberSkillLevelDraft.value.trim(),
+      });
+      statusMessage.value = existing
+        ? `Member skill updated: ${existing.uid}.`
+        : "Member skill recorded.";
+      resetMissionMemberSkillEditor();
     });
   }
 
@@ -484,7 +679,11 @@ export function useMissionDomainData(missionUid: string) {
     missionChecklists,
     missionTeams,
     missionTeamMembers,
+    missionMemberTeamOptions,
+    missionMemberOptions,
     availableTeamOptions,
+    missionSkills,
+    missionMemberSkills,
     missionAssets,
     missionAssignments,
     missionZones,
@@ -495,11 +694,23 @@ export function useMissionDomainData(missionUid: string) {
     missionChanges,
     missionChannelKey,
     activeMissionChange,
+    activeMissionMember,
     isEditingMissionChange,
+    isEditingMissionMember,
+    activeMissionMemberSkill,
+    isEditingMissionMemberSkill,
     missionParentDraft,
     missionRdeDraft,
     missionZoneDraft,
     missionTeamDraft,
+    missionMemberDraftUid,
+    missionMemberTeamDraft,
+    missionMemberNameDraft,
+    missionMemberRoleDraft,
+    missionMemberSkillDraftUid,
+    missionMemberSkillMemberDraft,
+    missionMemberSkillUidDraft,
+    missionMemberSkillLevelDraft,
     missionChangeDraftUid,
     missionChangeSummaryDraft,
     missionChangeTypeDraft,
@@ -510,6 +721,13 @@ export function useMissionDomainData(missionUid: string) {
     linkSelectedMissionTeam,
     unlinkMissionTeam,
     deleteMissionTeam,
+    editMissionMember,
+    resetMissionMemberEditor,
+    saveMissionMember,
+    deleteMissionMember,
+    editMissionMemberSkill,
+    resetMissionMemberSkillEditor,
+    saveMissionMemberSkill,
     createMissionAsset,
     createMissionZone,
     createMissionLogEntry,

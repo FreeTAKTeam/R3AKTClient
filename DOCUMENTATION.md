@@ -49,13 +49,14 @@ Overall state:
 - P4 mission workspace zone link/unlink slice landed
 - P4 mission workspace mission-change editor slice landed
 - P4 mission workspace team link/unlink/delete slice landed
+- P4 mission workspace team-member CRUD slice landed
 - P5 app-side event/offline/persistence hardening slice landed
 
 Current blocker:
 - live Rust hub probe for `getAppInfo` still returns timeout against both tested hub targets, so the session query path is not yet trustworthy even after link-prewarm and retry changes
 
 Next intended action:
-- continue P4 on an approved teams/people/skills route with team-member create/update/delete or member client link/unlink controls, while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
+- continue P4 on an approved teams/people/skills route with member client link/unlink or team-member skill upsert controls, while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
 
 Last updated:
 - 2026-03-11
@@ -809,6 +810,61 @@ Open issues:
 Next recommended step:
 - continue the next approved P4 slice on a teams/people/skills route with team-member create/update/delete or member client link/unlink controls, and keep matching interaction coverage in the same change
 
+### 2026-03-11 - Session 016
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose team-member create/update/delete controls on the approved mission workspace teams route using the existing teams/skills store and typed wrapper surface
+
+Planned changes:
+- extend the mission workspace composable with a team-member editor state plus mission-team-member save/delete actions
+- split the teams route UI into a focused child panel so the route view stays a composition surface while exposing linked-team members and a member editor on `/missions/:missionUid/teams`
+- extend the web/mock wrapper path with deterministic team-member upsert/delete behavior and coherent member-skill cleanup so the route stays store-backed in browser mode
+- add focused Vitest and Playwright coverage for team-member create, update, and delete from the approved route
+
+Files touched:
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/stores/teamsSkillsStore.ts`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/views/missions/MissionTeamsPanel.vue`
+- `apps/mobile/src/teamsSkillsStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- `/missions/:missionUid/teams` now exposes a member editor plus per-member edit/delete controls on the approved route instead of leaving team members as a passive count
+- the new `MissionTeamsPanel` keeps the route-level mission domain view as a composition surface while containing the expanded teams/member UI in a focused child component
+- the web/mock node-client path now supports `mission.registry.team_member.upsert` and `mission.registry.team_member.delete`, and deleting a member now clears any cached team-member skill state tied to that member
+
+Open issues:
+- team-member client link / unlink controls remain unsurfaced
+- skill create / update and team-member skill upsert controls remain unsurfaced
+- task skill requirement screens remain unsurfaced
+- the live Rust `getAppInfo` timeout remains the main blocker on trusting live session query UX
+
+Next recommended step:
+- continue the next approved P4 slice on a teams/people/skills route with member client link/unlink or team-member skill upsert controls, and keep matching interaction coverage in the same change
+
 ---
 
 ## Decision log
@@ -1070,6 +1126,26 @@ Notes:
 - the approved mission workspace teams route now exposes mission-team link, unlink, and delete controls through the existing teams/skills store instead of showing a read-only list
 - the web/mock node-client path now synthesizes deterministic team, team-member, skill, and member-skill registry payloads so the teams route and ops users route remain store-backed in browser mode and covered by Vitest plus Playwright
 - the next remaining P4 gap within teams/people/skills moves to team-member mutation or client-link controls on approved routes
+
+### 2026-03-11
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission workspace teams route now exposes team-member create, update, and delete controls through the existing teams/skills store rather than only showing member counts and static metadata
+- the route-level mission view now composes a focused `MissionTeamsPanel` child so the expanded teams/member UI stays isolated without pushing more orchestration into the route component
+- the next remaining P4 gap within teams/people/skills now narrows to member client link/unlink or team-member skill controls on approved routes
 
 ---
 

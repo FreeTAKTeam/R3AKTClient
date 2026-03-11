@@ -211,6 +211,11 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
         const uid = readString(value, ["team_member_uid", "teamMemberUid"]);
         if (uid) {
           delete teamMembersByUid[uid];
+          for (const [memberSkillUid, memberSkill] of Object.entries(memberSkillsByUid)) {
+            if (memberSkill.teamMemberUid === uid) {
+              delete memberSkillsByUid[memberSkillUid];
+            }
+          }
         }
       }
       return;
@@ -317,6 +322,14 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     await execute(TEAM_MEMBER_UPSERT_OPERATION, payload);
   }
 
+  async function deleteTeamMember(teamMemberUid: string): Promise<void> {
+    const normalized = teamMemberUid.trim();
+    if (!normalized) {
+      return;
+    }
+    await execute(TEAM_MEMBER_DELETE_OPERATION, { team_member_uid: normalized });
+  }
+
   async function listSkills(): Promise<void> {
     await execute(SKILL_LIST_OPERATION, {});
   }
@@ -380,6 +393,7 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     unlinkTeamFromMission,
     listTeamMembers,
     upsertTeamMember,
+    deleteTeamMember,
     listSkills,
     listTeamMemberSkills,
     upsertTeamMemberSkill,

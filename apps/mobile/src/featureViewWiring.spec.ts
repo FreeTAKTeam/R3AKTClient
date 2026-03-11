@@ -51,6 +51,10 @@ describe("live shell wiring", () => {
     expect(missionTeams.text()).toContain("Linked Teams");
     expect(missionTeams.text()).toContain("Attach Existing Team");
     expect(missionTeams.text()).toContain("Available Teams");
+    expect(missionTeams.text()).toContain("Member Editor");
+    expect(missionTeams.text()).toContain("Save Member");
+    expect(missionTeams.text()).toContain("Member Skill Editor");
+    expect(missionTeams.text()).toContain("Save Skill");
 
     const missionDomain = await mountWithRoute(App, "/missions/demo/log-entries");
     expect(missionDomain.text()).toContain("Mission Workspace");

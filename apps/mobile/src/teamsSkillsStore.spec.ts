@@ -33,4 +33,50 @@ describe("teams skills store", () => {
     expect(store.teamsByUid["team-harbor"]).toBeUndefined();
     expect(store.teamMembersByUid["member-delta"]).toBeUndefined();
   });
+
+  it("creates, updates, and deletes team members through the canonical member commands", async () => {
+    const store = useTeamsSkillsStore();
+
+    await store.wire();
+    await store.upsertTeamMember({
+      team_member_uid: "member-foxtrot",
+      team_uid: "team-harbor",
+      callsign: "Foxtrot",
+      role: "medic",
+    });
+    expect(store.teamMembersByUid["member-foxtrot"]?.name).toBe("Foxtrot");
+    expect(store.teamMembersByUid["member-foxtrot"]?.role).toBe("medic");
+
+    await store.upsertTeamMember({
+      team_member_uid: "member-foxtrot",
+      team_uid: "team-harbor",
+      callsign: "Foxtrot",
+      role: "lead medic",
+    });
+    expect(store.teamMembersByUid["member-foxtrot"]?.role).toBe("lead medic");
+
+    await store.deleteTeamMember("member-foxtrot");
+    expect(store.teamMembersByUid["member-foxtrot"]).toBeUndefined();
+  });
+
+  it("creates and updates team-member skills through the canonical member-skill command", async () => {
+    const store = useTeamsSkillsStore();
+
+    await store.wire();
+    await store.upsertTeamMemberSkill({
+      team_member_skill_uid: "member-delta:skill-relay",
+      team_member_uid: "member-delta",
+      skill_uid: "skill-relay",
+      level: "advanced",
+    });
+    expect(store.memberSkillsByUid["member-delta:skill-relay"]?.level).toBe("advanced");
+
+    await store.upsertTeamMemberSkill({
+      team_member_skill_uid: "member-delta:skill-relay",
+      team_member_uid: "member-delta",
+      skill_uid: "skill-relay",
+      level: "expert",
+    });
+    expect(store.memberSkillsByUid["member-delta:skill-relay"]?.level).toBe("expert");
+  });
 });

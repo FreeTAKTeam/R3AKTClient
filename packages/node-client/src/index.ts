@@ -1253,20 +1253,28 @@ interface MockTeamMemberSkillRecord {
   level: string;
 }
 
-const MOCK_TEAM_MEMBER_SKILL_REGISTRY: MockTeamMemberSkillRecord[] = [
-  {
-    team_member_skill_uid: "member-delta:skill-nav",
-    team_member_uid: "member-delta",
-    skill_uid: "skill-nav",
-    level: "advanced",
-  },
-  {
-    team_member_skill_uid: "member-sierra:skill-relay",
-    team_member_uid: "member-sierra",
-    skill_uid: "skill-relay",
-    level: "expert",
-  },
-];
+function createInitialMockTeamMemberSkillRegistry(): MockTeamMemberSkillRecord[] {
+  return [
+    {
+      team_member_skill_uid: "member-delta:skill-nav",
+      team_member_uid: "member-delta",
+      skill_uid: "skill-nav",
+      level: "advanced",
+    },
+    {
+      team_member_skill_uid: "member-sierra:skill-relay",
+      team_member_uid: "member-sierra",
+      skill_uid: "skill-relay",
+      level: "expert",
+    },
+  ];
+}
+
+let mockTeamMemberSkillRegistry = createInitialMockTeamMemberSkillRegistry();
+
+function cloneMockTeamMemberSkillRegistry(): MockTeamMemberSkillRecord[] {
+  return mockTeamMemberSkillRegistry.map((entry) => ({ ...entry }));
+}
 
 function createInitialMockChecklistRegistry() {
   return [
@@ -1577,6 +1585,7 @@ function buildSyntheticExecutePayload(
     if (!missionUid) {
       mockTeamRegistry = createInitialMockTeamRegistry();
       mockTeamMemberRegistry = createInitialMockTeamMemberRegistry();
+      mockTeamMemberSkillRegistry = createInitialMockTeamMemberSkillRegistry();
     }
     return {
       payload: {
@@ -1624,6 +1633,9 @@ function buildSyntheticExecutePayload(
     if (teamUid) {
       mockTeamRegistry = mockTeamRegistry.filter((team) => team.team_uid !== teamUid);
       mockTeamMemberRegistry = mockTeamMemberRegistry.filter((member) => member.team_uid !== teamUid);
+      mockTeamMemberSkillRegistry = mockTeamMemberSkillRegistry.filter(
+        (entry) => !deletedMemberUids.includes(entry.team_member_uid),
+      );
     }
     return {
       payload: {
@@ -1681,6 +1693,57 @@ function buildSyntheticExecutePayload(
     };
   }
 
+  if (envelope.type === "mission.registry.team_member.upsert") {
+    const teamMemberUid =
+      readStringCandidate(request, ["team_member_uid", "teamMemberUid", "uid", "id"])
+      ?? `member-${mockTeamMemberRegistry.length + 1}`;
+    const existing = mockTeamMemberRegistry.find((member) => member.team_member_uid === teamMemberUid);
+    const nextMember: MockTeamMemberRecord = {
+      team_member_uid: teamMemberUid,
+      team_uid:
+        readStringCandidate(request, ["team_uid", "teamUid"])
+        ?? existing?.team_uid
+        ?? mockTeamRegistry[0]?.team_uid,
+      callsign:
+        readStringCandidate(request, ["callsign", "name", "display_name", "displayName"])
+        ?? existing?.callsign
+        ?? teamMemberUid,
+      role: readStringCandidate(request, ["role", "position"]) ?? existing?.role,
+      client_identity:
+        readStringCandidate(request, ["client_identity", "clientIdentity"])
+        ?? existing?.client_identity,
+    };
+    const existingIndex = mockTeamMemberRegistry.findIndex((member) => member.team_member_uid === teamMemberUid);
+    if (existingIndex >= 0) {
+      mockTeamMemberRegistry = mockTeamMemberRegistry.map((member, index) =>
+        index === existingIndex ? nextMember : member);
+    } else {
+      mockTeamMemberRegistry = [nextMember, ...mockTeamMemberRegistry];
+    }
+    return {
+      payload: {
+        team_member: nextMember,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team_member.delete") {
+    const teamMemberUid = readStringCandidate(request, ["team_member_uid", "teamMemberUid"]);
+    if (teamMemberUid) {
+      mockTeamMemberRegistry = mockTeamMemberRegistry.filter(
+        (member) => member.team_member_uid !== teamMemberUid,
+      );
+      mockTeamMemberSkillRegistry = mockTeamMemberSkillRegistry.filter(
+        (entry) => entry.team_member_uid !== teamMemberUid,
+      );
+    }
+    return {
+      payload: {
+        team_member_uid: teamMemberUid,
+      },
+    };
+  }
+
   if (envelope.type === "mission.registry.skill.list") {
     return {
       payload: {
@@ -1701,9 +1764,37 @@ function buildSyntheticExecutePayload(
       : undefined;
     return {
       payload: {
-        team_member_skills: MOCK_TEAM_MEMBER_SKILL_REGISTRY
+        team_member_skills: cloneMockTeamMemberSkillRegistry()
           .filter((entry) => !matchingMemberUid || entry.team_member_uid === matchingMemberUid)
-          .map((entry) => ({ ...entry })),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.team_member_skill.upsert") {
+    const teamMemberUid = readStringCandidate(request, ["team_member_uid", "teamMemberUid"]);
+    const skillUid = readStringCandidate(request, ["skill_uid", "skillUid"]);
+    const teamMemberSkillUid =
+      readStringCandidate(request, ["team_member_skill_uid", "teamMemberSkillUid", "uid", "id"])
+      ?? ([teamMemberUid, skillUid].filter(Boolean).join(":") || `member-skill-${mockTeamMemberSkillRegistry.length + 1}`);
+    const existing = mockTeamMemberSkillRegistry.find((entry) => entry.team_member_skill_uid === teamMemberSkillUid);
+    const nextSkillRecord: MockTeamMemberSkillRecord = {
+      team_member_skill_uid: teamMemberSkillUid,
+      team_member_uid: teamMemberUid ?? existing?.team_member_uid ?? mockTeamMemberRegistry[0]?.team_member_uid ?? "",
+      skill_uid: skillUid ?? existing?.skill_uid ?? MOCK_SKILL_REGISTRY[0]?.skill_uid ?? "",
+      level: readStringCandidate(request, ["level", "proficiency", "status"]) ?? existing?.level ?? "basic",
+    };
+    const existingIndex = mockTeamMemberSkillRegistry.findIndex(
+      (entry) => entry.team_member_skill_uid === teamMemberSkillUid,
+    );
+    if (existingIndex >= 0) {
+      mockTeamMemberSkillRegistry = mockTeamMemberSkillRegistry.map((entry, index) =>
+        index === existingIndex ? nextSkillRecord : entry);
+    } else {
+      mockTeamMemberSkillRegistry = [nextSkillRecord, ...mockTeamMemberSkillRegistry];
+    }
+    return {
+      payload: {
+        team_member_skill: nextSkillRecord,
       },
     };
   }

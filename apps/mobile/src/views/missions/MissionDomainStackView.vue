@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 
 import { useMissionDomainData } from "../../composables/useMissionDomainData";
+import MissionTeamsPanel from "./MissionTeamsPanel.vue";
 import MissionWorkspaceOverview from "./MissionWorkspaceOverview.vue";
 
 const props = defineProps<{
@@ -21,7 +22,11 @@ const {
   missionChecklists,
   missionTeams,
   missionTeamMembers,
+  missionMemberTeamOptions,
+  missionMemberOptions,
   availableTeamOptions,
+  missionSkills,
+  missionMemberSkills,
   missionAssets,
   missionAssignments,
   missionZones,
@@ -32,10 +37,18 @@ const {
   missionChanges,
   missionChannelKey,
   isEditingMissionChange,
+  isEditingMissionMember,
+  isEditingMissionMemberSkill,
   missionParentDraft,
   missionRdeDraft,
   missionZoneDraft,
   missionTeamDraft,
+  missionMemberTeamDraft,
+  missionMemberNameDraft,
+  missionMemberRoleDraft,
+  missionMemberSkillMemberDraft,
+  missionMemberSkillUidDraft,
+  missionMemberSkillLevelDraft,
   missionChangeSummaryDraft,
   missionChangeTypeDraft,
   refreshMissionBundle,
@@ -45,6 +58,13 @@ const {
   linkSelectedMissionTeam,
   unlinkMissionTeam,
   deleteMissionTeam,
+  editMissionMember,
+  resetMissionMemberEditor,
+  saveMissionMember,
+  deleteMissionMember,
+  editMissionMemberSkill,
+  resetMissionMemberSkillEditor,
+  saveMissionMemberSkill,
   createMissionAsset,
   createMissionZone,
   createMissionLogEntry,
@@ -257,58 +277,36 @@ async function openMissionChat(): Promise<void> {
       </section>
 
       <section v-else-if="domainKind === 'teams'" class="mission-domain__section">
-        <div class="mission-domain__section-head">
-          <h2>Teams &amp; Members</h2>
-          <button type="button" :disabled="busy" @click="createMissionTeam">Create</button>
-        </div>
-        <div class="mission-domain__list mission-domain__list--two">
-          <article class="mission-domain__card">
-            <h3>Linked Teams</h3>
-            <ul>
-              <li v-for="team in missionTeams" :key="team.uid">
-                <div class="mission-domain__item-head">
-                  <strong>{{ team.name }}</strong>
-                  <div class="mission-domain__button-row">
-                    <button type="button" :disabled="busy" @click="unlinkMissionTeam(team.uid)">Unlink</button>
-                    <button type="button" class="danger-link" :disabled="busy" @click="deleteMissionTeam(team.uid)">Delete</button>
-                  </div>
-                </div>
-                <span>{{ team.description ?? "Mission-linked response team." }}</span>
-                <span>{{ missionTeamMembers.filter((member) => member.teamUid === team.uid).length }} members</span>
-              </li>
-              <li v-if="missionTeams.length === 0">
-                No teams linked to this mission yet.
-              </li>
-            </ul>
-          </article>
-          <article class="mission-domain__card">
-            <h3>Attach Existing Team</h3>
-            <label class="mission-domain__control">
-              <span>Available Teams</span>
-              <select v-model="missionTeamDraft" :disabled="busy">
-                <option value="">Select unlinked team</option>
-                <option
-                  v-for="team in availableTeamOptions"
-                  :key="team.uid"
-                  :value="team.uid"
-                >
-                  {{ team.name }} ({{ team.uid }})
-                </option>
-              </select>
-            </label>
-            <button type="button" :disabled="busy || !missionTeamDraft" @click="linkSelectedMissionTeam">
-              Link Team
-            </button>
-            <ul>
-              <li v-for="team in availableTeamOptions" :key="team.uid">
-                {{ team.name }} <span>{{ team.uid }}</span>
-              </li>
-              <li v-if="availableTeamOptions.length === 0">
-                No unlinked teams available.
-              </li>
-            </ul>
-          </article>
-        </div>
+        <MissionTeamsPanel
+          :busy="busy"
+          :mission-teams="missionTeams"
+          :mission-team-members="missionTeamMembers"
+          :mission-member-team-options="missionMemberTeamOptions"
+          :mission-member-options="missionMemberOptions"
+          :available-team-options="availableTeamOptions"
+          :mission-skills="missionSkills"
+          :mission-member-skills="missionMemberSkills"
+          :is-editing-mission-member="isEditingMissionMember"
+          :is-editing-mission-member-skill="isEditingMissionMemberSkill"
+          v-model:team-draft="missionTeamDraft"
+          v-model:member-team-draft="missionMemberTeamDraft"
+          v-model:member-name-draft="missionMemberNameDraft"
+          v-model:member-role-draft="missionMemberRoleDraft"
+          v-model:member-skill-member-draft="missionMemberSkillMemberDraft"
+          v-model:member-skill-uid-draft="missionMemberSkillUidDraft"
+          v-model:member-skill-level-draft="missionMemberSkillLevelDraft"
+          @create-team="createMissionTeam"
+          @link-team="linkSelectedMissionTeam"
+          @unlink-team="unlinkMissionTeam"
+          @delete-team="deleteMissionTeam"
+          @edit-member="editMissionMember"
+          @save-member="saveMissionMember"
+          @reset-member-editor="resetMissionMemberEditor"
+          @delete-member="deleteMissionMember"
+          @edit-member-skill="editMissionMemberSkill"
+          @save-member-skill="saveMissionMemberSkill"
+          @reset-member-skill-editor="resetMissionMemberSkillEditor"
+        />
       </section>
 
       <section v-else-if="domainKind === 'assets'" class="mission-domain__section">
@@ -702,6 +700,11 @@ async function openMissionChat(): Promise<void> {
   display: flex;
   gap: 0.75rem;
   justify-content: space-between;
+}
+
+.mission-domain__sub-list {
+  margin-top: 0.65rem;
+  padding-left: 0.8rem;
 }
 
 .mission-domain__card li:first-child {

@@ -158,6 +158,57 @@ test.describe("mobile interaction flows", () => {
     await expect(page.locator('option[value="team-reserve"]')).toHaveCount(0);
   });
 
+  test("mission workspace creates, edits, and deletes team members from the approved route", async ({ page }) => {
+    await page.goto("/missions/demo/teams");
+    await expect(page.getByTestId("mission-domain-screen")).toBeVisible();
+
+    const memberEditor = page.locator("article").filter({ hasText: "Member Editor" }).first();
+    await memberEditor.getByRole("combobox").selectOption("team-harbor");
+    await memberEditor.getByPlaceholder("Delta / Echo / Sierra").fill("Foxtrot");
+    await memberEditor.getByPlaceholder("lead / operator / medic").fill("medic");
+    await memberEditor.getByRole("button", { name: "Save Member" }).click();
+
+    await expect(page.getByText("Team member created.")).toBeVisible();
+    const linkedTeamsCard = page.locator("article").filter({ hasText: "Linked Teams" }).first();
+    const foxtrotRow = linkedTeamsCard.locator("li").filter({ hasText: /^Foxtrot/ }).first();
+    await expect(foxtrotRow).toBeVisible();
+
+    await foxtrotRow.getByRole("button", { name: "Edit" }).click();
+    await memberEditor.getByPlaceholder("lead / operator / medic").fill("lead medic");
+    await memberEditor.getByRole("button", { name: "Update Member" }).click();
+
+    await expect(page.getByText(/Team member updated:/)).toBeVisible();
+    await expect(page.getByText("lead medic").first()).toBeVisible();
+
+    await foxtrotRow.getByRole("button", { name: "Delete" }).click();
+    await expect(page.getByText(/Team member deleted:/)).toBeVisible();
+    await expect(page.locator("li").filter({ hasText: "Foxtrot" })).toHaveCount(0);
+  });
+
+  test("mission workspace records and updates member skills from the approved route", async ({ page }) => {
+    await page.goto("/missions/demo/teams");
+    await expect(page.getByTestId("mission-domain-screen")).toBeVisible();
+
+    const skillEditor = page.locator("article").filter({ hasText: "Member Skill Editor" }).first();
+    await skillEditor.getByRole("combobox").first().selectOption("member-delta");
+    await skillEditor.getByRole("combobox").nth(1).selectOption("skill-relay");
+    await skillEditor.getByPlaceholder("basic / advanced / expert").fill("advanced");
+    await skillEditor.getByRole("button", { name: "Save Skill" }).click();
+
+    await expect(page.getByText("Member skill recorded.")).toBeVisible();
+    const deltaRow = page.locator("li").filter({ hasText: /^Delta/ }).first();
+    await expect(deltaRow.getByText("Relay Ops")).toBeVisible();
+    await expect(deltaRow.getByText("advanced")).toBeVisible();
+
+    const relaySkillRow = page.locator("li").filter({ hasText: "Relay Ops" }).first();
+    await relaySkillRow.getByRole("button", { name: "Edit" }).click();
+    await skillEditor.getByPlaceholder("basic / advanced / expert").fill("expert");
+    await skillEditor.getByRole("button", { name: "Update Skill" }).click();
+
+    await expect(page.getByText(/Member skill updated:/)).toBeVisible();
+    await expect(page.getByText("expert").first()).toBeVisible();
+  });
+
   test("mission workspace edits a mission change from the approved log route", async ({ page }) => {
     await page.goto("/missions/demo/log-entries");
     await expect(page.getByTestId("mission-domain-screen")).toBeVisible();

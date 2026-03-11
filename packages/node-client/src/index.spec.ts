@@ -625,4 +625,102 @@ describe("RchClient grouped feature API", () => {
       ]),
     });
   });
+
+  it("supports mock-backed team member create, update, and delete on the web client", async () => {
+    const nodeClient = createReticulumNodeClient({ mode: "web" });
+    const client = createRchClient(nodeClient);
+
+    await client.teamsSkills.execute("mission.registry.team_member.upsert", {
+      team_member_uid: "member-foxtrot",
+      team_uid: "team-harbor",
+      callsign: "Foxtrot",
+      role: "medic",
+    });
+
+    let members = await client.teamsSkills.execute("mission.registry.team_member.list", {
+      team_uid: "team-harbor",
+    });
+    expect(members.payload).toMatchObject({
+      team_members: expect.arrayContaining([
+        expect.objectContaining({
+          team_member_uid: "member-foxtrot",
+          team_uid: "team-harbor",
+          callsign: "Foxtrot",
+          role: "medic",
+        }),
+      ]),
+    });
+
+    await client.teamsSkills.execute("mission.registry.team_member.upsert", {
+      team_member_uid: "member-foxtrot",
+      team_uid: "team-harbor",
+      callsign: "Foxtrot",
+      role: "lead medic",
+    });
+    members = await client.teamsSkills.execute("mission.registry.team_member.list", {
+      team_uid: "team-harbor",
+    });
+    expect(members.payload).toMatchObject({
+      team_members: expect.arrayContaining([
+        expect.objectContaining({
+          team_member_uid: "member-foxtrot",
+          role: "lead medic",
+        }),
+      ]),
+    });
+
+    await client.teamsSkills.execute("mission.registry.team_member.delete", {
+      team_member_uid: "member-foxtrot",
+    });
+    members = await client.teamsSkills.execute("mission.registry.team_member.list", {
+      team_uid: "team-harbor",
+    });
+    expect(members.payload).not.toMatchObject({
+      team_members: expect.arrayContaining([
+        expect.objectContaining({
+          team_member_uid: "member-foxtrot",
+        }),
+      ]),
+    });
+  });
+
+  it("supports mock-backed team-member skill create and update on the web client", async () => {
+    const nodeClient = createReticulumNodeClient({ mode: "web" });
+    const client = createRchClient(nodeClient);
+
+    await client.teamsSkills.execute("mission.registry.team_member_skill.upsert", {
+      team_member_skill_uid: "member-delta:skill-relay",
+      team_member_uid: "member-delta",
+      skill_uid: "skill-relay",
+      level: "advanced",
+    });
+
+    let memberSkills = await client.teamsSkills.execute("mission.registry.team_member_skill.list", {});
+    expect(memberSkills.payload).toMatchObject({
+      team_member_skills: expect.arrayContaining([
+        expect.objectContaining({
+          team_member_skill_uid: "member-delta:skill-relay",
+          team_member_uid: "member-delta",
+          skill_uid: "skill-relay",
+          level: "advanced",
+        }),
+      ]),
+    });
+
+    await client.teamsSkills.execute("mission.registry.team_member_skill.upsert", {
+      team_member_skill_uid: "member-delta:skill-relay",
+      team_member_uid: "member-delta",
+      skill_uid: "skill-relay",
+      level: "expert",
+    });
+    memberSkills = await client.teamsSkills.execute("mission.registry.team_member_skill.list", {});
+    expect(memberSkills.payload).toMatchObject({
+      team_member_skills: expect.arrayContaining([
+        expect.objectContaining({
+          team_member_skill_uid: "member-delta:skill-relay",
+          level: "expert",
+        }),
+      ]),
+    });
+  });
 });
