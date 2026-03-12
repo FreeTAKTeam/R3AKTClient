@@ -26,6 +26,8 @@ const SKILL_UPSERT_OPERATION: TeamsSkillsOperation = "mission.registry.skill.ups
 const SKILL_LIST_OPERATION: TeamsSkillsOperation = "mission.registry.skill.list";
 const TEAM_MEMBER_SKILL_LIST_OPERATION: TeamsSkillsOperation = "mission.registry.team_member_skill.list";
 const TEAM_MEMBER_SKILL_UPSERT_OPERATION: TeamsSkillsOperation = "mission.registry.team_member_skill.upsert";
+const TASK_SKILL_REQUIREMENT_LIST_OPERATION: TeamsSkillsOperation = "mission.registry.task_skill_requirement.list";
+const TASK_SKILL_REQUIREMENT_UPSERT_OPERATION: TeamsSkillsOperation = "mission.registry.task_skill_requirement.upsert";
 
 export interface TeamRecord {
   uid: string;
@@ -54,6 +56,15 @@ export interface SkillRecord {
 export interface TeamMemberSkillRecord {
   uid: string;
   teamMemberUid?: string;
+  skillUid?: string;
+  level?: string;
+  raw: Record<string, unknown>;
+}
+
+export interface TaskSkillRequirementRecord {
+  uid: string;
+  checklistId?: string;
+  taskId?: string;
   skillUid?: string;
   level?: string;
   raw: Record<string, unknown>;
@@ -135,6 +146,28 @@ function normalizeTeamMemberSkillRecord(raw: unknown): TeamMemberSkillRecord | n
   };
 }
 
+function normalizeTaskSkillRequirementRecord(raw: unknown): TaskSkillRequirementRecord | null {
+  const value = asRecord(raw);
+  const uid =
+    readString(value, ["task_skill_requirement_uid", "taskSkillRequirementUid", "uid", "id"])
+    ?? [
+      readString(value, ["checklist_id", "checklistId"]),
+      readString(value, ["task_id", "taskId"]),
+      readString(value, ["skill_uid", "skillUid"]),
+    ].filter(Boolean).join(":");
+  if (!uid) {
+    return null;
+  }
+  return {
+    uid,
+    checklistId: readString(value, ["checklist_id", "checklistId"]),
+    taskId: readString(value, ["task_id", "taskId", "task_uid", "taskUid"]),
+    skillUid: readString(value, ["skill_uid", "skillUid"]),
+    level: readString(value, ["level", "required_level", "requiredLevel", "proficiency", "status"]),
+    raw: value,
+  };
+}
+
 export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
   const rchClientStore = useRchClientStore();
 
@@ -150,6 +183,7 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
   const teamMembersByUid = reactive<Record<string, TeamMemberRecord>>({});
   const skillsByUid = reactive<Record<string, SkillRecord>>({});
   const memberSkillsByUid = reactive<Record<string, TeamMemberSkillRecord>>({});
+  const taskSkillRequirementsByUid = reactive<Record<string, TaskSkillRequirementRecord>>({});
 
   function upsertItems<T extends { uid: string }>(target: Record<string, T>, items: readonly T[]): void {
     for (const item of items) {
@@ -262,6 +296,27 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
           asArray(value.team_member_skills ?? value.items ?? value.entries)
             .map(normalizeTeamMemberSkillRecord)
             .filter((entry): entry is TeamMemberSkillRecord => Boolean(entry)),
+        );
+      }
+      return;
+    }
+
+    if (
+      operation === TASK_SKILL_REQUIREMENT_LIST_OPERATION
+      || operation === TASK_SKILL_REQUIREMENT_UPSERT_OPERATION
+    ) {
+      const record =
+        normalizeTaskSkillRequirementRecord(value.task_skill_requirement ?? value.requirement ?? value)
+        ?? normalizeTaskSkillRequirementRecord((asArray(value.task_skill_requirements)[0] ?? null) as unknown);
+      if (record) {
+        taskSkillRequirementsByUid[record.uid] = record;
+      }
+      if (operation === TASK_SKILL_REQUIREMENT_LIST_OPERATION) {
+        upsertItems(
+          taskSkillRequirementsByUid,
+          asArray(value.task_skill_requirements ?? value.items ?? value.entries)
+            .map(normalizeTaskSkillRequirementRecord)
+            .filter((entry): entry is TaskSkillRequirementRecord => Boolean(entry)),
         );
       }
     }
@@ -391,12 +446,32 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     await execute(TEAM_MEMBER_SKILL_UPSERT_OPERATION, payload);
   }
 
+  async function listTaskSkillRequirements(checklistId?: string, taskId?: string): Promise<void> {
+    await execute(
+      TASK_SKILL_REQUIREMENT_LIST_OPERATION,
+      {
+        ...(checklistId ? { checklist_id: checklistId.trim() } : {}),
+        ...(taskId ? { task_id: taskId.trim() } : {}),
+      },
+    );
+  }
+
+  async function upsertTaskSkillRequirement(payload: Record<string, unknown>): Promise<void> {
+    await execute(TASK_SKILL_REQUIREMENT_UPSERT_OPERATION, payload);
+  }
+
   async function wire(): Promise<void> {
     if (wired.value) {
       return;
     }
     try {
-      await Promise.all([listTeams(), listTeamMembers(), listSkills(), listTeamMemberSkills()]);
+      await Promise.all([
+        listTeams(),
+        listTeamMembers(),
+        listSkills(),
+        listTeamMemberSkills(),
+        listTaskSkillRequirements(),
+      ]);
     } catch (error: unknown) {
       throw wrapWireError(feature, error);
     }
@@ -409,6 +484,7 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
   );
   const skills = computed(() => Object.values(skillsByUid).sort((a, b) => a.name.localeCompare(b.name)));
   const memberSkills = computed(() => Object.values(memberSkillsByUid));
+  const taskSkillRequirements = computed(() => Object.values(taskSkillRequirementsByUid));
   const lastResponseJson = computed(() =>
     lastResponse.value ? JSON.stringify(lastResponse.value, null, 2) : "",
   );
@@ -430,6 +506,8 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     skills,
     memberSkillsByUid,
     memberSkills,
+    taskSkillRequirementsByUid,
+    taskSkillRequirements,
     execute,
     executeFromJson,
     listTeams,
@@ -446,6 +524,8 @@ export const useTeamsSkillsStore = defineStore("rch-teams-skills", () => {
     upsertSkill,
     listTeamMemberSkills,
     upsertTeamMemberSkill,
+    listTaskSkillRequirements,
+    upsertTaskSkillRequirement,
     wire,
   };
 });

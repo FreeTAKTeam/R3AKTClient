@@ -47,6 +47,17 @@ export function useMissionDomainData(missionUid: string) {
   const missionMemberSkillMemberDraft = ref("");
   const missionMemberSkillUidDraft = ref("");
   const missionMemberSkillLevelDraft = ref("");
+  const missionAssetDraftUid = ref("");
+  const missionAssetNameDraft = ref("");
+  const missionAssetTypeDraft = ref("equipment");
+  const missionAssetMemberDraft = ref("");
+  const missionAssignmentDraftUid = ref("");
+  const missionAssignmentNameDraft = ref("");
+  const missionAssignmentTaskDraft = ref("");
+  const missionAssignmentLinkDraft = ref("");
+  const missionAssignmentAssetLinkDraft = ref("");
+  const missionAssignmentAssetSetDraft = ref<string[]>([]);
+  const missionAssignmentAssetSetAssignmentDraft = ref("");
   const missionChangeDraftUid = ref("");
   const missionChangeSummaryDraft = ref("");
   const missionChangeTypeDraft = ref("status-update");
@@ -226,6 +237,24 @@ export function useMissionDomainData(missionUid: string) {
     missionMemberSkills.value.find((entry) => entry.uid === missionMemberSkillDraftUid.value) ?? null,
   );
   const isEditingMissionMemberSkill = computed(() => Boolean(missionMemberSkillDraftUid.value));
+  const activeMissionAsset = computed(() =>
+    missionAssets.value.find((entry) => entry.uid === missionAssetDraftUid.value) ?? null,
+  );
+  const isEditingMissionAsset = computed(() => Boolean(missionAssetDraftUid.value));
+  const activeMissionAssignment = computed(() =>
+    missionAssignments.value.find((entry) => entry.uid === missionAssignmentDraftUid.value) ?? null,
+  );
+  const isEditingMissionAssignment = computed(() => Boolean(missionAssignmentDraftUid.value));
+  const selectedMissionAssignmentForLink = computed(() =>
+    missionAssignments.value.find((entry) => entry.uid === missionAssignmentLinkDraft.value) ?? null,
+  );
+  const selectedMissionAssignmentForSet = computed(() =>
+    missionAssignments.value.find((entry) => entry.uid === missionAssignmentAssetSetAssignmentDraft.value) ?? null,
+  );
+  const availableMissionAssignmentLinkAssets = computed(() => {
+    const linkedAssetIds = new Set(selectedMissionAssignmentForLink.value?.assetIds ?? []);
+    return missionAssets.value.filter((asset) => !linkedAssetIds.has(asset.uid));
+  });
 
   watch(
     mission,
@@ -288,6 +317,12 @@ export function useMissionDomainData(missionUid: string) {
     missionMemberOptions,
     (nextOptions) => {
       if (
+        missionAssetMemberDraft.value
+        && !nextOptions.some((member) => member.uid === missionAssetMemberDraft.value)
+      ) {
+        missionAssetMemberDraft.value = "";
+      }
+      if (
         missionMemberClientMemberDraft.value
         && !nextOptions.some((member) => member.uid === missionMemberClientMemberDraft.value)
       ) {
@@ -305,6 +340,79 @@ export function useMissionDomainData(missionUid: string) {
       if (!missionMemberSkillDraftUid.value && !missionMemberSkillMemberDraft.value) {
         missionMemberSkillMemberDraft.value = nextOptions[0]?.uid ?? "";
       }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    missionAssets,
+    (nextAssets) => {
+      if (
+        missionAssetDraftUid.value
+        && !nextAssets.some((asset) => asset.uid === missionAssetDraftUid.value)
+      ) {
+        missionAssetDraftUid.value = "";
+        missionAssetNameDraft.value = "";
+        missionAssetTypeDraft.value = "equipment";
+        missionAssetMemberDraft.value = "";
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    missionAssignments,
+    (nextAssignments) => {
+      if (
+        missionAssignmentDraftUid.value
+        && !nextAssignments.some((assignment) => assignment.uid === missionAssignmentDraftUid.value)
+      ) {
+        missionAssignmentDraftUid.value = "";
+        missionAssignmentNameDraft.value = "";
+        missionAssignmentTaskDraft.value = "";
+      }
+      if (
+        missionAssignmentLinkDraft.value
+        && !nextAssignments.some((assignment) => assignment.uid === missionAssignmentLinkDraft.value)
+      ) {
+        missionAssignmentLinkDraft.value = nextAssignments[0]?.uid ?? "";
+      }
+      if (!missionAssignmentLinkDraft.value) {
+        missionAssignmentLinkDraft.value = nextAssignments[0]?.uid ?? "";
+      }
+      if (
+        missionAssignmentAssetSetAssignmentDraft.value
+        && !nextAssignments.some((assignment) => assignment.uid === missionAssignmentAssetSetAssignmentDraft.value)
+      ) {
+        missionAssignmentAssetSetAssignmentDraft.value = nextAssignments[0]?.uid ?? "";
+      }
+      if (!missionAssignmentAssetSetAssignmentDraft.value) {
+        missionAssignmentAssetSetAssignmentDraft.value = nextAssignments[0]?.uid ?? "";
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    availableMissionAssignmentLinkAssets,
+    (nextAssets) => {
+      if (
+        missionAssignmentAssetLinkDraft.value
+        && !nextAssets.some((asset) => asset.uid === missionAssignmentAssetLinkDraft.value)
+      ) {
+        missionAssignmentAssetLinkDraft.value = nextAssets[0]?.uid ?? "";
+      }
+      if (!missionAssignmentAssetLinkDraft.value) {
+        missionAssignmentAssetLinkDraft.value = nextAssets[0]?.uid ?? "";
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    selectedMissionAssignmentForSet,
+    (nextAssignment) => {
+      missionAssignmentAssetSetDraft.value = [...(nextAssignment?.assetIds ?? [])];
     },
     { immediate: true },
   );
@@ -623,15 +731,167 @@ export function useMissionDomainData(missionUid: string) {
     });
   }
 
-  async function createMissionAsset(): Promise<void> {
-    const firstMember = missionTeamMembers.value[0];
+  function resetMissionAssetEditor(): void {
+    missionAssetDraftUid.value = "";
+    missionAssetNameDraft.value = "";
+    missionAssetTypeDraft.value = "equipment";
+    missionAssetMemberDraft.value = "";
+  }
+
+  function editMissionAsset(assetUid: string): void {
+    const target = missionAssets.value.find((entry) => entry.uid === assetUid);
+    if (!target) {
+      return;
+    }
+    missionAssetDraftUid.value = target.uid;
+    missionAssetNameDraft.value = target.name;
+    missionAssetTypeDraft.value = target.type ?? "equipment";
+    missionAssetMemberDraft.value = target.teamMemberUid ?? "";
+    errorMessage.value = "";
+    statusMessage.value = `Editing mission asset ${target.name}.`;
+  }
+
+  async function saveMissionAsset(): Promise<void> {
+    if (!missionAssetNameDraft.value.trim()) {
+      errorMessage.value = "Enter an asset name before saving.";
+      return;
+    }
+
+    const existing = activeMissionAsset.value;
     await runMutation(async () => {
       await assetsAssignmentsStore.upsertAsset({
-        asset_name: `Field Asset ${Date.now().toString().slice(-4)}`,
-        asset_type: "equipment",
-        team_member_uid: firstMember?.uid,
+        asset_uid: existing?.uid || undefined,
+        asset_name: missionAssetNameDraft.value.trim(),
+        asset_type: missionAssetTypeDraft.value.trim() || undefined,
+        team_member_uid: missionAssetMemberDraft.value.trim() || undefined,
       });
-      await assetsAssignmentsStore.listAssets();
+      statusMessage.value = existing
+        ? `Mission asset updated: ${existing.name}.`
+        : "Mission asset recorded.";
+      resetMissionAssetEditor();
+    });
+  }
+
+  async function deleteMissionAsset(assetUid: string): Promise<void> {
+    const target = missionAssets.value.find((entry) => entry.uid === assetUid);
+    await runMutation(async () => {
+      await assetsAssignmentsStore.deleteAsset(assetUid);
+      statusMessage.value = `Mission asset deleted: ${target?.name ?? assetUid}.`;
+      if (missionAssetDraftUid.value === assetUid) {
+        resetMissionAssetEditor();
+      }
+    });
+  }
+
+  function resetMissionAssignmentEditor(): void {
+    missionAssignmentDraftUid.value = "";
+    missionAssignmentNameDraft.value = "";
+    missionAssignmentTaskDraft.value = "";
+  }
+
+  function editMissionAssignment(assignmentUid: string): void {
+    const target = missionAssignments.value.find((entry) => entry.uid === assignmentUid);
+    if (!target) {
+      return;
+    }
+    missionAssignmentDraftUid.value = target.uid;
+    missionAssignmentNameDraft.value = target.name;
+    missionAssignmentTaskDraft.value = target.taskUid ?? "";
+    errorMessage.value = "";
+    statusMessage.value = `Editing mission assignment ${target.name}.`;
+  }
+
+  async function saveMissionAssignment(): Promise<void> {
+    if (!mission.value) {
+      return;
+    }
+    if (!missionAssignmentNameDraft.value.trim()) {
+      errorMessage.value = "Enter an assignment name before saving.";
+      return;
+    }
+
+    const existing = activeMissionAssignment.value;
+    await runMutation(async () => {
+      await assetsAssignmentsStore.upsertAssignment({
+        assignment_uid: existing?.uid || undefined,
+        assignment_name: missionAssignmentNameDraft.value.trim(),
+        mission_uid: mission.value!.uid,
+        task_uid: missionAssignmentTaskDraft.value.trim() || undefined,
+      });
+      statusMessage.value = existing
+        ? `Mission assignment updated: ${existing.name}.`
+        : "Mission assignment recorded.";
+      resetMissionAssignmentEditor();
+    });
+  }
+
+  async function linkSelectedMissionAssignmentAsset(): Promise<void> {
+    if (!missionAssignmentLinkDraft.value.trim() || !missionAssignmentAssetLinkDraft.value.trim()) {
+      errorMessage.value = "Select an assignment and asset before linking them.";
+      return;
+    }
+
+    const selectedAsset = missionAssets.value.find(
+      (asset) => asset.uid === missionAssignmentAssetLinkDraft.value,
+    );
+    await runMutation(async () => {
+      await assetsAssignmentsStore.linkAssignmentAsset(
+        missionAssignmentLinkDraft.value,
+        missionAssignmentAssetLinkDraft.value,
+      );
+      statusMessage.value = `Asset linked to assignment: ${selectedAsset?.name ?? missionAssignmentAssetLinkDraft.value}.`;
+      missionAssignmentAssetLinkDraft.value = "";
+    });
+  }
+
+  async function unlinkMissionAssignmentAsset(assignmentUid: string, assetUid: string): Promise<void> {
+    const selectedAsset = missionAssets.value.find((asset) => asset.uid === assetUid);
+    await runMutation(async () => {
+      await assetsAssignmentsStore.unlinkAssignmentAsset(assignmentUid, assetUid);
+      statusMessage.value = `Asset unlinked from assignment: ${selectedAsset?.name ?? assetUid}.`;
+    });
+  }
+
+  function focusMissionAssignmentAssetSet(assignmentUid: string): void {
+    if (!missionAssignments.value.some((assignment) => assignment.uid === assignmentUid)) {
+      return;
+    }
+    missionAssignmentAssetSetAssignmentDraft.value = assignmentUid;
+    errorMessage.value = "";
+    statusMessage.value = `Replacing asset set for ${assignmentUid}.`;
+  }
+
+  function toggleMissionAssignmentAssetSet(assetUid: string, enabled: boolean): void {
+    const normalized = assetUid.trim();
+    if (!normalized) {
+      return;
+    }
+    if (enabled) {
+      if (!missionAssignmentAssetSetDraft.value.includes(normalized)) {
+        missionAssignmentAssetSetDraft.value = [...missionAssignmentAssetSetDraft.value, normalized];
+      }
+      return;
+    }
+    missionAssignmentAssetSetDraft.value = missionAssignmentAssetSetDraft.value.filter(
+      (entry) => entry !== normalized,
+    );
+  }
+
+  async function replaceMissionAssignmentAssetSet(): Promise<void> {
+    if (!missionAssignmentAssetSetAssignmentDraft.value.trim()) {
+      errorMessage.value = "Select an assignment before replacing its asset set.";
+      return;
+    }
+
+    const selectedAssignment = missionAssignments.value.find(
+      (assignment) => assignment.uid === missionAssignmentAssetSetAssignmentDraft.value,
+    );
+    await runMutation(async () => {
+      await assetsAssignmentsStore.setAssignmentAssets(
+        missionAssignmentAssetSetAssignmentDraft.value,
+        missionAssignmentAssetSetDraft.value,
+      );
+      statusMessage.value = `Assignment asset set replaced: ${selectedAssignment?.name ?? missionAssignmentAssetSetAssignmentDraft.value}.`;
     });
   }
 
@@ -849,6 +1109,12 @@ export function useMissionDomainData(missionUid: string) {
     isEditingMissionSkill,
     activeMissionMemberSkill,
     isEditingMissionMemberSkill,
+    activeMissionAsset,
+    isEditingMissionAsset,
+    activeMissionAssignment,
+    isEditingMissionAssignment,
+    availableMissionAssignmentLinkAssets,
+    selectedMissionAssignmentForSet,
     missionParentDraft,
     missionRdeDraft,
     missionZoneDraft,
@@ -867,6 +1133,17 @@ export function useMissionDomainData(missionUid: string) {
     missionMemberSkillMemberDraft,
     missionMemberSkillUidDraft,
     missionMemberSkillLevelDraft,
+    missionAssetDraftUid,
+    missionAssetNameDraft,
+    missionAssetTypeDraft,
+    missionAssetMemberDraft,
+    missionAssignmentDraftUid,
+    missionAssignmentNameDraft,
+    missionAssignmentTaskDraft,
+    missionAssignmentLinkDraft,
+    missionAssignmentAssetLinkDraft,
+    missionAssignmentAssetSetDraft,
+    missionAssignmentAssetSetAssignmentDraft,
     missionChangeDraftUid,
     missionChangeSummaryDraft,
     missionChangeTypeDraft,
@@ -891,7 +1168,18 @@ export function useMissionDomainData(missionUid: string) {
     editMissionMemberSkill,
     resetMissionMemberSkillEditor,
     saveMissionMemberSkill,
-    createMissionAsset,
+    editMissionAsset,
+    resetMissionAssetEditor,
+    saveMissionAsset,
+    deleteMissionAsset,
+    editMissionAssignment,
+    resetMissionAssignmentEditor,
+    saveMissionAssignment,
+    linkSelectedMissionAssignmentAsset,
+    unlinkMissionAssignmentAsset,
+    focusMissionAssignmentAssetSet,
+    toggleMissionAssignmentAssetSet,
+    replaceMissionAssignmentAssetSet,
     createMissionZone,
     createMissionLogEntry,
     editMissionChange,

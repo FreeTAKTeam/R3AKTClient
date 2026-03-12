@@ -1284,6 +1284,138 @@ function cloneMockTeamMemberSkillRegistry(): MockTeamMemberSkillRecord[] {
   return mockTeamMemberSkillRegistry.map((entry) => ({ ...entry }));
 }
 
+interface MockTaskSkillRequirementRecord {
+  task_skill_requirement_uid: string;
+  checklist_id: string;
+  task_id: string;
+  skill_uid: string;
+  level: string;
+}
+
+function createInitialMockTaskSkillRequirementRegistry(): MockTaskSkillRequirementRecord[] {
+  return [
+    {
+      task_skill_requirement_uid: "reconnaissance:briefing:skill-nav",
+      checklist_id: "reconnaissance",
+      task_id: "briefing",
+      skill_uid: "skill-nav",
+      level: "advanced",
+    },
+    {
+      task_skill_requirement_uid: "infiltration-alpha:relay:skill-relay",
+      checklist_id: "infiltration-alpha",
+      task_id: "relay",
+      skill_uid: "skill-relay",
+      level: "expert",
+    },
+  ];
+}
+
+let mockTaskSkillRequirementRegistry = createInitialMockTaskSkillRequirementRegistry();
+
+function cloneMockTaskSkillRequirementRegistry(): MockTaskSkillRequirementRecord[] {
+  return mockTaskSkillRequirementRegistry.map((entry) => ({ ...entry }));
+}
+
+interface MockAssetRecord {
+  asset_uid: string;
+  asset_name: string;
+  asset_type?: string;
+  team_member_uid?: string;
+}
+
+function createInitialMockAssetRegistry(): MockAssetRecord[] {
+  return [
+    {
+      asset_uid: "asset-kit-delta",
+      asset_name: "Delta Trauma Kit",
+      asset_type: "medical",
+      team_member_uid: "member-delta",
+    },
+    {
+      asset_uid: "asset-drone-case",
+      asset_name: "Drone Case",
+      asset_type: "surveillance",
+    },
+    {
+      asset_uid: "asset-relay-pack",
+      asset_name: "Relay Pack",
+      asset_type: "communications",
+      team_member_uid: "member-sierra",
+    },
+  ];
+}
+
+let mockAssetRegistry = createInitialMockAssetRegistry();
+
+function cloneMockAssetRegistry(): MockAssetRecord[] {
+  return mockAssetRegistry.map((asset) => ({ ...asset }));
+}
+
+function findMockAsset(assetUid?: string): MockAssetRecord | undefined {
+  if (!assetUid) {
+    return mockAssetRegistry[0];
+  }
+  return mockAssetRegistry.find((entry) => entry.asset_uid === assetUid) ?? mockAssetRegistry[0];
+}
+
+interface MockAssignmentRecord {
+  assignment_uid: string;
+  assignment_name: string;
+  mission_uid?: string;
+  task_uid?: string;
+  asset_ids: string[];
+}
+
+function createInitialMockAssignmentRegistry(): MockAssignmentRecord[] {
+  return [
+    {
+      assignment_uid: "assignment-grid-support",
+      assignment_name: "Grid Authorization Support",
+      mission_uid: "demo",
+      task_uid: "grid",
+      asset_ids: ["asset-kit-delta"],
+    },
+    {
+      assignment_uid: "assignment-relay-fallback",
+      assignment_name: "Fallback Relay Coverage",
+      mission_uid: "relay-watch",
+      task_uid: "relay",
+      asset_ids: ["asset-relay-pack"],
+    },
+  ];
+}
+
+let mockAssignmentRegistry = createInitialMockAssignmentRegistry();
+
+function cloneMockAssignmentRegistry(): MockAssignmentRecord[] {
+  return mockAssignmentRegistry.map((assignment) => ({
+    ...assignment,
+    asset_ids: [...assignment.asset_ids],
+  }));
+}
+
+function findMockAssignment(assignmentUid?: string): MockAssignmentRecord | undefined {
+  if (!assignmentUid) {
+    return mockAssignmentRegistry[0];
+  }
+  return mockAssignmentRegistry.find((entry) => entry.assignment_uid === assignmentUid) ?? mockAssignmentRegistry[0];
+}
+
+function resetMockWebRegistries(): void {
+  mockMissionRegistry = createInitialMockMissionRegistry();
+  mockZoneRegistry = createInitialMockZoneRegistry();
+  mockMissionChangeRegistry = createInitialMockMissionChangeRegistry();
+  mockTeamRegistry = createInitialMockTeamRegistry();
+  mockTeamMemberRegistry = createInitialMockTeamMemberRegistry();
+  mockSkillRegistry = createInitialMockSkillRegistry();
+  mockTeamMemberSkillRegistry = createInitialMockTeamMemberSkillRegistry();
+  mockTaskSkillRequirementRegistry = createInitialMockTaskSkillRequirementRegistry();
+  mockAssetRegistry = createInitialMockAssetRegistry();
+  mockAssignmentRegistry = createInitialMockAssignmentRegistry();
+  mockChecklistRegistry = createInitialMockChecklistRegistry();
+}
+
 function createInitialMockChecklistRegistry() {
   return [
     {
@@ -1595,6 +1727,7 @@ function buildSyntheticExecutePayload(
       mockTeamMemberRegistry = createInitialMockTeamMemberRegistry();
       mockSkillRegistry = createInitialMockSkillRegistry();
       mockTeamMemberSkillRegistry = createInitialMockTeamMemberSkillRegistry();
+      mockTaskSkillRequirementRegistry = createInitialMockTaskSkillRequirementRegistry();
     }
     return {
       payload: {
@@ -1870,6 +2003,229 @@ function buildSyntheticExecutePayload(
     return {
       payload: {
         team_member_skill: nextSkillRecord,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.task_skill_requirement.list") {
+    const checklistId = readStringCandidate(request, ["checklist_id", "checklistId"]);
+    const taskId = readStringCandidate(request, ["task_id", "taskId"]);
+    return {
+      payload: {
+        task_skill_requirements: cloneMockTaskSkillRequirementRegistry().filter((entry) =>
+          (!checklistId || entry.checklist_id === checklistId)
+          && (!taskId || entry.task_id === taskId)),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.task_skill_requirement.upsert") {
+    const checklistId = readStringCandidate(request, ["checklist_id", "checklistId"]);
+    const taskId = readStringCandidate(request, ["task_id", "taskId"]);
+    const skillUid = readStringCandidate(request, ["skill_uid", "skillUid"]);
+    const requirementUid =
+      readStringCandidate(request, ["task_skill_requirement_uid", "taskSkillRequirementUid", "uid", "id"])
+      ?? ([checklistId, taskId, skillUid].filter(Boolean).join(":")
+        || `task-skill-${mockTaskSkillRequirementRegistry.length + 1}`);
+    const existing = mockTaskSkillRequirementRegistry.find(
+      (entry) => entry.task_skill_requirement_uid === requirementUid,
+    );
+    const nextRequirement: MockTaskSkillRequirementRecord = {
+      task_skill_requirement_uid: requirementUid,
+      checklist_id: checklistId ?? existing?.checklist_id ?? mockChecklistRegistry[0]?.checklist_id ?? "",
+      task_id: taskId ?? existing?.task_id ?? findMockChecklist(checklistId)?.tasks[0]?.task_id ?? "",
+      skill_uid: skillUid ?? existing?.skill_uid ?? mockSkillRegistry[0]?.skill_uid ?? "",
+      level:
+        readStringCandidate(request, ["level", "required_level", "requiredLevel", "proficiency", "status"])
+        ?? existing?.level
+        ?? "basic",
+    };
+    const existingIndex = mockTaskSkillRequirementRegistry.findIndex(
+      (entry) => entry.task_skill_requirement_uid === requirementUid,
+    );
+    if (existingIndex >= 0) {
+      mockTaskSkillRequirementRegistry = mockTaskSkillRequirementRegistry.map((entry, index) =>
+        index === existingIndex ? nextRequirement : entry);
+    } else {
+      mockTaskSkillRequirementRegistry = [nextRequirement, ...mockTaskSkillRequirementRegistry];
+    }
+    return {
+      payload: {
+        task_skill_requirement: nextRequirement,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.asset.list") {
+    const teamMemberUid = readStringCandidate(request, ["team_member_uid", "teamMemberUid"]);
+    return {
+      payload: {
+        assets: cloneMockAssetRegistry().filter((asset) =>
+          !teamMemberUid || asset.team_member_uid === teamMemberUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.asset.upsert") {
+    const assetUid =
+      readStringCandidate(request, ["asset_uid", "assetUid", "uid", "id"])
+      ?? `asset-${mockAssetRegistry.length + 1}`;
+    const existing = findMockAsset(assetUid);
+    const nextAsset: MockAssetRecord = {
+      asset_uid: assetUid,
+      asset_name:
+        readStringCandidate(request, ["asset_name", "assetName", "name", "title"])
+        ?? existing?.asset_name
+        ?? assetUid,
+      asset_type: readStringCandidate(request, ["asset_type", "assetType", "type"]) ?? existing?.asset_type,
+      team_member_uid:
+        readStringCandidate(request, ["team_member_uid", "teamMemberUid"])
+        ?? existing?.team_member_uid,
+    };
+    const existingIndex = mockAssetRegistry.findIndex((asset) => asset.asset_uid === assetUid);
+    if (existingIndex >= 0) {
+      mockAssetRegistry = mockAssetRegistry.map((asset, index) =>
+        index === existingIndex ? nextAsset : asset);
+    } else {
+      mockAssetRegistry = [nextAsset, ...mockAssetRegistry];
+    }
+    return {
+      payload: {
+        asset: nextAsset,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.asset.delete") {
+    const assetUid = readStringCandidate(request, ["asset_uid", "assetUid"]);
+    if (assetUid) {
+      mockAssetRegistry = mockAssetRegistry.filter((asset) => asset.asset_uid !== assetUid);
+      mockAssignmentRegistry = mockAssignmentRegistry.map((assignment) => ({
+        ...assignment,
+        asset_ids: assignment.asset_ids.filter((linkedAssetUid) => linkedAssetUid !== assetUid),
+      }));
+    }
+    return {
+      payload: {
+        asset_uid: assetUid,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.assignment.list") {
+    const missionUid = readStringCandidate(request, ["mission_uid", "missionUid"]);
+    const taskUid = readStringCandidate(request, ["task_uid", "taskUid"]);
+    return {
+      payload: {
+        assignments: cloneMockAssignmentRegistry().filter((assignment) =>
+          (!missionUid || assignment.mission_uid === missionUid)
+          && (!taskUid || assignment.task_uid === taskUid)),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.assignment.upsert") {
+    const assignmentUid =
+      readStringCandidate(request, ["assignment_uid", "assignmentUid", "uid", "id"])
+      ?? `assignment-${mockAssignmentRegistry.length + 1}`;
+    const existing = findMockAssignment(assignmentUid);
+    const nextAssignment: MockAssignmentRecord = {
+      assignment_uid: assignmentUid,
+      assignment_name:
+        readStringCandidate(request, ["assignment_name", "assignmentName", "name", "title"])
+        ?? existing?.assignment_name
+        ?? assignmentUid,
+      mission_uid:
+        readStringCandidate(request, ["mission_uid", "missionUid"])
+        ?? existing?.mission_uid
+        ?? mockMissionRegistry[0]?.mission_uid,
+      task_uid: readStringCandidate(request, ["task_uid", "taskUid"]) ?? existing?.task_uid,
+      asset_ids:
+        existing?.asset_ids
+        ?? [],
+    };
+    const existingIndex = mockAssignmentRegistry.findIndex(
+      (assignment) => assignment.assignment_uid === assignmentUid,
+    );
+    if (existingIndex >= 0) {
+      mockAssignmentRegistry = mockAssignmentRegistry.map((assignment, index) =>
+        index === existingIndex ? nextAssignment : assignment);
+    } else {
+      mockAssignmentRegistry = [nextAssignment, ...mockAssignmentRegistry];
+    }
+    return {
+      payload: {
+        assignment: nextAssignment,
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.assignment.asset.set") {
+    const assignmentUid = readStringCandidate(request, ["assignment_uid", "assignmentUid"]);
+    const requestedAssets = Array.isArray(request.assets)
+      ? request.assets
+      : Array.isArray(request.asset_ids)
+        ? request.asset_ids
+        : [];
+    const assetIds = requestedAssets
+      .map((entry) =>
+        typeof entry === "string"
+          ? entry.trim()
+          : readStringCandidate(asRecord(entry), ["asset_uid", "assetUid", "uid", "id"]),
+      )
+      .filter((entry): entry is string => Boolean(entry));
+    if (assignmentUid) {
+      mockAssignmentRegistry = mockAssignmentRegistry.map((assignment) =>
+        assignment.assignment_uid !== assignmentUid
+          ? assignment
+          : {
+            ...assignment,
+            asset_ids: assetIds,
+          });
+    }
+    return {
+      payload: {
+        assignment: findMockAssignment(assignmentUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.assignment.asset.link") {
+    const assignmentUid = readStringCandidate(request, ["assignment_uid", "assignmentUid"]);
+    const assetUid = readStringCandidate(request, ["asset_uid", "assetUid"]);
+    if (assignmentUid && assetUid) {
+      mockAssignmentRegistry = mockAssignmentRegistry.map((assignment) =>
+        assignment.assignment_uid !== assignmentUid
+          ? assignment
+          : {
+            ...assignment,
+            asset_ids: assignment.asset_ids.includes(assetUid)
+              ? assignment.asset_ids
+              : [...assignment.asset_ids, assetUid],
+          });
+    }
+    return {
+      payload: {
+        assignment: findMockAssignment(assignmentUid),
+      },
+    };
+  }
+
+  if (envelope.type === "mission.registry.assignment.asset.unlink") {
+    const assignmentUid = readStringCandidate(request, ["assignment_uid", "assignmentUid"]);
+    const assetUid = readStringCandidate(request, ["asset_uid", "assetUid"]);
+    if (assignmentUid && assetUid) {
+      mockAssignmentRegistry = mockAssignmentRegistry.map((assignment) =>
+        assignment.assignment_uid !== assignmentUid
+          ? assignment
+          : {
+            ...assignment,
+            asset_ids: assignment.asset_ids.filter((linkedAssetUid) => linkedAssetUid !== assetUid),
+          });
+    }
+    return {
+      payload: {
+        assignment: findMockAssignment(assignmentUid),
       },
     };
   }
@@ -2803,12 +3159,14 @@ export function createReticulumNodeClient(
 ): ReticulumNodeClient {
   const mode = options.mode ?? "auto";
   if (mode === "web") {
+    resetMockWebRegistries();
     return new WebReticulumNodeClient();
   }
   if (mode === "capacitor") {
     return new CapacitorReticulumNodeClient();
   }
   if (Capacitor.getPlatform() === "web") {
+    resetMockWebRegistries();
     return new WebReticulumNodeClient();
   }
   return new CapacitorReticulumNodeClient();

@@ -287,6 +287,132 @@ describe("RchClient grouped feature API", () => {
     ).toBe("Updated signal planning guidance.");
   });
 
+  it("supports mock-backed task skill requirement create and update on the web client", async () => {
+    const client = createReticulumNodeClient({ mockMode: "web" });
+    const rchClient = createRchClient(client);
+
+    await rchClient.teamsSkills.execute("mission.registry.task_skill_requirement.upsert", {
+      task_skill_requirement_uid: "reconnaissance:grid:skill-relay",
+      checklist_id: "reconnaissance",
+      task_id: "grid",
+      skill_uid: "skill-relay",
+      level: "advanced",
+    });
+
+    const createdRequirements = await rchClient.teamsSkills.execute("mission.registry.task_skill_requirement.list", {
+      checklist_id: "reconnaissance",
+    });
+    expect(
+      ((createdRequirements.payload as {
+        task_skill_requirements?: Array<{ task_skill_requirement_uid?: string; level?: string }>;
+      }).task_skill_requirements ?? []).find((entry) => entry.task_skill_requirement_uid === "reconnaissance:grid:skill-relay")?.level,
+    ).toBe("advanced");
+
+    await rchClient.teamsSkills.execute("mission.registry.task_skill_requirement.upsert", {
+      task_skill_requirement_uid: "reconnaissance:grid:skill-relay",
+      checklist_id: "reconnaissance",
+      task_id: "grid",
+      skill_uid: "skill-relay",
+      level: "expert",
+    });
+
+    const updatedRequirements = await rchClient.teamsSkills.execute("mission.registry.task_skill_requirement.list", {
+      checklist_id: "reconnaissance",
+    });
+    expect(
+      ((updatedRequirements.payload as {
+        task_skill_requirements?: Array<{ task_skill_requirement_uid?: string; level?: string }>;
+      }).task_skill_requirements ?? []).find((entry) => entry.task_skill_requirement_uid === "reconnaissance:grid:skill-relay")?.level,
+    ).toBe("expert");
+  });
+
+  it("supports mock-backed asset create and delete on the web client", async () => {
+    const client = createReticulumNodeClient({ mockMode: "web" });
+    const rchClient = createRchClient(client);
+
+    await rchClient.assetsAssignments.execute("mission.registry.asset.upsert", {
+      asset_uid: "asset-portable-repeater",
+      asset_name: "Portable Repeater",
+      asset_type: "communications",
+      team_member_uid: "member-delta",
+    });
+
+    const createdAssets = await rchClient.assetsAssignments.execute("mission.registry.asset.list", {});
+    expect(
+      ((createdAssets.payload as { assets?: Array<{ asset_uid?: string; asset_type?: string }> }).assets ?? [])
+        .find((asset) => asset.asset_uid === "asset-portable-repeater")?.asset_type,
+    ).toBe("communications");
+
+    await rchClient.assetsAssignments.execute("mission.registry.asset.delete", {
+      asset_uid: "asset-portable-repeater",
+    });
+
+    const remainingAssets = await rchClient.assetsAssignments.execute("mission.registry.asset.list", {});
+    expect(
+      ((remainingAssets.payload as { assets?: Array<{ asset_uid?: string }> }).assets ?? [])
+        .some((asset) => asset.asset_uid === "asset-portable-repeater"),
+    ).toBe(false);
+  });
+
+  it("supports mock-backed assignment update and asset link lifecycle on the web client", async () => {
+    const client = createReticulumNodeClient({ mockMode: "web" });
+    const rchClient = createRchClient(client);
+
+    await rchClient.assetsAssignments.execute("mission.registry.assignment.upsert", {
+      assignment_uid: "assignment-portable-relay",
+      assignment_name: "Portable Relay Coverage",
+      mission_uid: "demo",
+      task_uid: "relay",
+    });
+
+    await rchClient.assetsAssignments.execute("mission.registry.assignment.asset.link", {
+      assignment_uid: "assignment-portable-relay",
+      asset_uid: "asset-drone-case",
+    });
+
+    const linkedAssignments = await rchClient.assetsAssignments.execute("mission.registry.assignment.list", {
+      mission_uid: "demo",
+    });
+    expect(
+      ((linkedAssignments.payload as {
+        assignments?: Array<{ assignment_uid?: string; asset_ids?: string[] }>;
+      }).assignments ?? []).find((assignment) => assignment.assignment_uid === "assignment-portable-relay")?.asset_ids,
+    ).toContain("asset-drone-case");
+
+    await rchClient.assetsAssignments.execute("mission.registry.assignment.asset.unlink", {
+      assignment_uid: "assignment-portable-relay",
+      asset_uid: "asset-drone-case",
+    });
+
+    const unlinkedAssignments = await rchClient.assetsAssignments.execute("mission.registry.assignment.list", {
+      mission_uid: "demo",
+    });
+    expect(
+      ((unlinkedAssignments.payload as {
+        assignments?: Array<{ assignment_uid?: string; asset_ids?: string[] }>;
+      }).assignments ?? []).find((assignment) => assignment.assignment_uid === "assignment-portable-relay")?.asset_ids ?? [],
+    ).not.toContain("asset-drone-case");
+  });
+
+  it("supports mock-backed assignment asset-set replacement on the web client", async () => {
+    const client = createReticulumNodeClient({ mockMode: "web" });
+    const rchClient = createRchClient(client);
+
+    await rchClient.assetsAssignments.execute("mission.registry.assignment.asset.set", {
+      assignment_uid: "assignment-grid-support",
+      assets: ["asset-drone-case"],
+    });
+
+    const updatedAssignments = await rchClient.assetsAssignments.execute("mission.registry.assignment.list", {
+      mission_uid: "demo",
+    });
+    expect(
+      ((updatedAssignments.payload as {
+        assignments?: Array<{ assignment_uid?: string; asset_ids?: string[] }>;
+      }).assignments ?? []).find((assignment) => assignment.assignment_uid === "assignment-grid-support")?.asset_ids,
+    ).toEqual(["asset-drone-case"]);
+  });
+
   it("classifies documented direct southbound query operations correctly", async () => {
     const fake = new FakeNodeClient();
     const client = createRchClient(fake);

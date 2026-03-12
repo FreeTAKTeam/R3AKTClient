@@ -117,6 +117,14 @@ export const useAssetsAssignmentsStore = defineStore("rch-assets-assignments", (
         const uid = readString(value, ["asset_uid", "assetUid"]);
         if (uid) {
           delete assetsByUid[uid];
+          for (const assignment of Object.values(assignmentsByUid)) {
+            if (assignment.assetIds.includes(uid)) {
+              assignmentsByUid[assignment.uid] = {
+                ...assignment,
+                assetIds: assignment.assetIds.filter((assetId) => assetId !== uid),
+              };
+            }
+          }
         }
       }
       return;

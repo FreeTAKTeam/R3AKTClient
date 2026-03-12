@@ -31,16 +31,6 @@ This file tracks backend capability already present in the RCH/node contract tha
 - raw `TelemetryRequest` exploration UI
 - telemetry history/detail panels
 
-### Teams, people, and skills
-
-- task skill requirement screens
-
-### Assets and assignments
-
-- asset create / delete controls surfaced in UI
-- assignment create / update controls
-- assignment asset set / link / unlink controls
-
 ### Checklists advanced/admin flows
 
 - template list / get / create / update / clone / delete

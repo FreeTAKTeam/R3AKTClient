@@ -157,13 +157,19 @@ Notes:
 - completed sub-slice: mission workspace team-member skill upsert controls on the approved teams route
 - completed sub-slice: mission workspace team-member client link/unlink controls on the approved teams route
 - completed sub-slice: mission workspace skill create/update controls on the approved teams route
+- completed sub-slice: checklist detail task skill requirement screens on the approved checklist-detail route
+- completed sub-slice: mission asset create/delete controls on the approved mission-assets route
+- completed sub-slice: mission assignment create/update plus assignment asset link/unlink controls on the approved mission-assets route
+- completed sub-slice: mission assignment asset-set controls on the approved mission-assets route
 - stability note: the mission workspace member-skill Playwright flow now scopes to the nested `Relay Ops` skill row under the linked-team member list so repeated level text does not trigger Playwright strict-mode collisions in CI
+- stability note: the mobile interaction Playwright flow now opens app routes at `domcontentloaded` and waits on route-specific screen assertions, avoiding SPA `load`-event flake without weakening route readiness checks
+- stability note: the mission-route Vitest wiring case now has a 15s timeout because it intentionally mounts multiple mission subroutes in one assertion, which exceeded the default 5s limit after the approved assets route was added
 - merge-sync note: resolving the Playwright PR against `codex/r3aktmobile-parity` required keeping the interaction coverage while also standardizing invalid JSON handling through the shared payload parser across the remaining feature stores
 - transport support note: session/chat delivery now primes the hub link on announce, uses bounded link retries before raw transport fallback, and no longer fires an eager telemetry request during initial store wiring
 - rust-only live probe note: `cargo test -p reticulum_mobile --test live_rch_lxmf live_rch_lxmf_get_app_info_probe -- --ignored --exact --nocapture` still times out on `getAppInfo` against the configured live hub, so the session query path is not yet trustworthy
 - alternate-target note: retesting the same Rust-only probe against `8f455b1c01a6032f6bd740994686f49f` also timed out, and the runtime did not log that target as a reachable announcing hub during the probe window
 - routes without approved Stitch references remain blocked for net-new UI implementation and must not be guessed in code
-- next candidate sub-slice: teams/people/skills controls on an approved route, most likely task skill requirement screens with matching interaction coverage
+- next candidate sub-slice: checklist advanced/admin flows on approved routes
 
 ---
 
@@ -254,7 +260,7 @@ Depends on:
 ## Current focus
 Current milestone: P4
 Owner: Codex / agent
-Last updated: 2026-03-11
+Last updated: 2026-03-12
 
 ## Rules for updating this file
 

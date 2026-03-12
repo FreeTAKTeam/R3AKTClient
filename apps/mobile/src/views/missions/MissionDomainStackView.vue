@@ -3,6 +3,8 @@ import { computed } from "vue";
 import { RouterLink, useRouter } from "vue-router";
 
 import { useMissionDomainData } from "../../composables/useMissionDomainData";
+import MissionAssetsPanel from "./MissionAssetsPanel.vue";
+import MissionAssignmentsPanel from "./MissionAssignmentsPanel.vue";
 import MissionTeamsPanel from "./MissionTeamsPanel.vue";
 import MissionWorkspaceOverview from "./MissionWorkspaceOverview.vue";
 
@@ -41,6 +43,8 @@ const {
   isEditingMissionMemberClient,
   isEditingMissionSkill,
   isEditingMissionMemberSkill,
+  isEditingMissionAsset,
+  isEditingMissionAssignment,
   missionParentDraft,
   missionRdeDraft,
   missionZoneDraft,
@@ -55,6 +59,15 @@ const {
   missionMemberSkillMemberDraft,
   missionMemberSkillUidDraft,
   missionMemberSkillLevelDraft,
+  missionAssetNameDraft,
+  missionAssetTypeDraft,
+  missionAssetMemberDraft,
+  missionAssignmentNameDraft,
+  missionAssignmentTaskDraft,
+  missionAssignmentLinkDraft,
+  missionAssignmentAssetLinkDraft,
+  missionAssignmentAssetSetDraft,
+  missionAssignmentAssetSetAssignmentDraft,
   missionChangeSummaryDraft,
   missionChangeTypeDraft,
   refreshMissionBundle,
@@ -78,7 +91,19 @@ const {
   editMissionMemberSkill,
   resetMissionMemberSkillEditor,
   saveMissionMemberSkill,
-  createMissionAsset,
+  editMissionAsset,
+  resetMissionAssetEditor,
+  saveMissionAsset,
+  deleteMissionAsset,
+  editMissionAssignment,
+  resetMissionAssignmentEditor,
+  saveMissionAssignment,
+  linkSelectedMissionAssignmentAsset,
+  unlinkMissionAssignmentAsset,
+  availableMissionAssignmentLinkAssets,
+  focusMissionAssignmentAssetSet,
+  toggleMissionAssignmentAssetSet,
+  replaceMissionAssignmentAssetSet,
   createMissionZone,
   createMissionLogEntry,
   editMissionChange,
@@ -336,28 +361,40 @@ async function openMissionChat(): Promise<void> {
       </section>
 
       <section v-else-if="domainKind === 'assets'" class="mission-domain__section">
-        <div class="mission-domain__section-head">
-          <h2>Assets &amp; Assignments</h2>
-          <button type="button" :disabled="busy" @click="createMissionAsset">Create</button>
-        </div>
-        <div class="mission-domain__list mission-domain__list--two">
-          <article class="mission-domain__card">
-            <h3>Assets</h3>
-            <ul>
-              <li v-for="asset in missionAssets" :key="asset.uid">
-                {{ asset.name }} <span>{{ asset.type ?? "equipment" }}</span>
-              </li>
-            </ul>
-          </article>
-          <article class="mission-domain__card">
-            <h3>Assignments</h3>
-            <ul>
-              <li v-for="assignment in missionAssignments" :key="assignment.uid">
-                {{ assignment.name }} <span>{{ assignment.assetIds.length }} assets</span>
-              </li>
-            </ul>
-          </article>
-        </div>
+        <MissionAssetsPanel
+          :busy="busy"
+          :mission-assets="missionAssets"
+          :mission-member-options="missionMemberOptions"
+          :is-editing-mission-asset="isEditingMissionAsset"
+          v-model:asset-name-draft="missionAssetNameDraft"
+          v-model:asset-type-draft="missionAssetTypeDraft"
+          v-model:asset-member-draft="missionAssetMemberDraft"
+          @edit-asset="editMissionAsset"
+          @save-asset="saveMissionAsset"
+          @reset-asset-editor="resetMissionAssetEditor"
+          @delete-asset="deleteMissionAsset"
+        />
+        <MissionAssignmentsPanel
+          :busy="busy"
+          :mission-assets="missionAssets"
+          :mission-assignments="missionAssignments"
+          :available-assignment-link-assets="availableMissionAssignmentLinkAssets"
+          :is-editing-mission-assignment="isEditingMissionAssignment"
+          v-model:assignment-name-draft="missionAssignmentNameDraft"
+          v-model:assignment-task-draft="missionAssignmentTaskDraft"
+          v-model:assignment-link-draft="missionAssignmentLinkDraft"
+          v-model:assignment-asset-link-draft="missionAssignmentAssetLinkDraft"
+          v-model:assignment-asset-set-draft="missionAssignmentAssetSetDraft"
+          v-model:assignment-asset-set-assignment-draft="missionAssignmentAssetSetAssignmentDraft"
+          @edit-assignment="editMissionAssignment"
+          @save-assignment="saveMissionAssignment"
+          @reset-assignment-editor="resetMissionAssignmentEditor"
+          @link-assignment-asset="linkSelectedMissionAssignmentAsset"
+          @unlink-assignment-asset="unlinkMissionAssignmentAsset"
+          @focus-assignment-asset-set="focusMissionAssignmentAssetSet"
+          @toggle-assignment-asset-set="toggleMissionAssignmentAssetSet"
+          @replace-assignment-asset-set="replaceMissionAssignmentAssetSet"
+        />
       </section>
 
       <section v-else-if="domainKind === 'zones'" class="mission-domain__section">

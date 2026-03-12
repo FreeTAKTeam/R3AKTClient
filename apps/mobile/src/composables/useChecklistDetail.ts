@@ -2,6 +2,7 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 
 import { useChecklistsStore } from "../stores/checklistsStore";
 import { useNodeStore } from "../stores/nodeStore";
+import { useTeamsSkillsStore } from "../stores/teamsSkillsStore";
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -17,6 +18,7 @@ function overrideKey(checklistId: string, taskId: string): string {
 export function useChecklistDetail(checklistId: () => string) {
   const nodeStore = useNodeStore();
   const checklistsStore = useChecklistsStore();
+  const teamsSkillsStore = useTeamsSkillsStore();
 
   const loading = ref(false);
   const errorMessage = ref("");
@@ -24,6 +26,10 @@ export function useChecklistDetail(checklistId: () => string) {
   const pendingStatusByTaskKey = reactive<Record<string, boolean>>({});
   const rowStyleDraftsByTaskKey = reactive<Record<string, string>>({});
   const rowStyleBusyByTaskKey = reactive<Record<string, boolean>>({});
+  const requirementSkillDraftsByTaskKey = reactive<Record<string, string>>({});
+  const requirementLevelDraftsByTaskKey = reactive<Record<string, string>>({});
+  const requirementBusyByTaskKey = reactive<Record<string, boolean>>({});
+  const requirementEditingUidByTaskKey = reactive<Record<string, string>>({});
 
   async function loadChecklist(): Promise<void> {
     const currentChecklistId = checklistId().trim();
@@ -35,8 +41,11 @@ export function useChecklistDetail(checklistId: () => string) {
     errorMessage.value = "";
     try {
       await nodeStore.init();
-      await checklistsStore.wire();
-      await checklistsStore.getChecklist(currentChecklistId);
+      await Promise.all([checklistsStore.wire(), teamsSkillsStore.wire()]);
+      await Promise.all([
+        checklistsStore.getChecklist(currentChecklistId),
+        teamsSkillsStore.listTaskSkillRequirements(currentChecklistId),
+      ]);
     } catch (error: unknown) {
       errorMessage.value = toErrorMessage(error);
     } finally {
@@ -89,6 +98,20 @@ export function useChecklistDetail(checklistId: () => string) {
     };
   });
 
+  const availableSkills = computed(() => teamsSkillsStore.skills);
+  const taskSkillRequirements = computed(() => {
+    const currentChecklist = checklist.value;
+    if (!currentChecklist) {
+      return [];
+    }
+    const taskIds = new Set(currentChecklist.tasks.map((task) => task.taskId));
+    return teamsSkillsStore.taskSkillRequirements.filter((requirement) =>
+      requirement.checklistId === currentChecklist.checklistId
+      && requirement.taskId
+      && taskIds.has(requirement.taskId),
+    );
+  });
+
   watch(
     checklist,
     (nextChecklist) => {
@@ -99,6 +122,30 @@ export function useChecklistDetail(checklistId: () => string) {
         const taskKey = overrideKey(nextChecklist.checklistId, task.taskId);
         if (!rowStyleDraftsByTaskKey[taskKey]) {
           rowStyleDraftsByTaskKey[taskKey] = task.rowStyle ?? "";
+        }
+        if (!requirementSkillDraftsByTaskKey[taskKey]) {
+          requirementSkillDraftsByTaskKey[taskKey] = availableSkills.value[0]?.uid ?? "";
+        }
+        if (!requirementLevelDraftsByTaskKey[taskKey]) {
+          requirementLevelDraftsByTaskKey[taskKey] = "";
+        }
+      }
+    },
+    { immediate: true },
+  );
+
+  watch(
+    availableSkills,
+    (nextSkills) => {
+      const currentChecklist = checklist.value;
+      if (!currentChecklist) {
+        return;
+      }
+      for (const task of currentChecklist.tasks) {
+        const taskKey = overrideKey(currentChecklist.checklistId, task.taskId);
+        const draftValue = requirementSkillDraftsByTaskKey[taskKey];
+        if (!draftValue || !nextSkills.some((skill) => skill.uid === draftValue)) {
+          requirementSkillDraftsByTaskKey[taskKey] = nextSkills[0]?.uid ?? "";
         }
       }
     },
@@ -139,6 +186,120 @@ export function useChecklistDetail(checklistId: () => string) {
       return false;
     }
     return rowStyleBusyByTaskKey[overrideKey(currentChecklistId, taskId)] ?? false;
+  }
+
+  function taskSkillRequirementsFor(taskId: string) {
+    return taskSkillRequirements.value.filter((requirement) => requirement.taskId === taskId);
+  }
+
+  function taskRequirementSkillDraftFor(taskId: string): string {
+    const currentChecklistId = checklist.value?.checklistId;
+    if (!currentChecklistId) {
+      return "";
+    }
+    return requirementSkillDraftsByTaskKey[overrideKey(currentChecklistId, taskId)] ?? "";
+  }
+
+  function setTaskRequirementSkillDraft(taskId: string, nextValue: string): void {
+    const currentChecklistId = checklist.value?.checklistId;
+    if (!currentChecklistId) {
+      return;
+    }
+    requirementSkillDraftsByTaskKey[overrideKey(currentChecklistId, taskId)] = nextValue;
+  }
+
+  function taskRequirementLevelDraftFor(taskId: string): string {
+    const currentChecklistId = checklist.value?.checklistId;
+    if (!currentChecklistId) {
+      return "";
+    }
+    return requirementLevelDraftsByTaskKey[overrideKey(currentChecklistId, taskId)] ?? "";
+  }
+
+  function setTaskRequirementLevelDraft(taskId: string, nextValue: string): void {
+    const currentChecklistId = checklist.value?.checklistId;
+    if (!currentChecklistId) {
+      return;
+    }
+    requirementLevelDraftsByTaskKey[overrideKey(currentChecklistId, taskId)] = nextValue;
+  }
+
+  function taskRequirementBusy(taskId: string): boolean {
+    const currentChecklistId = checklist.value?.checklistId;
+    if (!currentChecklistId) {
+      return false;
+    }
+    return requirementBusyByTaskKey[overrideKey(currentChecklistId, taskId)] ?? false;
+  }
+
+  function isEditingTaskRequirement(taskId: string): boolean {
+    const currentChecklistId = checklist.value?.checklistId;
+    if (!currentChecklistId) {
+      return false;
+    }
+    return Boolean(requirementEditingUidByTaskKey[overrideKey(currentChecklistId, taskId)]);
+  }
+
+  function resetTaskSkillRequirementDraft(taskId: string): void {
+    const currentChecklistId = checklist.value?.checklistId;
+    if (!currentChecklistId) {
+      return;
+    }
+    const taskKey = overrideKey(currentChecklistId, taskId);
+    delete requirementEditingUidByTaskKey[taskKey];
+    requirementSkillDraftsByTaskKey[taskKey] = availableSkills.value[0]?.uid ?? "";
+    requirementLevelDraftsByTaskKey[taskKey] = "";
+  }
+
+  function editTaskSkillRequirement(taskId: string, requirementUid: string): void {
+    const currentChecklistId = checklist.value?.checklistId;
+    if (!currentChecklistId) {
+      return;
+    }
+    const target = taskSkillRequirements.value.find((entry) => entry.uid === requirementUid);
+    if (!target) {
+      return;
+    }
+    const taskKey = overrideKey(currentChecklistId, taskId);
+    requirementEditingUidByTaskKey[taskKey] = target.uid;
+    requirementSkillDraftsByTaskKey[taskKey] = target.skillUid ?? availableSkills.value[0]?.uid ?? "";
+    requirementLevelDraftsByTaskKey[taskKey] = target.level ?? "";
+    statusMessage.value = `Editing task skill requirement ${target.uid}.`;
+    errorMessage.value = "";
+  }
+
+  async function saveTaskSkillRequirement(taskId: string): Promise<void> {
+    if (!checklist.value) {
+      return;
+    }
+
+    const taskKey = overrideKey(checklist.value.checklistId, taskId);
+    const nextSkillUid = requirementSkillDraftsByTaskKey[taskKey]?.trim() ?? "";
+    const nextLevel = requirementLevelDraftsByTaskKey[taskKey]?.trim() ?? "";
+    if (!nextSkillUid || !nextLevel) {
+      return;
+    }
+
+    requirementBusyByTaskKey[taskKey] = true;
+    statusMessage.value = "";
+    errorMessage.value = "";
+    try {
+      await teamsSkillsStore.upsertTaskSkillRequirement({
+        task_skill_requirement_uid: requirementEditingUidByTaskKey[taskKey] || undefined,
+        checklist_id: checklist.value.checklistId,
+        task_id: taskId,
+        skill_uid: nextSkillUid,
+        level: nextLevel,
+      });
+      statusMessage.value = requirementEditingUidByTaskKey[taskKey]
+        ? `Task skill requirement updated for ${taskId}.`
+        : `Task skill requirement recorded for ${taskId}.`;
+      resetTaskSkillRequirementDraft(taskId);
+    } catch (error: unknown) {
+      errorMessage.value = toErrorMessage(error);
+    } finally {
+      delete requirementBusyByTaskKey[taskKey];
+    }
   }
 
   async function toggleTask(taskId: string): Promise<void> {
@@ -204,9 +365,21 @@ export function useChecklistDetail(checklistId: () => string) {
     checklist,
     checklistProgress,
     completedCount,
+    availableSkills,
+    taskSkillRequirements,
     rowStyleDraftFor,
     setRowStyleDraft,
     rowStyleBusy,
+    taskSkillRequirementsFor,
+    taskRequirementSkillDraftFor,
+    setTaskRequirementSkillDraft,
+    taskRequirementLevelDraftFor,
+    setTaskRequirementLevelDraft,
+    taskRequirementBusy,
+    isEditingTaskRequirement,
+    resetTaskSkillRequirementDraft,
+    editTaskSkillRequirement,
+    saveTaskSkillRequirement,
     toggleTask,
     applyTaskRowStyle,
   };

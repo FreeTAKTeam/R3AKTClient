@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 
+import ChecklistTaskRequirementsPanel from "../../components/checklists/ChecklistTaskRequirementsPanel.vue";
 import { useChecklistDetail } from "../../composables/useChecklistDetail";
 import { useNavigationDrawer } from "../../composables/useNavigationDrawer";
 import { useNodeStore } from "../../stores/nodeStore";
@@ -20,9 +21,20 @@ const {
   checklist,
   checklistProgress,
   completedCount,
+  availableSkills,
   rowStyleDraftFor,
   setRowStyleDraft,
   rowStyleBusy,
+  taskSkillRequirementsFor,
+  taskRequirementSkillDraftFor,
+  setTaskRequirementSkillDraft,
+  taskRequirementLevelDraftFor,
+  setTaskRequirementLevelDraft,
+  taskRequirementBusy,
+  isEditingTaskRequirement,
+  resetTaskSkillRequirementDraft,
+  editTaskSkillRequirement,
+  saveTaskSkillRequirement,
   toggleTask,
   applyTaskRowStyle,
 } = useChecklistDetail(() => props.checklistId);
@@ -123,6 +135,19 @@ function goBack(): void {
                 {{ rowStyleBusy(task.taskId) ? "Applying..." : "Apply Style" }}
               </button>
             </div>
+            <ChecklistTaskRequirementsPanel
+              :busy="taskRequirementBusy(task.taskId)"
+              :requirements="taskSkillRequirementsFor(task.taskId)"
+              :skills="availableSkills"
+              :is-editing="isEditingTaskRequirement(task.taskId)"
+              :selected-skill-uid="taskRequirementSkillDraftFor(task.taskId)"
+              :required-level="taskRequirementLevelDraftFor(task.taskId)"
+              @update:selected-skill-uid="setTaskRequirementSkillDraft(task.taskId, $event)"
+              @update:required-level="setTaskRequirementLevelDraft(task.taskId, $event)"
+              @edit-requirement="editTaskSkillRequirement(task.taskId, $event)"
+              @reset-requirement="resetTaskSkillRequirementDraft(task.taskId)"
+              @save-requirement="saveTaskSkillRequirement(task.taskId)"
+            />
           </article>
         </div>
         <article v-else class="checklist-detail__empty-card">

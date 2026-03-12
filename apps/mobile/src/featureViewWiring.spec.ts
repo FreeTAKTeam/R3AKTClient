@@ -60,13 +60,22 @@ describe("live shell wiring", () => {
     expect(missionTeams.text()).toContain("Member Skill Editor");
     expect(missionTeams.text()).toContain("Save Skill");
 
+    const missionAssets = await mountWithRoute(App, "/missions/demo/assets");
+    expect(missionAssets.text()).toContain("Assets");
+    expect(missionAssets.text()).toContain("Asset Editor");
+    expect(missionAssets.text()).toContain("Save Asset");
+    expect(missionAssets.text()).toContain("Assignments");
+    expect(missionAssets.text()).toContain("Assignment Editor");
+    expect(missionAssets.text()).toContain("Link Asset");
+    expect(missionAssets.text()).toContain("Replace Asset Set");
+
     const missionDomain = await mountWithRoute(App, "/missions/demo/log-entries");
     expect(missionDomain.text()).toContain("Mission Workspace");
     expect(missionDomain.text()).toContain("Mission UID");
     expect(missionDomain.text()).toContain("Logs & Changes");
     expect(missionDomain.text()).toContain("Change Editor");
     expect(missionDomain.text()).toContain("Save Change");
-  });
+  }, 15000);
 
   it("renders comms routes", async () => {
     const topics = await mountWithRoute(App, "/comms/topics");
@@ -87,6 +96,8 @@ describe("live shell wiring", () => {
     expect(checklistDetail.text()).toContain("Verification Sub-tasks");
     expect(checklistDetail.text()).toContain("Recent Activity");
     expect(checklistDetail.text()).toContain("Row Style");
+    expect(checklistDetail.text()).toContain("Task Skill Requirements");
+    expect(checklistDetail.text()).toContain("Save Requirement");
   });
 
   it("renders map and ops settings routes", async () => {

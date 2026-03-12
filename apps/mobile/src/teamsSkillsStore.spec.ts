@@ -89,6 +89,29 @@ describe("teams skills store", () => {
     expect(store.skillsByUid["skill-signal-planning"]?.description).toBe("Updated signal planning guidance.");
   });
 
+  it("creates and updates task skill requirements through the canonical requirement command", async () => {
+    const store = useTeamsSkillsStore();
+
+    await store.wire();
+    await store.upsertTaskSkillRequirement({
+      task_skill_requirement_uid: "reconnaissance:grid:skill-relay",
+      checklist_id: "reconnaissance",
+      task_id: "grid",
+      skill_uid: "skill-relay",
+      level: "advanced",
+    });
+    expect(store.taskSkillRequirementsByUid["reconnaissance:grid:skill-relay"]?.level).toBe("advanced");
+
+    await store.upsertTaskSkillRequirement({
+      task_skill_requirement_uid: "reconnaissance:grid:skill-relay",
+      checklist_id: "reconnaissance",
+      task_id: "grid",
+      skill_uid: "skill-relay",
+      level: "expert",
+    });
+    expect(store.taskSkillRequirementsByUid["reconnaissance:grid:skill-relay"]?.level).toBe("expert");
+  });
+
   it("creates and updates team-member skills through the canonical member-skill command", async () => {
     const store = useTeamsSkillsStore();
 

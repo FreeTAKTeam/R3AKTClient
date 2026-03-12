@@ -53,16 +53,20 @@ Overall state:
 - P4 mission workspace team-member skill upsert slice landed
 - P4 mission workspace team-member client link/unlink slice landed
 - P4 mission workspace skill create/update slice landed
+- P4 checklist detail task skill requirement slice landed
+- P4 mission asset create/delete slice landed
+- P4 mission assignment create/update plus assignment asset link/unlink slice landed
+- P4 mission assignment asset-set slice landed
 - P5 app-side event/offline/persistence hardening slice landed
 
 Current blocker:
 - live Rust hub probe for `getAppInfo` still returns timeout against both tested hub targets, so the session query path is not yet trustworthy even after link-prewarm and retry changes
 
 Next intended action:
-- continue P4 on an approved teams/people/skills route with task skill requirement screens, while using the new projection/persistence layer as the default app-state boundary; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
+- continue P4 with checklist advanced/admin flows on approved routes; keep the Rust `getAppInfo` timeout investigation as a separate blocker on live session trustworthiness
 
 Last updated:
-- 2026-03-11
+- 2026-03-12
 
 ---
 
@@ -1061,6 +1065,160 @@ Open issues:
 Next recommended step:
 - keep future Playwright additions on the mission teams route anchored to the linked-team/member/skill sub-lists rather than broad row-level text lookups when duplicate labels are possible
 
+### 2026-03-12 - Session 020
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose task skill requirement screens on the approved checklist-detail route using the existing teams/skills store, typed wrapper surface, and web/mock parity path
+
+Planned changes:
+- extend the teams/skills store with canonical `mission.registry.task_skill_requirement.list` and `.upsert` helpers plus normalized requirement records
+- add a focused checklist-detail child panel and composable state for per-task skill requirement create/edit flows without turning the route into a logic sink
+- extend the web/mock wrapper path with deterministic task-skill-requirement list/upsert behavior and add focused Vitest/Playwright coverage
+
+Files touched:
+- `apps/mobile/src/stores/teamsSkillsStore.ts`
+- `apps/mobile/src/components/checklists/ChecklistTaskRequirementsPanel.vue`
+- `apps/mobile/src/composables/useChecklistDetail.ts`
+- `apps/mobile/src/views/checklists/ChecklistDetailView.vue`
+- `apps/mobile/src/teamsSkillsStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- the approved checklist-detail route now exposes per-task skill requirement list and create/edit controls through the canonical teams/skills store instead of leaving `mission.registry.task_skill_requirement.*` available only in backend parity
+- the route stays a composition surface by moving the new requirement markup into `ChecklistTaskRequirementsPanel` and keeping the checklist-detail orchestration in the composable
+- the web/mock node-client path now keeps task skill requirements mutable, so the checklist-detail route remains store-backed in browser mode and covered by Vitest plus Playwright
+- `mobileFlows.spec.ts` now opens SPA routes at `domcontentloaded` and waits on route-specific screen assertions, which removes the flaky dependency on the full `load` event without weakening end-to-end readiness checks
+
+Open issues:
+- the remaining approved-route P4 backlog now moves out of teams/people/skills and into assets/assignments controls
+
+Next recommended step:
+- continue the next approved P4 slice on an assets/assignments route with mission-asset create/delete or assignment create/update controls, and keep matching interaction coverage in the same change
+
+### 2026-03-12 - Session 021
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose mission-asset create/delete controls on the approved mission-assets route using the existing assets/assignments store, typed wrapper surface, and browser-mode mock path
+
+Planned changes:
+- add focused mission-assets route orchestration for asset editor/delete flows while keeping `MissionDomainStackView` as a composition surface
+- add a dedicated mission-assets child panel instead of embedding another large UI block directly in the route component
+- extend the web/mock wrapper path with deterministic asset and assignment registries so the assets route remains store-backed in browser mode and can be covered by Vitest plus Playwright
+
+Files touched:
+- `apps/mobile/src/stores/assetsAssignmentsStore.ts`
+- `apps/mobile/src/assetsAssignmentsStore.spec.ts`
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/views/missions/MissionAssetsPanel.vue`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- the approved mission-assets route now exposes asset create/edit state and delete controls through the canonical assets/assignments store instead of leaving `mission.registry.asset.*` stranded behind backend parity
+- `MissionDomainStackView` stays a composition surface by delegating the assets route UI to `MissionAssetsPanel`, which also keeps the existing assignments list visible without widening this slice into assignment editing
+- the web/mock node-client path now owns deterministic asset and assignment registries and resets them when a fresh mock client is created, so asset mutations persist for the lifetime of a test/app session without bleeding across sessions
+- the mission-route Vitest wiring case now has a longer timeout because it intentionally mounts several mission subroutes in one assertion and had outgrown Vitest's default 5s limit
+
+Open issues:
+- the remaining approved-route backlog in this feature family is assignment create/update and assignment asset link/unlink controls
+
+Next recommended step:
+- continue the next approved P4 slice on the mission-assets route with assignment create/update controls, then follow with assignment asset link/unlink on the same approved surface
+
+### 2026-03-12 - Session 022
+Milestone:
+- P4 - UI action parity backlog
+
+Objective:
+- expose assignment create/update and assignment asset link/unlink controls on the approved mission-assets route without widening the surface beyond the existing assets/assignments store and typed wrapper contract
+
+Planned changes:
+- extend `useMissionDomainData` with assignment editor and link-editor state plus the canonical assignment upsert/link/unlink actions
+- split the mission-assets route into focused child panels so the route stays a composition surface while the assignment UI remains readable and testable
+- add store, route-wiring, and Playwright coverage for assignment authoring plus asset link/unlink behavior on `/missions/:missionUid/assets`
+
+Files touched:
+- `apps/mobile/src/composables/useMissionDomainData.ts`
+- `apps/mobile/src/views/missions/MissionAssetsPanel.vue`
+- `apps/mobile/src/views/missions/MissionAssignmentsPanel.vue`
+- `apps/mobile/src/views/missions/MissionDomainStackView.vue`
+- `apps/mobile/src/assetsAssignmentsStore.spec.ts`
+- `apps/mobile/src/featureViewWiring.spec.ts`
+- `packages/node-client/src/index.spec.ts`
+- `tests/mobileFlows.spec.ts`
+- `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+
+Validation run:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Validation result:
+- pass
+
+Outcome:
+- complete
+
+Notes:
+- the approved mission-assets route now exposes assignment create/update and assignment asset link/unlink controls through the canonical assets/assignments store instead of leaving assignment mutation stranded behind backend parity
+- the route remains a composition surface by splitting the assets family into `MissionAssetsPanel` and `MissionAssignmentsPanel`, with the composable owning the new assignment editor and asset-link state
+- Playwright now exercises both assignment authoring and link/unlink behavior on `/missions/demo/assets`, while the existing asset create/delete flow stays covered separately on the same route
+
+Open issues:
+- the remaining approved-route backlog in this feature family is now `assignment asset set` controls
+
+Next recommended step:
+- continue the next approved P4 slice on the mission-assets route with assignment asset-set controls, then move to the checklist advanced/admin backlog on approved routes
+
 ---
 
 ## Decision log
@@ -1418,6 +1576,86 @@ Result:
 Notes:
 - the member-skill Playwright flow now scopes its `advanced` level assertion to the nested `Relay Ops` skill row under `Delta`, avoiding the strict-mode violation that occurred when repeated level text existed in the broader member row
 - the full Playwright suite remained green after the selector change, so the fix addressed the CI failure without changing app behavior or widening the route surface
+
+### 2026-03-12
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved checklist-detail route now exposes per-task skill requirement list and create/edit controls through the canonical teams/skills store instead of leaving task requirement operations stranded in backend parity
+- the web/mock node-client path now keeps task skill requirements mutable, so the checklist-detail route remains store-backed in browser mode and covered by Vitest plus Playwright
+- the mobile interaction Playwright suite now opens SPA routes at `domcontentloaded` and still waits on route-specific screen assertions, removing a `load`-event flake without relaxing the behavioral checks
+
+### 2026-03-12
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission-assets route now exposes asset create/delete controls through the canonical assets/assignments store and a focused `MissionAssetsPanel` child instead of leaving asset mutation stranded in backend parity
+- the web/mock node-client path now owns deterministic asset and assignment registries and resets them when a fresh mock web client is created, so asset mutations persist within a session while remaining deterministic across tests
+- the mission-route Vitest wiring case now uses a 15s timeout because it deliberately mounts multiple mission subroutes and had exceeded the default 5s limit after the assets route was added
+
+### 2026-03-12
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission-assets route now exposes assignment create/update and assignment asset link/unlink controls through the canonical assets/assignments store and a focused `MissionAssignmentsPanel` child
+- `useMissionDomainData` now owns the assignment editor plus asset-link drafts, keeping `MissionDomainStackView` as a composition surface rather than pushing more mutation state into the route component
+- Playwright now covers assignment authoring and assignment asset link/unlink separately from the existing mission-asset create/delete path on `/missions/demo/assets`
+
+### 2026-03-12
+Milestone:
+- P4 - UI action parity backlog
+
+Commands:
+- `npm --workspace apps/mobile run typecheck`
+- `npm run test:node-client`
+- `npm run test:mobile`
+- `npm run node-client:build`
+- `npm run mobile:build`
+- `npm run test:e2e`
+
+Result:
+- pass
+
+Notes:
+- the approved mission-assets route now exposes assignment asset-set replacement controls through the canonical assets/assignments store instead of limiting the route to additive asset link/unlink operations
+- `MissionAssignmentsPanel` now renders a focused asset-set editor while `useMissionDomainData` owns the selected-assignment draft and replacement mutation, keeping the route component itself as a composition surface
+- the web/mock node-client path and mobile Vitest/Playwright coverage now verify `mission.registry.assignment.asset.set`, so assignment asset replacement remains store-backed and deterministic in browser-mode validation
 
 ---
 
