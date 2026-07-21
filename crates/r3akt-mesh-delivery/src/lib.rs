@@ -4,11 +4,11 @@
 
 use std::collections::HashMap;
 
+use chrono::DateTime;
 use rmpv::Value as MsgPackValue;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use thiserror::Error;
-use time::{format_description::well_known::Rfc3339, OffsetDateTime};
 
 pub const DELIVERY_SCHEMA_VERSION: &str = "1";
 pub const DEFAULT_TTL_SECONDS: u32 = 300;
@@ -642,7 +642,7 @@ pub fn validate_delivery_envelope(
     }
     let created_at = object.get("Created-At").and_then(value_as_str);
     if let Some(created_at) = created_at.as_ref().filter(|value| !value.trim().is_empty()) {
-        OffsetDateTime::parse(created_at, &Rfc3339).map_err(|_| {
+        DateTime::parse_from_rfc3339(created_at).map_err(|_| {
             MeshDeliveryError::Delivery("Created-At must be RFC3339 UTC".to_string())
         })?;
     }
