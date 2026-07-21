@@ -210,7 +210,7 @@ fn extract_msgpack_capability_tokens(value: &MsgPackValue) -> Vec<String> {
 
 fn decode_hex_announce_app_data(app_data: &str) -> Option<Vec<u8>> {
     let trimmed = app_data.trim();
-    if trimmed.len() < 2 || !trimmed.len().is_multiple_of(2) {
+    if trimmed.len() < 2 || trimmed.len() % 2 != 0 {
         return None;
     }
     if !trimmed.bytes().all(|byte| byte.is_ascii_hexdigit()) {
