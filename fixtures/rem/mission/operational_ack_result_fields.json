@@ -1,0 +1,47 @@
+{
+  "source": "REM crates/reticulum_mobile/src/runtime.rs",
+  "field_ids": {
+    "results": 10,
+    "event": 13
+  },
+  "results": [
+    {
+      "name": "verbose_accepted_result",
+      "field_tree": {
+        "command_id": "cmd-result-shape",
+        "correlation_id": "corr-result-shape",
+        "status": "accepted"
+      },
+      "expected_metadata": {
+        "primary_kind": "result",
+        "command_id": "cmd-result-shape",
+        "correlation_id": "corr-result-shape",
+        "result_status": "accepted"
+      }
+    },
+    {
+      "name": "compact_accepted_result",
+      "field_tree": {
+        "i": "cmd-compact-accepted",
+        "c": "corr-compact-accepted",
+        "s": "a"
+      },
+      "expected_metadata": {
+        "primary_kind": "result",
+        "command_id": "cmd-compact-accepted",
+        "correlation_id": "corr-compact-accepted",
+        "result_status": "accepted"
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "compact_event_ack",
+      "field_tree": {
+        "u": "evt-984bfa16-cfe3-430a-a201-3294310a91fe",
+        "event_type": "mission.registry.log_entry.upserted"
+      },
+      "expected_command_id": "log-entry-evt-984bfa16-cfe3-430a-a201-3294310a91fe"
+    }
+  ]
+}

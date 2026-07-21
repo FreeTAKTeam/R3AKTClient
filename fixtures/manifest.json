@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-06-29",
+  "purpose": "REM-first and RCH compatibility fixtures for shared r3akt-* Rust crates",
+  "fixtures": [
+    {
+      "id": "rem.mission.compact_command_aliases",
+      "product": "REM",
+      "format": "json",
+      "path": "fixtures/rem/mission/compact_command_aliases.json",
+      "crate_target": "r3akt-mission-wire",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/mission_commands.rs"
+      ],
+      "shared_behavior": "Compact command aliases and canonical command names"
+    },
+    {
+      "id": "rem.mission.checklist_arg_aliases",
+      "product": "REM",
+      "format": "json",
+      "path": "fixtures/rem/mission/checklist_arg_aliases.json",
+      "crate_target": "r3akt-mission-wire",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/mission_commands.rs"
+      ],
+      "shared_behavior": "Compact checklist argument aliases"
+    },
+    {
+      "id": "rem.mission.metadata_matrix",
+      "product": "REM",
+      "format": "json-msgpack-tree",
+      "path": "fixtures/rem/mission/metadata_matrix.json",
+      "crate_target": "r3akt-mission-wire",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/mission_sync.rs",
+        "crates/reticulum_mobile/src/mission_commands.rs"
+      ],
+      "shared_behavior": "Mission command/result/event metadata extraction from compact and verbose field maps"
+    },
+    {
+      "id": "rem.mission.operational_ack_result_fields",
+      "product": "REM",
+      "format": "json-msgpack-tree",
+      "path": "fixtures/rem/mission/operational_ack_result_fields.json",
+      "crate_target": "r3akt-mission-wire",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/mission_sync.rs",
+        "crates/reticulum_mobile/src/runtime.rs"
+      ],
+      "shared_behavior": "Accepted result and compact event ACK metadata"
+    },
+    {
+      "id": "rem.sos.active_with_telemetry_field_tree",
+      "product": "REM",
+      "format": "json-msgpack-tree",
+      "path": "fixtures/rem/sos/active_with_telemetry_field_tree.json",
+      "crate_target": "r3akt-sos-wire",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/sos_fields.rs",
+        "crates/reticulum_mobile/src/lxmf_fields.rs",
+        "crates/reticulum_mobile/src/mission_sync.rs"
+      ],
+      "shared_behavior": "SOS command and regular LXMF telemetry field layout"
+    },
+    {
+      "id": "rem.sos.text_detection",
+      "product": "REM",
+      "format": "json",
+      "path": "fixtures/rem/sos/text_detection.json",
+      "crate_target": "r3akt-sos-wire",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/sos_fields.rs"
+      ],
+      "shared_behavior": "Legacy SOS text prefixes, cancel phrases, and coordinate extraction"
+    },
+    {
+      "id": "rem.mesh.announce_metadata",
+      "product": "REM",
+      "format": "json",
+      "path": "fixtures/rem/mesh/announce_metadata.json",
+      "crate_target": "r3akt-mesh-delivery",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/announce_metadata.rs"
+      ],
+      "shared_behavior": "Text and MsgPack announce metadata normalization"
+    },
+    {
+      "id": "rem.mesh.delivery_policy",
+      "product": "REM",
+      "format": "json",
+      "path": "fixtures/rem/mesh/delivery_policy.json",
+      "crate_target": "r3akt-mesh-delivery",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/delivery_policy.rs"
+      ],
+      "shared_behavior": "Peer route classification and direct-versus-propagation decisions"
+    },
+    {
+      "id": "rem.replication.checklist_payload_plan",
+      "product": "REM",
+      "format": "json",
+      "path": "fixtures/rem/replication/checklist_payload_plan.json",
+      "crate_target": "r3akt-replication-core",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/node.rs",
+        "crates/reticulum_mobile/src/mission_sync.rs"
+      ],
+      "shared_behavior": "Compact checklist replication payload planning"
+    },
+    {
+      "id": "rem.replication.target_decisions",
+      "product": "REM",
+      "format": "json",
+      "path": "fixtures/rem/replication/target_decisions.json",
+      "crate_target": "r3akt-replication-core",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/node.rs",
+        "crates/reticulum_mobile/src/delivery_policy.rs"
+      ],
+      "shared_behavior": "Mission, event, SOS, telemetry, and checklist participant replication target decisions"
+    },
+    {
+      "id": "rem.replication.eam_payloads",
+      "product": "REM",
+      "format": "json-msgpack-tree",
+      "path": "fixtures/rem/replication/eam_payloads.json",
+      "crate_target": "r3akt-replication-core",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/node.rs",
+        "crates/reticulum_mobile/src/mission_sync.rs"
+      ],
+      "shared_behavior": "Compact EAM upsert/delete payload planning"
+    },
+    {
+      "id": "rem.replication.event_mecp_payload",
+      "product": "REM",
+      "format": "json-msgpack-tree",
+      "path": "fixtures/rem/replication/event_mecp_payload.json",
+      "crate_target": "r3akt-replication-core",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/node.rs",
+        "crates/reticulum_mobile/src/runtime.rs"
+      ],
+      "shared_behavior": "Compact event/MECP payload planning and inbound expansion"
+    },
+    {
+      "id": "rem.replication.telemetry_upsert_payload",
+      "product": "REM",
+      "format": "json-msgpack-tree",
+      "path": "fixtures/rem/replication/telemetry_upsert_payload.json",
+      "crate_target": "r3akt-replication-core",
+      "source_repo": "/home/pgiuseppe/Documents/reticulum_mobile_emergency_management",
+      "source_files": [
+        "crates/reticulum_mobile/src/node.rs",
+        "crates/reticulum_mobile/src/runtime.rs",
+        "crates/reticulum_mobile/src/types.rs"
+      ],
+      "shared_behavior": "Compact telemetry upsert payload and required finite position fields"
+    },
+    {
+      "id": "rch.mission.commands_topic_create",
+      "product": "RCH",
+      "format": "msgpack-hex",
+      "path": "fixtures/rch/mission/commands_topic_create.msgpack.hex",
+      "crate_target": "r3akt-mission-wire",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-profile-rch/src/lib.rs"
+      ],
+      "shared_behavior": "RCH command envelope field 0x09 compatibility"
+    },
+    {
+      "id": "rch.protocol.envelope_heartbeat",
+      "product": "RCH",
+      "format": "json",
+      "path": "fixtures/rch/protocol/envelope_heartbeat.json",
+      "crate_target": "r3akt-protocol",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-protocol/src/lib.rs"
+      ],
+      "shared_behavior": "Generic RCH protocol envelope schema and stable dedupe contract"
+    },
+    {
+      "id": "rch.mission.results_variants",
+      "product": "RCH",
+      "format": "msgpack-hex",
+      "path": "fixtures/rch/mission/results_variants.msgpack.hex",
+      "crate_target": "r3akt-mission-wire",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-profile-rch/src/lib.rs"
+      ],
+      "shared_behavior": "RCH accepted/result/rejected field 0x0A variants"
+    },
+    {
+      "id": "rch.mission.event_mission_joined",
+      "product": "RCH",
+      "format": "msgpack-hex",
+      "path": "fixtures/rch/mission/event_mission_joined.msgpack.hex",
+      "crate_target": "r3akt-mission-wire",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-profile-rch/src/lib.rs"
+      ],
+      "shared_behavior": "RCH event envelope field 0x0D compatibility"
+    },
+    {
+      "id": "rch.mission.mecp_structured_event",
+      "product": "RCH",
+      "format": "json",
+      "path": "fixtures/rch/mission/mecp_structured_event.json",
+      "crate_target": "r3akt-mission-wire",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-profile-rch/src/lib.rs",
+        "crates/r3akt-rch-core/src/lib.rs"
+      ],
+      "shared_behavior": "MECP parser output used by RCH log-entry enrichment"
+    },
+    {
+      "id": "rch.situational.domain_records",
+      "product": "RCH",
+      "format": "json",
+      "path": "fixtures/rch/situational/domain_records.json",
+      "crate_target": "r3akt-situational-core",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-rch-core/src/lib.rs"
+      ],
+      "shared_behavior": "RCH-only situational records REM does not fully cover"
+    },
+    {
+      "id": "rch.situational.validators",
+      "product": "RCH",
+      "format": "json",
+      "path": "fixtures/rch/situational/validators.json",
+      "crate_target": "r3akt-situational-core",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-rch-core/src/lib.rs"
+      ],
+      "shared_behavior": "Marker, zone, mission, and checklist validation contracts"
+    },
+    {
+      "id": "rch.mesh.delivery_envelope",
+      "product": "RCH",
+      "format": "json",
+      "path": "fixtures/rch/mesh/delivery_envelope.json",
+      "crate_target": "r3akt-mesh-delivery",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-rch-core/src/lib.rs"
+      ],
+      "shared_behavior": "RCH delivery envelope validation contract"
+    },
+    {
+      "id": "rch.mesh.delivery_policy",
+      "product": "RCH",
+      "format": "json",
+      "path": "fixtures/rch/mesh/delivery_policy.json",
+      "crate_target": "r3akt-mesh-delivery",
+      "source_repo": "/home/pgiuseppe/Documents/Reticulum-Community-Hub",
+      "source_files": [
+        "crates/r3akt-rch-core/src/lib.rs"
+      ],
+      "shared_behavior": "RCH outbound direct-versus-propagated decision contract"
+    },
+    {
+      "id": "compatibility.matrix",
+      "product": "shared",
+      "format": "json",
+      "path": "fixtures/compatibility_matrix.json",
+      "crate_target": "workspace",
+      "source_repo": "/home/pgiuseppe/Documents/R3AKTClient",
+      "source_files": [
+        "docs/R3AKTClient/R3AKT_shared_rust_crates_transition_plan.md",
+        "PLANS.md"
+      ],
+      "shared_behavior": "P2 fixture coverage matrix and explicit excluded adapter behavior"
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "source": "RCH crates/r3akt-rch-core/src/lib.rs",
+  "marker": {
+    "valid": {
+      "name": "Marker Alpha",
+      "marker_type": "marker",
+      "symbol": "marker",
+      "lat": 45.0,
+      "lon": -63.0
+    },
+    "invalid": [
+      {
+        "name": "Unsupported marker type",
+        "marker_type": "not-in-registry",
+        "symbol": "marker",
+        "reason_contains": "Unsupported marker type"
+      },
+      {
+        "name": "Unsupported marker symbol",
+        "marker_type": "marker",
+        "symbol": "not-in-registry",
+        "reason_contains": "Unsupported marker symbol"
+      }
+    ],
+    "symbol_aliases": {
+      "pin": "marker",
+      "uav": "drone",
+      "medical": "medic"
+    }
+  },
+  "zone": {
+    "valid": {
+      "name": "Hot Zone",
+      "points": [
+        { "lat": 45.0, "lon": -63.0 },
+        { "lat": 45.1, "lon": -63.1 },
+        { "lat": 45.1, "lon": -63.0 }
+      ]
+    },
+    "constraints": {
+      "min_points": 3,
+      "max_points": 200,
+      "lat_min": -90.0,
+      "lat_max": 90.0,
+      "lon_min": -180.0,
+      "lon_max": 180.0,
+      "reject_self_intersection": true
+    },
+    "invalid": [
+      {
+        "name": "Too Small",
+        "reason_contains": "at least 3 points"
+      },
+      {
+        "name": "Bow Tie",
+        "points": [
+          { "lat": 0.0, "lon": 0.0 },
+          { "lat": 1.0, "lon": 1.0 },
+          { "lat": 0.0, "lon": 1.0 },
+          { "lat": 1.0, "lon": 0.0 }
+        ],
+        "reason_contains": "self-intersect"
+      }
+    ]
+  },
+  "mission": {
+    "priority_min": 0,
+    "priority_max": 100,
+    "parent_cycle_rejected_reason_code": "invalid_payload"
+  },
+  "checklist_csv": {
+    "sample": "Due,Task\n10,Task 1\n20,Task 2\n",
+    "default_due_offsets_minutes": [30, 60],
+    "quoted_cell_sample": "Inspect, north ridge"
+  }
+}

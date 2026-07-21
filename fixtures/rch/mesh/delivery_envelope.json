@@ -1,0 +1,35 @@
+{
+  "source": "RCH crates/r3akt-rch-core/src/lib.rs",
+  "payload": {
+    "Born": 1700000000000,
+    "Content-Type": "text/plain; schema=lxmf.chat.v1",
+    "Created-At": "2026-05-03T12:00:00Z",
+    "Message-ID": "018f053d7dec70008000000000000001",
+    "Priority": 3,
+    "Schema-Version": "1",
+    "Sender": "abcdef",
+    "TTL": 300,
+    "TopicID": "018f053d7dec70008000000000000002"
+  },
+  "expected": {
+    "message_id": "018f053d7dec70008000000000000001",
+    "sender": "abcdef",
+    "topic_id": "018f053d7dec70008000000000000002",
+    "priority": 3,
+    "ttl_seconds": 300
+  },
+  "rejections": [
+    {
+      "case": "expired",
+      "reason": "Message exceeded TTL"
+    },
+    {
+      "case": "future_clock_skew",
+      "reason": "Clock skew exceeds delivery budget"
+    },
+    {
+      "case": "missing_required_field",
+      "reason_prefix": "Missing delivery fields:"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "source": "RCH crates/r3akt-profile-rch/src/lib.rs",
+  "raw": "MECP/1/R03 T99 4pax 45.5017,-73.5673 #A1 15 @en @0930 ~EAGLE-1 north gate",
+  "decoded": {
+    "valid": true,
+    "severity": 1,
+    "severity_label": "Urgent",
+    "severity_status": "yellow",
+    "codes": ["R03", "T99"],
+    "category": "R",
+    "category_label": "Response",
+    "details": "4pax 45.5017,-73.5673 #A1 15 @en @0930 ~EAGLE-1 north gate",
+    "code_details": [
+      {
+        "code": "R03",
+        "category": "R",
+        "label": "ETA [minutes]",
+        "known": true
+      },
+      {
+        "code": "T99",
+        "category": "T",
+        "label": "T99",
+        "known": false
+      }
+    ],
+    "extras": {
+      "callsign": "EAGLE-1",
+      "eta_minutes": 15,
+      "language": "en",
+      "pax": 4,
+      "references": ["#A1"],
+      "coordinates": {
+        "latitude": 45.5017,
+        "longitude": -73.5673
+      },
+      "timestamp": "0930"
+    },
+    "warnings": ["Unknown MECP event code \"T99\"."]
+  },
+  "invalid_examples": [
+    {
+      "raw": "Bridge closed near rally point",
+      "valid": false,
+      "reason": "missing MECP prefix"
+    },
+    {
+      "raw": "MECP/2/",
+      "valid": false,
+      "warning": "MECP message does not contain an event code."
+    }
+  ]
+}

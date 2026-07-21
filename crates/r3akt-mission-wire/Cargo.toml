@@ -1,0 +1,23 @@
+[package]
+name = "r3akt-mission-wire"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+publish = false
+
+[lib]
+name = "r3akt_mission_wire"
+path = "src/lib.rs"
+
+[dependencies]
+hex = "0.4"
+r3akt-protocol = { path = "../r3akt-protocol" }
+rmp-serde = "1"
+rmpv = { version = "1", features = ["with-serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[dev-dependencies]
+uuid = "1"

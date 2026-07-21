@@ -1,0 +1,31 @@
+{
+  "source": "REM crates/reticulum_mobile/src/announce_metadata.rs",
+  "text_layout": {
+    "app_data": "R3AKT;EMergencyMessages;name=Legacy+Team",
+    "display_name": "Legacy Team",
+    "capability_tokens": ["r3akt", "emergencymessages"],
+    "supports_mission_traffic": true
+  },
+  "msgpack_layout": {
+    "decoded_tree": [
+      "Msgpack Team",
+      {
+        "caps": ["R3AKT", "EMergencyMessages", "Telemetry"]
+      }
+    ],
+    "display_name": "Msgpack Team",
+    "capability_tokens": ["r3akt", "emergencymessages", "telemetry"],
+    "supports_mission_traffic": true
+  },
+  "malformed_hex": {
+    "app_data": "fffe00",
+    "display_name": null,
+    "capability_tokens": [],
+    "supports_mission_traffic": false
+  },
+  "normalization": {
+    "max_display_name_chars": 64,
+    "control_chars_are_collapsed_to_space": true,
+    "capability_tokens_are_lowercase": true
+  }
+}

@@ -1,6 +1,7 @@
 # PLANS.md
 
-This file is the execution board for long-horizon agent work in this repository.
+This file is the execution board for long-horizon agent work in this
+repository.
 
 Status values:
 
@@ -9,231 +10,319 @@ Status values:
 - `blocked`
 - `done`
 
-Rule: only one milestone may be `in_progress` at a time unless the task explicitly authorizes parallel worktrees.
+Rule: only one milestone may be `in_progress` at a time unless the task
+explicitly authorizes parallel worktrees or agents.
 
 ---
 
-## P0 - Operating docs realignment
+## Pivot Note
+
+The earlier mobile-client milestone board is superseded as of 2026-06-29.
+
+This repository is now the Rust-only shared-crate transition home for R3AKT
+situational-awareness functions reused by REM and RCH. Do not extend the old
+TypeScript, Java, Vue, Capacitor, Android, or iOS application surfaces.
+
+Active plan:
+
+- `docs/R3AKTClient/R3AKT_shared_rust_crates_transition_plan.md`
+
+---
+
+## P0 - Shared-crates plan and Rust inventory
 Status: done
 
 Goal:
-Realign root operating docs with the repository state that actually exists on March 9, 2026.
+Create the improved transition plan for this repository after reading the RCH
+roadmap and analyzing the full first-party Rust surfaces of REM and RCH.
 
 Deliverables:
+- `docs/R3AKTClient/R3AKT_shared_rust_crates_transition_plan.md`
 - updated `AGENTS.md`
 - updated `PLANS.md`
+- updated `IMPLEMENT.md`
 - updated `DOCUMENTATION.md`
 
 Acceptance criteria:
-- root operating docs no longer describe the repo as pre-parity or pre-live-shell
-- source-of-truth ordering matches the real codegen and validation pipeline
-- current focus is moved to the next incomplete milestone
+- the plan makes this repository the neutral `r3akt-*` Rust crate host
+- the plan explicitly avoids modifying REM and RCH during initial extraction
+- the plan identifies reusable REM and RCH Rust code
+- the plan identifies product-specific REM and RCH code that must not move
+- the plan records that active source must not contain TypeScript or Java after
+  the Rust-only baseline milestone
 
 Validation:
-- `npm run check:client-operations`
-- manual review for consistency with repo docs and current repo behavior
+- `git diff --check`
+- `cargo metadata --no-deps --format-version 1`
 
 Notes:
-This milestone is documentation-only and does not change runtime behavior.
+This milestone is documentation-only and does not move or extract code.
 
 ---
 
-## P1 - Southbound command parity baseline
+## P1 - Rust-only repository baseline
 Status: done
 
 Goal:
-Maintain the validated 115-operation southbound allowlist as the parity baseline for mobile client execution.
+Turn this checkout into a Rust-only shared-crate workspace before extracting
+behavior.
 
 Deliverables:
-- `API/ReticulumCommunityHub-SouthboundCommands.json`
-- generated operation catalogs under `docs/R3AKTClient/generated`
-- coverage artifact proving Rust and TypeScript parity against the allowlist
+- remove or quarantine old mobile-client app surfaces
+- remove or quarantine TypeScript, Java, Kotlin, Swift, Vue, Capacitor, npm,
+  Playwright, Android, and iOS source
+- replace the old `reticulum_mobile` shell with a shared `r3akt-*` workspace
+  skeleton
+- add initial fixture and crate directories
+- keep historical API/docs only where useful for contract provenance
 
 Acceptance criteria:
-- allowlist contains 115 documented southbound operations
-- `docs/R3AKTClient/generated/client-operation-coverage.json` reports `expected_operation_count: 115`
-- coverage artifact reports `passed: true`
-- no HTTP-shaped public operation names leak into the public parity surface
+- active tracked source contains no forbidden app-language files
+- root Cargo workspace contains only shared Rust crates and tests
+- validation no longer depends on npm/mobile commands
+- next crate extraction can start without mobile-client layout ambiguity
 
 Validation:
-- `npm run check:client-operations`
+- `cargo fmt --all -- --check`
+- `cargo check --workspace --all-targets`
+- `cargo test --workspace`
+- `cargo metadata --no-deps --format-version 1`
+- tracked-language sweep for forbidden app source extensions
+
+Notes:
+Completed on 2026-06-29. The active workspace now contains only the initial
+`r3akt-*` Rust crate skeleton and fixture staging area; the previous
+mobile-client app, npm, Capacitor, Android/iOS, Playwright, TypeScript, Vue,
+Java, Kotlin, Swift, and `reticulum_mobile` surfaces were removed from tracked
+active source.
 
 Depends on:
 - P0
 
 ---
 
-## P2 - Rust/native/TypeScript parity baseline
+## P2 - Golden fixtures and compatibility matrix
 Status: done
 
 Goal:
-Keep Rust runtime, native bridge, and `packages/node-client` aligned to the current southbound parity baseline.
+Capture current REM and RCH wire behavior before moving logic.
 
 Deliverables:
-- Rust-side generated operation catalog and runtime dispatch support
-- native bridge exposure for the operation execution surface
-- typed TypeScript wrapper support for grouped feature execution
+- MsgPack fixtures for REM and RCH command/result/event/SOS/telemetry shapes
+- JSON fixtures for RCH compatibility where needed
+- fixture provenance manifest
+- compatibility matrix that defines stable behavior
 
 Acceptance criteria:
-- Rust runtime/catalog support covers the allowlisted operation set
-- native bridge exposes the parity surface without requiring raw UI-side packet work
-- `packages/node-client` exposes typed grouped execution APIs aligned to the allowlist
-- node-client build/tests pass
+- fixtures are decoded by local Rust tests
+- each fixture records the source repo and source file
+- no REM or RCH code is modified
 
 Validation:
-- `cargo check -p reticulum_mobile`
-- `npm run node-client:build`
-- `npm run test:node-client`
+- `cargo test --workspace fixtures`
+
+Notes:
+Completed on 2026-06-29. Fixture coverage is REM-first and includes compact
+command aliases, mission metadata, SOS field trees, announce metadata, route
+policy, and replication payload/target planning. RCH compatibility coverage
+includes protocol envelope contracts, command/result/event MessagePack bytes,
+MECP parsing, situational domain records, validators, delivery envelope, and
+delivery policy. `fixtures/compatibility_matrix.json` records the cross-product
+coverage and excluded adapter behavior.
 
 Depends on:
 - P1
 
 ---
 
-## P3 - Mobile live shell and primary feature-store wiring
+## P3 - Protocol and mission wire crates
 Status: done
 
 Goal:
-Keep the live mobile shell, feature stores, and primary routes aligned to the current wrapper/runtime baseline.
+Create `r3akt-protocol` and `r3akt-mission-wire` with tested REM/RCH
+compatibility.
 
 Deliverables:
-- live mobile shell route structure
-- primary feature stores for comms, missions, map, teams, assets, and checklists
-- buildable/typecheckable Vue integration over the typed wrapper
+- `crates/r3akt-protocol`
+- `crates/r3akt-mission-wire`
+- LXMF field constants
+- command alias table
+- command/result/event codecs
+- mission metadata parser
+- MECP parser
+- fixture tests
 
 Acceptance criteria:
-- existing live routes and primary stores remain present and wired
-- mobile build, typecheck, and tests pass
-- the app does not regress back to the old legacy-only shell model
+- REM compact commands and RCH command envelopes round trip
+- SOS fields are not misclassified as mission envelopes
+- REM and RCH field constants agree
 
 Validation:
-- `npm run mobile:build`
-- `npm --workspace apps/mobile run typecheck`
-- `npm run test:mobile`
+- `cargo test -p r3akt-protocol`
+- `cargo test -p r3akt-mission-wire`
+
+Notes:
+Completed on 2026-06-29. `r3akt-protocol` now provides shared envelope,
+payload, command, ACK, health, telemetry, and MessagePack primitives.
+`r3akt-mission-wire` now provides REM/RCH mission LXMF field constants, compact
+REM command/checklist aliases, RCH command/result/event MessagePack codecs,
+protocol-envelope bridge helpers, REM mission metadata parsing, and MECP
+decoding. Fixture-backed tests cover REM compact behavior, SOS
+non-misclassification, RCH command/result/event compatibility, and MECP parsing.
 
 Depends on:
 - P2
 
 ---
 
-## P4 - UI action parity backlog
-Status: in_progress
+## P4 - Situational core and SOS wire crates
+Status: done
 
 Goal:
-Close the gap between backend capability parity and first-class mobile UI actions.
+Extract shared situational-awareness records, validators, and pure SOS helpers.
 
 Deliverables:
-- core session/admin parity screens and actions
-- telemetry drill-down panels
-- file/image preview, download, share, and association flows
-- advanced mission, team, asset, assignment, checklist, and map editing actions
-- hub admin and moderation surfaces where explicitly allowed
+- `crates/r3akt-situational-core`
+- `crates/r3akt-sos-wire`
+- EAM, telemetry, checklist, mission, map, team, asset, assignment, and event
+  records
+- product-neutral validators and normalization helpers
+- SOS command/telemetry field codec and pure alert/status helpers
 
 Acceptance criteria:
-- items listed in `docs/R3AKTClient/UI_BACKEND_BACKLOG.md` are worked down in thin slices
-- newly surfaced UI actions use the existing typed wrapper instead of direct plugin calls
-- `PLANS.md` and `DOCUMENTATION.md` are updated after each completed UI slice
+- no REM JNI/UniFFI/native app dependencies
+- no RCH Axum/SQLite/server dependencies
+- fixture tests cover current REM and RCH shapes
 
 Validation:
-- `npm run node-client:build`
-- `npm run mobile:build`
-- `npm --workspace apps/mobile run typecheck`
-- `npm run test:mobile`
-- `npm run test:e2e`
+- `cargo test -p r3akt-situational-core`
+- `cargo test -p r3akt-sos-wire`
+
+Notes:
+Completed on 2026-06-29. `r3akt-situational-core` now contains
+product-neutral RCH-derived situational records, marker/zone validators,
+mission priority checks, EAM status validation, checklist normalization, and
+task status derivation. `r3akt-sos-wire` now contains REM-derived compact SOS
+LXMF field codecs, Telemeter-style telemetry parsing, text SOS detection,
+settings/status/body helpers, and alert/location projection helpers. Fixture
+tests cover current REM SOS shapes and RCH-only domain/validator behavior.
 
 Depends on:
 - P3
 
-Notes:
-- completed sub-slice: Slice A dashboard/settings session parity + telemetry drill-down
-- completed sub-slice: interaction-focused Playwright coverage for drawer navigation, dashboard parity panels, and chat send flow
-- merge-sync note: resolving the Playwright PR against `codex/r3aktmobile-parity` required keeping the interaction coverage while also standardizing invalid JSON handling through the shared payload parser across the remaining feature stores
-- transport support note: session/chat delivery now primes the hub link on announce, uses bounded link retries before raw transport fallback, and no longer fires an eager telemetry request during initial store wiring
-- rust-only live probe note: `cargo test -p reticulum_mobile --test live_rch_lxmf live_rch_lxmf_get_app_info_probe -- --ignored --exact --nocapture` still times out on `getAppInfo` against the configured live hub, so the session query path is not yet trustworthy
-- alternate-target note: retesting the same Rust-only probe against `8f455b1c01a6032f6bd740994686f49f` also timed out, and the runtime did not log that target as a reachable announcing hub during the probe window
-- routes without approved Stitch references remain blocked for net-new UI implementation and must not be guessed in code
-- next candidate sub-slice: files/images workflow completion only after explicit Stitch coverage review confirms existing chat/topics shells are sufficient or new Stitch screens are provided
-
 ---
 
-## P5 - Event/offline/persistence hardening
+## P5 - Mesh delivery and replication planning crates
 Status: done
 
 Goal:
-Raise confidence in event semantics, offline cache behavior, persistence boundaries, and runtime recovery.
+Share route and replication decisions without sharing product runtime loops.
 
 Deliverables:
-- domain-event vocabulary review and gap closure
-- offline cache and persistence verification for key feature families
-- runtime recovery and reconnection behavior checks
-- documentation of failure modes and expected recovery behavior
+- `crates/r3akt-mesh-delivery`
+- `crates/r3akt-replication-core`
+- announce metadata parser
+- peer route classification
+- direct/propagation policy
+- retry budget helpers
+- outbound payload builders
+- inbound parse/apply decisions
 
 Acceptance criteria:
-- event vocabulary is sufficient for mobile stores without ad-hoc payload guessing
-- offline-first expectations are validated for key stateful flows
-- recovery behavior is documented and verified for transient connectivity failures
+- APIs return decisions and payloads, not product side effects
+- REM continues owning phone runtime and sends
+- RCH continues owning reticulumd/RCH server adapters
 
 Validation:
-- `cargo check -p reticulum_mobile`
-- `npm run node-client:build`
-- `npm run mobile:build`
-- `npm run test:node-client`
-- `npm run test:mobile`
+- `cargo test -p r3akt-mesh-delivery`
+- `cargo test -p r3akt-replication-core`
+
+Notes:
+Completed on 2026-06-29. `r3akt-mesh-delivery` now contains REM-derived
+announce metadata parsing, capability detection, peer route classification,
+direct/propagation connectivity modeling, retry budget helpers, and
+RCH-compatible delivery envelope/policy validation. `r3akt-replication-core`
+now contains REM-first target planning for mission, event, SOS, telemetry, and
+checklist participant fan-out, compact mission/EAM/event/telemetry payload
+builders, metadata extraction, and inbound event apply classification. RCH-only
+delivery behavior remains represented through contracts and compatibility tests;
+adapters, reticulumd integration, storage, TAK, HTTP, and WebSocket work remain
+deferred.
 
 Depends on:
 - P4
 
-Notes:
-- completed user-directed app-side hardening slice: normalized `domainEvent` ingestion, shared persistence adapter, persisted command ledger/checkpoints, and restart-safe messaging/session/telemetry/mission/checklist store hydration
-- this slice intentionally left Rust-side application persistence out of scope; Rust still persists node identity/transport state only
-
 ---
 
-## P6 - Spec and documentation reconciliation
-Status: pending
+## P6 - Product adoption rehearsal
+Status: done
 
 Goal:
-Reconcile stale spec and documentation files that still describe the repo as a starter catalog or first-slice implementation.
+Prove REM and RCH can consume the shared crates without changing product
+contracts.
 
 Deliverables:
-- refreshed docs under `docs/R3AKTClient`
-- explicit documentation of which files are operative versus historical
-- removal of stale milestone wording that conflicts with the validated baseline
+- temporary REM branch using local path dependencies
+- temporary RCH branch using local path dependencies
+- adapter shims where needed
+- validation reports from both products
 
 Acceptance criteria:
-- no primary operating doc describes the repo as being before transport, wrapper, or live-shell parity
-- historical/starter references are clearly labeled as such
-- execution docs and product docs agree on the current state and next work
+- REM mobile/native behavior remains product-owned
+- RCH REST/WebSocket/SQLite/TAK behavior remains product-owned
+- duplicated logic is reduced only after parity tests pass
 
 Validation:
-- manual doc review
-- `npm run check:client-operations` when parity claims are updated
+- selected REM Rust/mobile validations for changed adapter layers
+- RCH `cargo fmt --all -- --check`
+- RCH `cargo clippy --workspace --all-targets -- -D warnings`
+- RCH `cargo test --workspace`
+
+Notes:
+Completed on 2026-06-29. REM adoption was rehearsed first in
+`/home/pgiuseppe/Documents/rem-r3akt-shared-adoption`, using local path
+dependencies on `r3akt-mission-wire` and `r3akt-mesh-delivery`; REM's changed
+adapter layer passed formatting, check, focused mission/announce/SOS tests, and
+the full `reticulum_mobile` library test suite. RCH adoption was rehearsed
+after REM was green in
+`/home/pgiuseppe/Documents/rch-r3akt-shared-adoption`, using a local path
+dependency on `r3akt-mesh-delivery`; RCH formatting, focused core tests, strict
+workspace clippy, and full workspace tests passed. Product runtime ownership
+remained in REM and RCH.
 
 Depends on:
 - P5
 
 ---
 
-## P7 - Release readiness and device validation
-Status: pending
+## P7 - Stabilization and versioning
+Status: done
 
 Goal:
-Prepare the Android-first client for reliable release use with device-level validation and tightened delivery gates.
+Make the shared crates safe for ongoing REM and RCH consumption.
 
 Deliverables:
-- Android device validation for key flows
-- release-signoff checklist and documentation
-- CI or automation tightening where needed for sustained parity confidence
-- final validation record for selected release scope
+- crate versioning policy
+- compatibility fixtures required in CI
+- changelog rules for wire/domain changes
+- adoption guide for REM
+- adoption guide for RCH
 
 Acceptance criteria:
-- Android-first critical flows are validated on-device
-- validation commands pass consistently
-- release documentation reflects actual behavior and known limits
+- REM and RCH can pin a git revision or tag
+- breaking changes are visible before either product adopts them
+- duplicate parsers and delivery rules can be retired in product repos
 
 Validation:
-- all relevant repo validation commands
-- device-specific checks added during hardening
+- full workspace tests in this repository
+- product adoption branch validations
+
+Notes:
+Completed on 2026-06-29. The workspace now has a lockstep versioning and
+compatibility policy, explicit fixture compatibility CI, changelog rules, and
+REM/RCH adoption guides. Consumers can rehearse with local path dependencies
+and later pin `r3akt-shared-vMAJOR.MINOR.PATCH` tags. REM remains the first
+adoption gate; RCH evidence follows only after REM is green.
 
 Depends on:
 - P6
@@ -241,9 +330,9 @@ Depends on:
 ---
 
 ## Current focus
-Current milestone: P4
+Current milestone: complete
 Owner: Codex / agent
-Last updated: 2026-03-10
+Last updated: 2026-06-29
 
 ## Rules for updating this file
 
@@ -258,4 +347,4 @@ When completing a milestone:
 
 When blocked:
 - set milestone to `blocked`
-- add blocker details and smallest next action to `DOCUMENTATION.md`
+- record the exact blocker and smallest next action in `DOCUMENTATION.md`

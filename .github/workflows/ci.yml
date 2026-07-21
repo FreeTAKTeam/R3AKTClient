@@ -12,49 +12,48 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  validation-gates:
-    name: Validation Gates
+  rust-validation:
+    name: Rust Validation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Checkout LXMF-rs
-        uses: actions/checkout@v4
-        with:
-          repository: FreeTAKTeam/LXMF-rs
-          ref: 0052218f1247c68f8c925988299d33d0678d81b4
-          path: LXMF-rs
-
-      - name: Link LXMF-rs sibling path
-        run: ln -sfn "$GITHUB_WORKSPACE/LXMF-rs" "$GITHUB_WORKSPACE/../LXMF-rs"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: package-lock.json
-
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Setup Rust 1.85 MSRV
+        run: rustup toolchain install 1.85 --profile minimal
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ci-validation-gates
+          shared-key: rust-shared-crates
 
-      - name: npm ci
-        run: npm ci
+      - name: Check forbidden app-language source
+        run: |
+          forbidden="$(git ls-files '*.ts' '*.tsx' '*.vue' '*.java' '*.kt' '*.swift')"
+          if [ -n "$forbidden" ]; then
+            printf '%s\n' "$forbidden"
+            exit 1
+          fi
 
-      - name: cargo check -p reticulum_mobile
-        run: cargo check -p reticulum_mobile
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
 
-      - name: npm run node-client:build
-        run: npm run node-client:build
+      - name: cargo check
+        run: cargo check --workspace --all-targets
 
-      - name: npm run mobile:build
-        run: npm run mobile:build
+      - name: cargo check MSRV
+        run: cargo +1.85 check --workspace --all-targets
 
-      - name: npm run check:client-operations
-        run: npm run check:client-operations
+      - name: cargo test fixtures
+        run: cargo test --workspace fixtures
+
+      - name: cargo test
+        run: cargo test --workspace
+
+      - name: cargo metadata
+        run: cargo metadata --no-deps --format-version 1

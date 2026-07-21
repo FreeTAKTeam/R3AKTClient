@@ -1,0 +1,29 @@
+{
+  "source": "RCH crates/r3akt-protocol/src/lib.rs",
+  "schema_version": 1,
+  "source": "alpha",
+  "destination": {
+    "Topic": "health"
+  },
+  "topic": "health",
+  "ttl_seconds": 300,
+  "dedupe_key": "alpha:heartbeat:7",
+  "payload": {
+    "Heartbeat": {
+      "status": "Nominal",
+      "sequence": 7
+    }
+  },
+  "expected": {
+    "stable_dedupe_key": "alpha:heartbeat:7",
+    "correlation_id": null,
+    "validate_basic": "ok"
+  },
+  "rejections": [
+    "unsupported_schema_version",
+    "missing_source",
+    "missing_topic",
+    "ttl_zero",
+    "expired"
+  ]
+}

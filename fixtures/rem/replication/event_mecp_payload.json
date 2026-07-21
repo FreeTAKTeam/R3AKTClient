@@ -1,0 +1,36 @@
+{
+  "source": "REM crates/reticulum_mobile/src/node.rs",
+  "compact_send": {
+    "input_content": "MECP/2/P01",
+    "body": "P01",
+    "field_tree": {
+      "9": [
+        {
+          "t": "E1",
+          "a": {
+            "u": "evt-1",
+            "m": "mission-1",
+            "ci": "Field Agent",
+            "d": "P01"
+          },
+          "to": ["mission-1"]
+        }
+      ]
+    }
+  },
+  "inbound_parse": {
+    "compact_body": "P01",
+    "expanded_content": "MECP/2/P01",
+    "verbose_body": "MECP/2/P01 legacy",
+    "verbose_content": "MECP/2/P01 legacy"
+  },
+  "default_mission": {
+    "compact_value": 0,
+    "expanded_uid": "r3akt-default-mission"
+  },
+  "expected_metadata": {
+    "command_type": "mission.registry.log_entry.upsert",
+    "event_uid": "evt-1",
+    "mission_uid": "mission-1"
+  }
+}

@@ -1,61 +1,56 @@
-# reticulum_mobile_emergency_management
+# R3AKTClient Shared Rust Crates
 
-Android-first, offline-first client for Reticulum Community Hub (RCH).
+This repository is being transitioned into the Rust-only shared-crate home for
+R3AKT situational-awareness functionality reused by REM and RCH.
 
-This monorepo runs a local Rust Reticulum + LXMF implementation on the device
-and exposes client functionality through a Capacitor native bridge, a typed
-TypeScript wrapper, and a Vue mobile app. The product target is a full mobile
-client for the RCH client-safe feature surface, including R3AKT mission and
-checklist workflows.
+The shared crates are built on top of LXMF-rs. They are intended to hold
+product-neutral wire contracts, codecs, domain records, validation rules,
+delivery decisions, replication planning helpers, and compatibility fixtures.
 
-This repository is not a replacement for the Python RCH server. It is the
-mobile client that interoperates with RCH and peer nodes over Reticulum/LXMF.
+This repository is not the REM mobile app, not the RCH server, not a REST
+server, not a TAK service, and not a TypeScript or Java application.
 
-## Current Implementation State
+## Active Plan
 
-The codebase already contains:
-- a local Rust node/runtime scaffold in `crates/reticulum_mobile`
-- generated/native binding delivery paths for Android and iOS
-- a Capacitor plugin bridge
-- a Vue mobile shell with baseline node, peer, status, and replicated local UX
+- `docs/R3AKTClient/R3AKT_shared_rust_crates_transition_plan.md`
+- `PLANS.md`
+- `DOCUMENTATION.md`
+- `docs/R3AKTClient/VERSIONING_AND_COMPATIBILITY.md`
+- `docs/R3AKTClient/REM_adoption_guide.md`
+- `docs/R3AKTClient/RCH_adoption_guide.md`
+- `CHANGELOG.md`
 
-The target state extends that scaffold into full `client`-scoped RCH parity.
+Older mobile-client app files were removed from active tracked source during the
+Rust-only baseline milestone. Historical docs and API references remain only as
+contract provenance for the shared crates.
 
-## Layout
-- `API`: canonical message catalog and imported compatibility contracts
-- `apps/mobile`: Vue + Capacitor application shell
-- `packages/node-client`: TypeScript wrapper around the Capacitor plugin surface
-- `crates/reticulum_mobile`: Rust UniFFI wrapper crate
-- `tools/codegen`: scripts for UniFFI code generation
-- `docs/R3AKTClient`: architecture, scope, and wire-contract references for the RCH client work
+## Initial Crate Direction
 
-## Consolidated LXMF-rs Dependency Model
+Initial shared crates:
 
-`crates/reticulum_mobile` now defaults to deterministic, pinned git dependencies
-from the consolidated `LXMF-rs` repository (no sibling checkout required).
+- `r3akt-protocol`
+- `r3akt-mission-wire`
+- `r3akt-situational-core`
+- `r3akt-sos-wire`
+- `r3akt-mesh-delivery`
+- `r3akt-replication-core`
 
-Pinned source:
+Optional later crates:
 
-- Repository: `https://github.com/FreeTAKTeam/LXMF-rs`
-- Commit: `87c71c94d1e76cb1acf33642dc6e02f36142c2e8`
-- Crates used: `reticulum`, `lxmf`, and `lxmf-sdk` (`std` feature only)
+- `r3akt-runtime-core`
+- `r3akt-lxmf-adapter`
 
-### Optional local override (opt-in)
+## Validation
 
-If you are actively developing `LXMF-rs` and want to test local changes, use the
-included override config from repo root:
+Rust milestones use:
 
-- `cargo --config .cargo/config.local.toml.example check -p reticulum_mobile`
+- `cargo fmt --all -- --check`
+- `cargo check --workspace --all-targets`
+- `cargo test --workspace fixtures`
+- `cargo test --workspace`
+- `cargo metadata --no-deps --format-version 1`
 
-This keeps local path usage explicit and opt-in.
+Docs-only planning uses:
 
-## Validation Commands
-
-From repo root:
-
-1. CI-friendly clean-checkout validation:
-   - `npm run validate:mobile:ci`
-2. Individual gates:
-   - `cargo check -p reticulum_mobile --locked`
-   - `npm run node-client:build`
-   - `npm run mobile:build`
+- `git diff --check`
+- `cargo metadata --no-deps --format-version 1` when workspace claims are made

@@ -1,0 +1,54 @@
+{
+  "source": "REM crates/reticulum_mobile/src/node.rs",
+  "compact_payloads": [
+    {
+      "command_type": "checklist.delete",
+      "wire_code": "C4",
+      "args": {
+        "cl": "chk-001"
+      },
+      "expected_metadata": {
+        "command_type": "checklist.delete",
+        "checklist_uid": "chk-001"
+      },
+      "local_only": false
+    },
+    {
+      "command_type": "checklist.task.cell.set",
+      "wire_code": "CA",
+      "args": {
+        "cl": "chk-001",
+        "tsk": "task-1",
+        "col": "col-notes",
+        "v": "done",
+        "ub": "peer-a"
+      },
+      "expected_metadata": {
+        "command_type": "checklist.task.cell.set",
+        "checklist_uid": "chk-001",
+        "task_uid": "task-1",
+        "column_uid": "col-notes"
+      }
+    },
+    {
+      "command_type": "checklist.task.status.set",
+      "wire_code": "C6",
+      "args": {
+        "cl": "chk-1779802362961",
+        "tsk": "template-task-001",
+        "us": "COMPLETE"
+      },
+      "expected_metadata": {
+        "command_type": "checklist.task.status.set",
+        "checklist_uid": "chk-1779802362961"
+      }
+    }
+  ],
+  "verbose_tokens_excluded": [
+    "checklist_uid",
+    "task_uid",
+    "column_uid",
+    "checklist.task.cell.set",
+    "checklist.task.status.set"
+  ]
+}

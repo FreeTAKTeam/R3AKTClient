@@ -1,113 +1,129 @@
 # AGENTS.md
 
-This repository is operated with Codex and other coding agents. Follow these rules exactly.
+This repository is operated with Codex and other coding agents. Follow these
+rules exactly.
 
 ## Mission
 
-Implement and extend the R3AKT mobile client inside the existing monorepo.
+Host the Rust crates that are reusable by REM and RCH for R3AKT situational
+awareness.
 
 This repository is:
 
-- an Android-first, offline-first mobile client
-- a local on-device Reticulum + LXMF runtime
-- a Capacitor native bridge
-- a typed TypeScript wrapper
-- a Vue mobile application
+- a Rust-only shared-crate workspace
+- the transition area where shared REM/RCH code is extracted and validated
+- responsible for situational-awareness functions built on top of LXMF-rs
+- the source for product-neutral `r3akt-*` crates consumed later by REM and RCH
 
 This repository is not:
 
-- a replacement for the Python RCH server
+- the REM mobile app
+- the RCH server
 - a REST server implementation
-- a place to redesign the repo structure
+- a TAK service implementation
+- a TypeScript, Java, Vue, Capacitor, Android, or iOS application
+- a replacement for LXMF-rs Reticulum/LXMF internals
 
-## Current baseline
+## Current Baseline
 
-As of March 9, 2026, the repository already has:
+As of June 29, 2026, this checkout has completed the Rust-only baseline. The
+older mobile-client monorepo surface has been removed from active tracked
+source. Do not reintroduce or extend TypeScript, Java, Vue, Capacitor,
+Android/iOS, npm, or Playwright application surfaces.
 
-- a validated 115-operation southbound command allowlist and coverage artifact
-- generated Rust and TypeScript operation catalogs aligned to that allowlist
-- green validation for Rust, node-client, and mobile build/test/typecheck flows
-- a live mobile shell with primary feature routes and stores already present
+The active work is to extract shared Rust behavior fixture-first following:
 
-Do not plan or describe this repository as if it is still at the initial starter-slice stage.
+- `docs/R3AKTClient/R3AKT_shared_rust_crates_transition_plan.md`
 
-## Source of truth
+## Source of Truth
 
 Use these files in this priority order:
 
-1. `docs/R3AKTClient/R3AKT_client_CODEX_Implementation_plan.md`
-2. `docs/R3AKTClient/APIANnalysis_clientImplementationSet.md`
-3. `API/ReticulumCommunityHub-SouthboundCommands.json`
-4. `docs/R3AKTClient/UI_BACKEND_BACKLOG.md`
-5. `docs/R3AKTClient/generated/client-operation-coverage.json`
-6. `API/ReticulumCommunityHub-Messages.yaml` as a historical starter reference unless a task explicitly refreshes it
-7. `docs/R3AKTClient/ImplementationGapAnalysis.md`
-8. `README.md`
+1. `docs/R3AKTClient/R3AKT_shared_rust_crates_transition_plan.md`
+2. `PLANS.md`
+3. `DOCUMENTATION.md`
+4. `/home/pgiuseppe/Documents/Reticulum-Community-Hub/docs/r3akt_roadmap.md`
+5. current first-party Rust code in `/home/pgiuseppe/Documents/Reticulum-Community-Hub`
+6. current first-party Rust code in `/home/pgiuseppe/Documents/reticulum_mobile_emergency_management`
+7. current LXMF-rs crate APIs
+8. older files under `docs/R3AKTClient` only as historical references
 
 If there is ambiguity, obey the higher item in this list.
 
-## Non-negotiable architecture
+## Non-Negotiable Architecture
 
-- Preserve the current monorepo layout.
-- The phone must continue to run Reticulum locally.
-- Southbound feature delivery must use Reticulum/LXMF messages.
-- Northbound delivery to the app must continue through:
-  - native plugin methods
-  - pushed native events
-  - `packages/node-client`
-  - Vue stores/views/components
-- Do not add a feature REST server crate.
-- Treat the OAS and related specs as message-contract references, not endpoint implementation targets.
+- Keep this repository Rust-only for active source.
+- Shared crates must use the `r3akt-*` namespace.
+- Shared crates must be product-neutral.
+- Shared crates may depend on LXMF-rs where appropriate.
+- Shared crates must not recreate Reticulum or LXMF internals.
+- REM and RCH are not modified during planning or extraction until an adoption
+  milestone explicitly says to test local path dependencies.
+- APIs should return typed decisions, payloads, and validation results rather
+  than performing product-specific side effects.
 
-## Scope rules
+Do not add:
 
-Implement only the allowed mobile client surface defined by the current allowlist sources.
+- TypeScript, Java, Kotlin, Swift, Vue, Capacitor, npm, Playwright, or mobile UI
+  source
+- REST, WebSocket, Axum server, TAK service, Tauri, packaging, or Python
+  migration code
+- Android/RNode BLE, JNI, UniFFI, native bridge, or app lifecycle code
+
+## Scope Rules
 
 Allowed:
 
-- operations classified as `client`
-- the explicitly widened `Hub Admin and Legacy Command Parity` group already present in the implementation set and southbound command catalog
+- situational-awareness wire contracts
+- mission command/result/event codecs over LXMF fields
+- MECP parsing
+- SOS wire fields and pure SOS status/alert helpers
+- EAM, telemetry, checklist, mission, map, team, asset, assignment, and event
+  records where shared by REM and RCH
+- product-neutral validation and normalization rules
+- peer route classification and direct/propagation delivery policy
+- replication planning helpers that do not perform sends
+- golden fixtures and compatibility tests
 
-Do not implement:
+Not allowed unless explicitly widened:
 
-- `server-only` operations
-- `unknown` operations
-- speculative features outside the current milestone
+- server-only hub admin/config/moderation features
+- RCH northbound route implementations
+- REM native/mobile runtime behavior
+- TAK-specific behavior
+- UI or app-shell behavior
 
-unless the task explicitly widens scope.
+## Repository Boundaries
 
-## Repository boundaries
+Preferred active structure:
 
-Keep changes in the existing structure:
+- `crates/r3akt-*`
+- `fixtures/`
+- `docs/R3AKTClient`
+- `API` only when needed as historical contract input
+
+Historical mobile-client directories must not be extended:
 
 - `apps/mobile`
 - `packages/node-client`
-- `crates/reticulum_mobile`
-- `tools/codegen`
-- `docs/R3AKTClient`
-- `API`
+- mobile Android/iOS directories
+- npm and Playwright tooling
 
-Do not create a parallel client package if `packages/node-client` can be extended.
-Do not move the project to a different UI stack.
-Do not introduce architectural churn without a milestone that explicitly requires it.
+## Delivery Style
 
-## Delivery style
+Prefer thin Rust crate slices.
 
-Prefer thin vertical slices.
+A valid slice normally includes:
 
-A valid slice normally includes, where applicable:
-
-1. message contract
-2. Rust runtime support
-3. native bridge exposure
-4. TypeScript wrapper support
-5. Vue integration
-6. verification
-7. documentation updates
+1. source inventory and fixture provenance
+2. product-neutral crate API
+3. compatibility tests against REM and RCH fixture behavior
+4. Rust validation
+5. documentation updates
 
 Make the smallest correct change set that completes the current milestone.
 
-## Required process for every non-trivial task
+## Required Process for Every Non-Trivial Task
 
 Before editing:
 
@@ -115,7 +131,9 @@ Before editing:
 2. Read `PLANS.md`
 3. Read `IMPLEMENT.md`
 4. Read the current section of `DOCUMENTATION.md`
-5. Read the relevant spec files for the assigned milestone
+5. Read `docs/R3AKTClient/R3AKT_shared_rust_crates_transition_plan.md`
+6. Read the relevant REM, RCH, or LXMF-rs Rust files for the assigned
+   milestone
 
 During work:
 
@@ -131,78 +149,82 @@ Before stopping:
 3. Record validation results
 4. Record open issues and next recommended step
 
-## Validation policy
+## Validation Policy
 
-At minimum, use the commands relevant to the current slice.
+At minimum, use the commands relevant to the current Rust slice.
 
 Primary validation commands from repo root:
 
-- `npm run check:client-operations`
-- `cargo check -p reticulum_mobile`
-- `npm run node-client:build`
-- `npm run mobile:build`
+- `cargo fmt --all -- --check`
+- `cargo check --workspace --all-targets`
+- `cargo test --workspace`
+- `cargo metadata --no-deps --format-version 1`
 
-Run `npm run check:client-operations` whenever a task changes or makes claims about:
+For docs-only planning:
 
-- `API/ReticulumCommunityHub-SouthboundCommands.json`
-- generated operation catalogs or coverage artifacts
-- bridge/wrapper operation parity
-- milestone status tied to command coverage parity
+- `git diff --check`
+- `cargo metadata --no-deps --format-version 1` if Cargo files or workspace
+  assumptions are discussed
 
-When TS/Vue surface changes are involved, also run if available:
-
-- `npm --workspace apps/mobile run typecheck`
-- `npm run test:node-client`
-- `npm run test:mobile`
+For Rust-only baseline work, also run a tracked-language sweep proving active
+source does not contain forbidden TypeScript, Java, Kotlin, Swift, Vue, or
+Capacitor app files.
 
 Do not claim completion if required validation has not passed.
 
-## Documentation policy
+## Documentation Policy
 
 For every milestone-sized task, update:
 
 - `PLANS.md`
 - `DOCUMENTATION.md`
 
-If you changed behavior, contracts, sequencing, or parity assumptions, update the relevant file under `docs/R3AKTClient` too.
+If behavior, contracts, sequencing, or parity assumptions change, update:
 
-## Parallel work policy
+- `docs/R3AKTClient/R3AKT_shared_rust_crates_transition_plan.md`
+
+## Parallel Work Policy
 
 When using worktrees or parallel agents:
 
-- split by milestone or layer
-- avoid two agents editing the same layer of the same slice
+- split by crate or layer
+- avoid two agents editing the same crate
 - merge only after validation passes in each branch
 
 Good split examples:
 
-- Rust contract/runtime
-- Capacitor bridge + TS wrapper
-- Vue UI/store
-- docs and catalog maintenance
+- mission wire and fixtures
+- situational core records and validators
+- mesh delivery policy
+- docs and compatibility matrix
 
 Bad split examples:
 
-- two agents both changing the same Rust runtime files
-- two agents both editing the same Pinia store or message schema section
+- two agents changing the same codec crate
+- one agent changing fixtures while another changes the same fixture tests
+- product adapter changes before shared crate behavior is validated
 
-## Change quality rules
+## Change Quality Rules
 
-- Prefer explicit types over implicit behavior
-- Keep adapter boundaries clean
-- Avoid dead code and placeholder abstractions
-- Avoid adding dependencies unless justified by the current milestone
-- Preserve Android-first operability
-- Keep iOS support compatible where practical, but do not let iOS concerns block Android delivery unless required by the milestone
+- Prefer explicit types over implicit behavior.
+- Keep adapter boundaries clean.
+- Avoid dead code and placeholder abstractions.
+- Avoid adding dependencies unless justified by the current milestone.
+- Preserve product neutrality in shared crates.
+- Do not move product-specific code into shared crates.
+- Keep LXMF-rs as the Reticulum/LXMF implementation source.
 
-## Stop conditions
+## Stop Conditions
 
 Stop and document if any of these are true:
 
 - the milestone is complete and validated
 - the current task would require widening scope
-- the spec is contradictory and cannot be resolved from the source-of-truth order
-- a required dependency or sibling checkout is missing
-- validation exposes unrelated pre-existing failures that block trustworthy completion
+- the spec is contradictory and cannot be resolved from the source-of-truth
+  order
+- a required sibling checkout is missing
+- validation exposes unrelated pre-existing failures that block trustworthy
+  completion
 
-When stopping, write the exact blocker and the smallest next step into `DOCUMENTATION.md`.
+When stopping, write the exact blocker and the smallest next step into
+`DOCUMENTATION.md`.

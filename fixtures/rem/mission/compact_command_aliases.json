@@ -1,0 +1,42 @@
+{
+  "source": "REM crates/reticulum_mobile/src/mission_commands.rs",
+  "field_ids": {
+    "commands": 9,
+    "results": 10,
+    "event": 13
+  },
+  "aliases": [
+    ["mission.registry.log_entry.upsert", "E1"],
+    ["mission.registry.log_entry.upserted", "E2"],
+    ["mission.registry.eam.upsert", "M1"],
+    ["mission.registry.eam.delete", "M2"],
+    ["mission.registry.eam.upserted", "M3"],
+    ["mission.registry.eam.list", "M4"],
+    ["mission.registry.eam.get", "M5"],
+    ["mission.registry.eam.latest", "M6"],
+    ["mission.registry.eam.team.summary", "M7"],
+    ["mission.registry.eam.listed", "M8"],
+    ["mission.registry.eam.retrieved", "M9"],
+    ["mission.registry.eam.latest_retrieved", "MA"],
+    ["mission.registry.eam.deleted", "MB"],
+    ["mission.registry.eam.team_summary.retrieved", "MC"],
+    ["mission.registry.team.list", "H1"],
+    ["mission.registry.team.upsert", "H2"],
+    ["mission.registry.team_member.list", "H3"],
+    ["mission.registry.team_member.upsert", "H4"],
+    ["mission.registry.team_member.client.link", "H5"],
+    ["mission.registry.telemetry.upsert", "T1"],
+    ["sos.status", "S1"],
+    ["checklist.create.online", "C1"],
+    ["checklist.upload", "C2"],
+    ["checklist.update", "C3"],
+    ["checklist.delete", "C4"],
+    ["checklist.join", "C5"],
+    ["checklist.task.status.set", "C6"],
+    ["checklist.task.row.add", "C7"],
+    ["checklist.task.row.delete", "C8"],
+    ["checklist.task.row.style.set", "C9"],
+    ["checklist.task.cell.set", "CA"]
+  ],
+  "unknown_command_policy": "preserve_original_string"
+}

@@ -1,0 +1,22 @@
+{
+  "source": "REM crates/reticulum_mobile/src/sos_fields.rs",
+  "active_prefixes": [
+    "SOS! I need help",
+    "urgence besoin aide",
+    "Emergency at 45.1,-63.2"
+  ],
+  "cancel_messages": [
+    "SOS Cancelled - I am safe.",
+    "SOS ended. I am safe at base."
+  ],
+  "non_sos_messages": [
+    "normal chat"
+  ],
+  "coordinate_examples": [
+    {
+      "body": "Emergency at 45.1,-63.2",
+      "lat": 45.1,
+      "lon": -63.2
+    }
+  ]
+}
