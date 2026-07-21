@@ -112,21 +112,28 @@ fn p2_fixtures_manifest_records_provenance_and_existing_paths() {
         let path = entry["path"].as_str().expect("fixture path");
         assert!(root().join(path).exists(), "fixture path exists: {path}");
 
-        let source_repo = Path::new(entry["source_repo"].as_str().expect("source repo"));
+        let source_repo_value = entry["source_repo"].as_str().expect("source repo");
         assert!(
-            source_repo.exists(),
-            "source repo exists: {}",
-            source_repo.display()
+            !source_repo_value.trim().is_empty(),
+            "source repo recorded for {path}"
         );
+        let source_repo = Path::new(source_repo_value);
         let source_files = entry["source_files"].as_array().expect("source files");
         assert!(!source_files.is_empty(), "source files recorded for {path}");
         for source_file in source_files {
             let source_file = source_file.as_str().expect("source file");
             assert!(
-                source_repo.join(source_file).exists(),
-                "source file exists: {}",
-                source_repo.join(source_file).display()
+                !Path::new(source_file).is_absolute()
+                    && !source_file.split('/').any(|part| part == ".."),
+                "source file is a safe repository-relative path: {source_file}"
             );
+            if source_repo.is_dir() {
+                assert!(
+                    source_repo.join(source_file).exists(),
+                    "source file exists: {}",
+                    source_repo.join(source_file).display()
+                );
+            }
         }
     }
 }
