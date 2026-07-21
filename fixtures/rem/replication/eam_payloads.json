@@ -1,0 +1,40 @@
+{
+  "source": "REM crates/reticulum_mobile/src/node.rs",
+  "upsert": {
+    "body_pattern": "E|{callsign}|{six_status_codes}",
+    "sample_body": "E|RESCUE-1|GGGGGG",
+    "field_tree": {
+      "9": [
+        {
+          "i": "m",
+          "t": "M1"
+        }
+      ]
+    },
+    "status_codes": {
+      "GREEN": "G",
+      "YELLOW": "Y",
+      "RED": "R",
+      "UNKNOWN": "U"
+    }
+  },
+  "delete": {
+    "body": "ED",
+    "field_tree": {
+      "9": [
+        {
+          "i": "md:RESCUE-1:token-1",
+          "t": "M2",
+          "a": {
+            "cs": "RESCUE-1",
+            "d": true
+          }
+        }
+      ]
+    }
+  },
+  "expected_metadata": {
+    "upsert_command_type": "mission.registry.eam.upsert",
+    "delete_command_type": "mission.registry.eam.delete"
+  }
+}

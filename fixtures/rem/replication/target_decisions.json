@@ -1,0 +1,87 @@
+{
+  "source": "REM crates/reticulum_mobile/src/node.rs",
+  "target_shape": {
+    "app_destination_hex": "32-lowercase-hex",
+    "send_mode": ["auto", "propagation_only"]
+  },
+  "capability_requirements": {
+    "mission": ["r3akt", "emergencymessages"],
+    "event": ["r3akt", "emergencymessages"],
+    "sos": ["r3akt", "emergencymessages"],
+    "telemetry": ["telemetry"]
+  },
+  "cases": [
+    {
+      "name": "mission_skips_self_and_peer_without_capabilities",
+      "self_destination_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "peers": [
+        {
+          "destination_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "capabilities": ["r3akt", "emergencymessages"],
+          "current": true
+        },
+        {
+          "destination_hex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "capabilities": ["r3akt"],
+          "current": true
+        },
+        {
+          "destination_hex": "cccccccccccccccccccccccccccccccc",
+          "capabilities": ["r3akt", "emergencymessages"],
+          "current": true
+        }
+      ],
+      "expected_targets": [
+        {
+          "app_destination_hex": "cccccccccccccccccccccccccccccccc",
+          "send_mode": "auto"
+        }
+      ]
+    },
+    {
+      "name": "saved_lxmf_profile_without_current_peer_uses_propagation",
+      "has_active_relay": true,
+      "saved_peers": [
+        {
+          "destination_hex": "dddddddddddddddddddddddddddddddd",
+          "lxmf_destination_hex": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          "capabilities": ["r3akt", "emergencymessages"]
+        }
+      ],
+      "expected_targets": [
+        {
+          "app_destination_hex": "dddddddddddddddddddddddddddddddd",
+          "send_mode": "propagation_only"
+        }
+      ]
+    },
+    {
+      "name": "telemetry_requires_telemetry_capability",
+      "peers": [
+        {
+          "destination_hex": "11111111111111111111111111111111",
+          "capabilities": ["r3akt", "emergencymessages"]
+        },
+        {
+          "destination_hex": "22222222222222222222222222222222",
+          "capabilities": ["telemetry"]
+        }
+      ],
+      "expected_targets": [
+        {
+          "app_destination_hex": "22222222222222222222222222222222",
+          "send_mode": "auto"
+        }
+      ]
+    },
+    {
+      "name": "checklist_participants_use_propagation_for_current_unsaved_source_when_relay_exists",
+      "has_active_relay": true,
+      "source_peer_saved": false,
+      "source_peer_current": true,
+      "source_peer_has_lxmf_route": true,
+      "expected_source_send_mode": "propagation_only"
+    }
+  ],
+  "ordering": "direct targets sort before relay targets"
+}

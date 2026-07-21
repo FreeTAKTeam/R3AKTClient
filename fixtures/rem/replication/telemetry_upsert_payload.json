@@ -1,0 +1,35 @@
+{
+  "source": "REM crates/reticulum_mobile/src/node.rs",
+  "body": "T",
+  "field_tree": {
+    "9": [
+      {
+        "i": "telemetry-123",
+        "c": "telemetry-123",
+        "t": "T1",
+        "a": {
+          "cs": "RESCUE-1",
+          "la": 43.967349,
+          "lo": -66.126159,
+          "u": "member-1",
+          "al": 25.0,
+          "cr": 90.0,
+          "sp": 0.5,
+          "ac": 4.5
+        }
+      }
+    ]
+  },
+  "required": {
+    "callsign": "finite non-empty string",
+    "lat": "finite f64",
+    "lon": "finite f64"
+  },
+  "expected_metadata": {
+    "command_type": "mission.registry.telemetry.upsert",
+    "command_id": "telemetry-123"
+  },
+  "sos_interop": {
+    "sos_telemetry_can_promote_to_map_position": true
+  }
+}

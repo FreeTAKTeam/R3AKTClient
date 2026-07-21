@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "milestone": "P2 - Golden fixtures and compatibility matrix",
+  "priority": "REM-first",
+  "coverage": [
+    {
+      "behavior": "LXMF mission field ids and compact command aliases",
+      "rem_fixture": "fixtures/rem/mission/compact_command_aliases.json",
+      "rch_fixture": "fixtures/rch/mission/commands_topic_create.msgpack.hex",
+      "target_crate": "r3akt-mission-wire",
+      "status": "captured"
+    },
+    {
+      "behavior": "Mission metadata command/result/event extraction",
+      "rem_fixture": "fixtures/rem/mission/metadata_matrix.json",
+      "rch_fixture": "fixtures/rch/mission/results_variants.msgpack.hex",
+      "target_crate": "r3akt-mission-wire",
+      "status": "captured"
+    },
+    {
+      "behavior": "SOS field layout and text fallback",
+      "rem_fixture": "fixtures/rem/sos/active_with_telemetry_field_tree.json",
+      "rch_fixture": null,
+      "target_crate": "r3akt-sos-wire",
+      "status": "captured_rem_first"
+    },
+    {
+      "behavior": "Announce metadata and mission capability discovery",
+      "rem_fixture": "fixtures/rem/mesh/announce_metadata.json",
+      "rch_fixture": null,
+      "target_crate": "r3akt-mesh-delivery",
+      "status": "captured_rem_first"
+    },
+    {
+      "behavior": "Direct-versus-propagation route policy",
+      "rem_fixture": "fixtures/rem/mesh/delivery_policy.json",
+      "rch_fixture": "fixtures/rch/mesh/delivery_policy.json",
+      "target_crate": "r3akt-mesh-delivery",
+      "status": "captured"
+    },
+    {
+      "behavior": "Replication target and compact payload planning",
+      "rem_fixture": "fixtures/rem/replication/target_decisions.json",
+      "rch_fixture": null,
+      "target_crate": "r3akt-replication-core",
+      "status": "captured_rem_first"
+    },
+    {
+      "behavior": "RCH-only command/result/event envelopes",
+      "rem_fixture": null,
+      "rch_fixture": "fixtures/rch/mission/commands_topic_create.msgpack.hex",
+      "target_crate": "r3akt-mission-wire",
+      "status": "captured_rch_compatibility"
+    },
+    {
+      "behavior": "MECP parsing and log-entry enrichment",
+      "rem_fixture": "fixtures/rem/replication/event_mecp_payload.json",
+      "rch_fixture": "fixtures/rch/mission/mecp_structured_event.json",
+      "target_crate": "r3akt-mission-wire",
+      "status": "captured"
+    },
+    {
+      "behavior": "RCH-only situational domain records and validators",
+      "rem_fixture": null,
+      "rch_fixture": "fixtures/rch/situational/domain_records.json",
+      "target_crate": "r3akt-situational-core",
+      "status": "captured_rch_compatibility"
+    },
+    {
+      "behavior": "RCH delivery envelope validation",
+      "rem_fixture": null,
+      "rch_fixture": "fixtures/rch/mesh/delivery_envelope.json",
+      "target_crate": "r3akt-mesh-delivery",
+      "status": "captured_rch_compatibility"
+    }
+  ],
+  "excluded_behavior": [
+    "REM JNI, UniFFI, Android, app lifecycle, sensors, native notifications, and sends",
+    "REM SQLite/app-state side effects and runtime scheduling",
+    "RCH Axum REST, WebSocket, diagnostics, auth, packaging, and release tests",
+    "RCH SQLite migration, Python migration, reticulumd RPC/ZMQ process management",
+    "TAK connector/service behavior",
+    "LXMF-rs Reticulum/LXMF internals"
+  ]
+}

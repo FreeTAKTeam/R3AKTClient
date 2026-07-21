@@ -1,0 +1,69 @@
+{
+  "source": "REM crates/reticulum_mobile/src/delivery_policy.rs",
+  "hex_route_rules": {
+    "valid_hash_len": 32,
+    "normalizes_to_lowercase": true,
+    "destination_and_lxmf_destination_required_for_known_lxmf_route": true
+  },
+  "connectivity_cases": [
+    {
+      "name": "connected_saved_peer_with_relay",
+      "peer": {
+        "destination_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "lxmf_destination_hex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "active_link": true,
+        "connected_state": true,
+        "saved": true,
+        "stale": false,
+        "announce_last_seen_at_ms": 1000,
+        "lxmf_last_seen_at_ms": 1050
+      },
+      "has_active_relay": true,
+      "desired_link": true,
+      "direct_cooldown": false,
+      "now_ms": 1100,
+      "stale_after_ms": 500,
+      "expected": {
+        "seen_recent": true,
+        "saved": true,
+        "connected_link": true,
+        "desired_link": true,
+        "direct_delivery_available": true,
+        "stored_propagation_available": true
+      }
+    },
+    {
+      "name": "saved_override_for_persisted_peer",
+      "peer": {
+        "destination_hex": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "lxmf_destination_hex": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "active_link": false,
+        "connected_state": false,
+        "saved": false,
+        "stale": true,
+        "announce_last_seen_at_ms": null,
+        "lxmf_last_seen_at_ms": null
+      },
+      "saved_override": true,
+      "has_active_relay": true,
+      "direct_cooldown": false,
+      "expected": {
+        "seen_recent": false,
+        "direct_delivery_available": false,
+        "stored_propagation_available": true,
+        "current_or_stored_route_available": true
+      }
+    }
+  ],
+  "direct_attempt_budget_case": {
+    "send_mode": "auto",
+    "has_active_relay": true,
+    "can_try_stored_lxmf_route": true,
+    "has_current_lxmf_route": false,
+    "direct_delivery_ready": false,
+    "direct_priority_hops": 3,
+    "direct_priority_free_hops": 2,
+    "lxmf_direct_attempts": 3,
+    "expected_budget": 0
+  }
+}

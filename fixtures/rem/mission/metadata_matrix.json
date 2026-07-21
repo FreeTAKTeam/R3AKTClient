@@ -1,0 +1,118 @@
+{
+  "source": "REM crates/reticulum_mobile/src/mission_sync.rs",
+  "field_ids": {
+    "commands": 9,
+    "results": 10,
+    "event": 13
+  },
+  "cases": [
+    {
+      "name": "compact_checklist_patch_command",
+      "field": 9,
+      "field_tree": [
+        {
+          "i": "cmd-checklist-1",
+          "c": "corr-checklist-1",
+          "t": "C3",
+          "a": {
+            "cl": "chk-001",
+            "tsk": "task-002",
+            "col": "col-task",
+            "m": "mission-alpha"
+          }
+        }
+      ],
+      "expected": {
+        "primary_kind": "command",
+        "command_present": true,
+        "command_id": "cmd-checklist-1",
+        "correlation_id": "corr-checklist-1",
+        "command_type": "checklist.update",
+        "mission_uid": "mission-alpha",
+        "checklist_uid": "chk-001",
+        "task_uid": "task-002",
+        "column_uid": "col-task"
+      }
+    },
+    {
+      "name": "eam_upsert_command",
+      "field": 9,
+      "field_tree": [
+        {
+          "command_id": "cmd-eam-123",
+          "correlation_id": "corr-eam-123",
+          "command_type": "mission.registry.eam.upsert",
+          "args": {
+            "eam_uid": "eam-123",
+            "team_member_uid": "member-123",
+            "team_uid": "team-123",
+            "mission_uid": "mission-123"
+          }
+        }
+      ],
+      "expected": {
+        "primary_kind": "command",
+        "command_type": "mission.registry.eam.upsert",
+        "eam_uid": "eam-123",
+        "team_member_uid": "member-123",
+        "team_uid": "team-123",
+        "mission_uid": "mission-123"
+      }
+    },
+    {
+      "name": "compact_result_status",
+      "field": 10,
+      "field_tree": {
+        "i": "cmd-result-shape",
+        "c": "corr-result-shape",
+        "s": "a"
+      },
+      "expected": {
+        "primary_kind": "result",
+        "result_present": true,
+        "command_id": "cmd-result-shape",
+        "correlation_id": "corr-result-shape",
+        "result_status": "accepted"
+      }
+    },
+    {
+      "name": "compact_event_uid_tail",
+      "field": 13,
+      "field_tree": {
+        "event_type": "mission.registry.log_entry.upserted",
+        "u": "evt-984bfa16-cfe3-430a-a201-3294310a91fe",
+        "payload": {
+          "mission_uid": "mission-1"
+        }
+      },
+      "expected": {
+        "primary_kind": "event",
+        "event_present": true,
+        "event_type": "mission.registry.log_entry.upserted",
+        "event_uid": "evt-984bfa16-cfe3-430a-a201-3294310a91fe",
+        "mission_uid": "mission-1"
+      }
+    }
+  ],
+  "negative_cases": [
+    {
+      "name": "sos_envelope_without_mission_markers",
+      "field": 9,
+      "field_tree": [
+        {
+          "i": "sos:incident-1:active:42",
+          "c": "incident-1",
+          "t": "S1",
+          "ss": "active",
+          "ii": "incident-1"
+        }
+      ],
+      "expected": {
+        "command_type": "sos.status",
+        "mission_uid": null,
+        "checklist_uid": null,
+        "is_sos_not_mission": true
+      }
+    }
+  ]
+}

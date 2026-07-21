@@ -1,3 +1,15 @@
 [workspace]
-members = ["crates/reticulum_mobile"]
+members = [
+    "crates/r3akt-protocol",
+    "crates/r3akt-mission-wire",
+    "crates/r3akt-sos-wire",
+    "crates/r3akt-situational-core",
+    "crates/r3akt-mesh-delivery",
+    "crates/r3akt-replication-core",
+]
 resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "EPL-2.0"
+version = "0.1.0"

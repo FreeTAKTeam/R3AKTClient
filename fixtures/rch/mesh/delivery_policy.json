@@ -1,0 +1,65 @@
+{
+  "source": "RCH crates/r3akt-rch-core/src/lib.rs",
+  "delivery_modes": ["targeted", "fanout", "broadcast"],
+  "decisions": [
+    {
+      "name": "targeted_without_presence",
+      "route_type": "targeted",
+      "has_live_connection": false,
+      "expected": {
+        "method": "propagated",
+        "reason": "no_fresh_presence"
+      }
+    },
+    {
+      "name": "targeted_with_fresh_presence",
+      "route_type": "targeted",
+      "presence_observed_delta_ms": -1000,
+      "expected": {
+        "method": "direct",
+        "reason": "fresh_presence"
+      }
+    },
+    {
+      "name": "targeted_direct_cooldown",
+      "route_type": "targeted",
+      "announce_last_seen_delta_ms": -1000,
+      "direct_failure_delta_ms": 0,
+      "expected": {
+        "method": "propagated",
+        "reason": "direct_cooldown"
+      }
+    },
+    {
+      "name": "fanout_route",
+      "route_type": "fanout",
+      "expected": {
+        "method": "propagated",
+        "reason": "fanout_route"
+      }
+    },
+    {
+      "name": "broadcast_route",
+      "route_type": "broadcast",
+      "expected": {
+        "method": "propagated",
+        "reason": "broadcast_route"
+      }
+    },
+    {
+      "name": "targeted_live_connection",
+      "route_type": "targeted",
+      "has_live_connection": true,
+      "expected": {
+        "method": "direct",
+        "reason": "live_connection"
+      }
+    }
+  ],
+  "classification": {
+    "topic_only": "fanout",
+    "destination_only": "targeted",
+    "neither": "broadcast",
+    "topic_and_destination_error": "topic_id and destination are mutually exclusive routing modes"
+  }
+}

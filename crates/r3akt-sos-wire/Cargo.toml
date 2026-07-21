@@ -1,0 +1,20 @@
+[package]
+name = "r3akt-sos-wire"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "r3akt_sos_wire"
+path = "src/lib.rs"
+
+[dependencies]
+r3akt-mission-wire = { path = "../r3akt-mission-wire" }
+rmp-serde = "1"
+rmpv = { version = "1", features = ["with-serde"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+[dev-dependencies]
+serde_json = "1"

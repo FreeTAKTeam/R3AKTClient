@@ -1,0 +1,19 @@
+[package]
+name = "r3akt-mesh-delivery"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "r3akt_mesh_delivery"
+path = "src/lib.rs"
+
+[dependencies]
+hex = "0.4"
+rmp-serde = "1"
+rmpv = { version = "1", features = ["with-serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+time = { version = "0.3", features = ["formatting", "parsing"] }

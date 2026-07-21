@@ -1,0 +1,51 @@
+{
+  "source": "REM crates/reticulum_mobile/src/sos_fields.rs",
+  "field_ids": {
+    "commands": 9,
+    "telemetry": 2
+  },
+  "telemeter_sensor_ids": {
+    "time": 1,
+    "location": 2,
+    "battery": 4
+  },
+  "command": {
+    "i": "sos:incident-1:active:42",
+    "c": "incident-1",
+    "t": "S1",
+    "ss": "active",
+    "ii": "incident-1",
+    "tr": "shake",
+    "sm": 42,
+    "au": "audio-1",
+    "a": {
+      "ii": "incident-1",
+      "ss": "active",
+      "tr": "shake"
+    }
+  },
+  "telemetry": {
+    "1": 1700000000,
+    "2": [45500000, -63250000, 20, 150, 18000, 40, 1700000000],
+    "4": [0.88, true]
+  },
+  "must_not_contain_verbose_tokens": [
+    "command_id",
+    "correlation_id",
+    "command_type",
+    "sos.status",
+    "sos_state",
+    "incident_id",
+    "trigger_source",
+    "sent_at_ms",
+    "audio_id"
+  ],
+  "expected_metadata": {
+    "command_type": "sos.status",
+    "correlation_id": "incident-1",
+    "command_id_prefix": "sos:incident-1:active:",
+    "lat": 45.5,
+    "lon": -63.25,
+    "battery_percent": 88.0
+  }
+}

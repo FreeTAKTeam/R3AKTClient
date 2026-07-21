@@ -1,0 +1,20 @@
+[package]
+name = "r3akt-replication-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "r3akt_replication_core"
+path = "src/lib.rs"
+
+[dependencies]
+hex = "0.4"
+r3akt-mesh-delivery = { path = "../r3akt-mesh-delivery" }
+r3akt-mission-wire = { path = "../r3akt-mission-wire" }
+rmp-serde = "1"
+rmpv = { version = "1", features = ["with-serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"

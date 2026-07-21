@@ -1,0 +1,79 @@
+{
+  "source": "RCH crates/r3akt-rch-core/src/lib.rs",
+  "records": {
+    "mission": {
+      "uid": "mission-alpha",
+      "mission_name": "Mission Alpha",
+      "description": "Initial",
+      "topic_id": "ops-main",
+      "keywords": ["medical", "shelter"],
+      "feeds": ["blue", "red"],
+      "default_role": "MISSION_SUBSCRIBER",
+      "mission_status": "MISSION_PENDING",
+      "mission_priority": 75,
+      "invite_only": true
+    },
+    "log_entry": {
+      "entry_uid": "mecp-log",
+      "mission_uid": "mission-default",
+      "callsign": "Field Agent",
+      "content": "MECP/1/R03 T99 4pax 45.5017,-73.5673 #A1 15 @en @0930 ~EAGLE-1 north gate",
+      "keywords": ["r3akt:event-type:R", "r3akt:event-code:R03", "r3akt:event-code:T99"]
+    },
+    "eam": {
+      "eam_uid": "eam-orange-1",
+      "callsign": "ORANGE-1",
+      "team_member_uid": "member-orange-1",
+      "team_uid": "team-orange",
+      "overall_status": "GREEN",
+      "security_status": "GREEN",
+      "capability_status": "GREEN",
+      "preparedness_status": "GREEN",
+      "medical_status": "GREEN",
+      "mobility_status": "GREEN",
+      "comms_status": "GREEN",
+      "ttl_seconds": 3600
+    },
+    "team_asset_skill_assignment": {
+      "team": {
+        "uid": "team-alpha",
+        "mission_uid": "mission-alpha",
+        "team_name": "Team Alpha"
+      },
+      "member": {
+        "uid": "member-alpha",
+        "team_uid": "team-alpha",
+        "rns_identity": "peer-alpha",
+        "display_name": "Field Agent"
+      },
+      "asset": {
+        "asset_uid": "asset-alpha",
+        "team_member_uid": "member-alpha",
+        "name": "Radio",
+        "asset_type": "equipment",
+        "status": "available"
+      },
+      "skill": {
+        "skill_uid": "skill-navigation",
+        "name": "Navigation"
+      },
+      "assignment": {
+        "assignment_uid": "assignment-alpha",
+        "mission_uid": "mission-alpha",
+        "task_uid": "task-1",
+        "team_member_rns_identity": "peer-alpha",
+        "assets": ["asset-alpha"],
+        "status": "assigned"
+      }
+    },
+    "checklist": {
+      "uid": "checklist-1",
+      "mission_uid": "mission-1",
+      "template_uid": "rch:checklist-1:template",
+      "name": "Medical Evacuation",
+      "mode": "online",
+      "participant_rns_identities": ["peer-a", "peer-b"],
+      "total_tasks": 2
+    }
+  }
+}
