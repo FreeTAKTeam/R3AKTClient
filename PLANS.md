@@ -329,10 +329,26 @@ Depends on:
 
 ---
 
+## P8 - Custody domain boundary
+Status: done
+
+Move the mission-aware custody classification from LXMF-rs into
+`r3akt-mesh-delivery::CustodyKind`. Keep generic propagation, persistence,
+retention and recovery in LXMF-rs. REM's native adapter translates the shared
+domain kind to generic storage kinds; RCH's existing mesh-delivery API stays
+compatible. Preserve existing stored records and signed payload bytes.
+
+Validation: shared workspace formatting, check, Rust 1.85 check, tests and
+metadata; LXMF custody/restart tests; REM native adapter and custody tests.
+Product adoption for this boundary is explicitly authorized by the user.
+Shared workspace: 35 tests pass, check/metadata pass, and Rust 1.85 check
+passes. LXMF custody/runtime: 51 tests pass, including raw stored-kind restart
+and exact signed-wire recovery. REM adoption: 516 native tests pass.
+
 ## Current focus
 Current milestone: complete
 Owner: Codex / agent
-Last updated: 2026-06-29
+Last updated: 2026-10-25
 
 ## Rules for updating this file
 

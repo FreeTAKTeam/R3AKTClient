@@ -2,6 +2,9 @@
 
 #![forbid(unsafe_code)]
 
+mod custody;
+pub use custody::CustodyKind;
+
 use std::collections::HashMap;
 
 use chrono::DateTime;

@@ -1,5 +1,28 @@
 # DOCUMENTATION.md
 
+## Custody classification boundary, 2026-10-25
+
+P8 is complete. `r3akt-mesh-delivery::CustodyKind` now owns the R3AKT
+`Mission` classification previously exposed by LXMF-rs. Generic propagation
+storage, standard handlers and delivery ownership remain in LXMF-rs. REM's
+native boundary maps this domain kind to generic `MessageKind::Application`;
+the persisted discriminator remains `1`, with no deletion or wire change.
+`Chat` and keyed `Telemetry` are preserved on both sides.
+
+The shared crate adds no dependency or runtime side effect. Its existing Rust
+1.85 contract and RCH consumers remain unchanged. This is the user-authorized
+P8 extraction and REM adoption slice.
+
+Validation: formatting, workspace check, Rust 1.85 workspace check, metadata
+and all 35 shared-workspace tests passed. The paired LXMF change passes 51
+custody/runtime tests and strict all-feature Clippy for propagation, runtime,
+RPC and daemon targets. The REM adoption passes all 516 native tests using
+the changed shared crate and LXMF libraries in an isolated sibling layout.
+The raw persisted-kind regression preserves state, expiry and exact signed
+wire through reopen. No data is deleted or migrated, and no hardware or
+production deployment is claimed. RCH's existing APIs and dependency pin are
+unchanged; no RCH source changes are needed for this additive shared type.
+
 This file is the live execution log for long-horizon work in `R3AKTClient`.
 
 It is not a product spec.
