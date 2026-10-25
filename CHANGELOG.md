@@ -15,6 +15,11 @@ The format is intentionally small. Each release entry must include:
 
 ### Added
 
+- `r3akt-mesh-delivery::CustodyKind` owns the mission-aware custody category
+  moved from LXMF-rs. REM translates it to generic LXMF application storage;
+  existing stored discriminator `1` and signed message bytes are preserved.
+  No existing shared-crate API, dependency, or Rust 1.85 requirement changes.
+
 - Rust-only `r3akt-*` workspace for shared REM/RCH situational-awareness crates.
 - REM-first and RCH-compatibility fixtures under `fixtures/`.
 - `r3akt-protocol`, `r3akt-mission-wire`, `r3akt-sos-wire`,

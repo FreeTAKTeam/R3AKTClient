@@ -41,6 +41,12 @@ The rehearsal branch was:
 
 ## Pinning Policy
 
+For custody, use `r3akt_mesh_delivery::CustodyKind` at the product boundary.
+REM maps `Mission` to LXMF's generic `MessageKind::Application` and maps it
+back before applying R3AKT permissions. Chat and keyed telemetry are unchanged.
+The generic store retains application discriminator `1`, so existing records
+and their recovery material remain valid. LXMF-rs never imports this crate.
+
 During rehearsal, use local path dependencies.
 
 For product branches, prefer a git tag once P7 release tags exist:

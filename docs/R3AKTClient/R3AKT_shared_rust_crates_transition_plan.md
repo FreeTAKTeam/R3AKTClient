@@ -51,6 +51,8 @@ This repository owns:
   domain records where they are shared by REM and RCH
 - validation and normalization rules for those records
 - peer route classification and direct-versus-propagation delivery policy
+- custody domain classification (`Chat`, `Mission`, keyed `Telemetry`), with
+  product adapters translating it to generic LXMF storage kinds
 - replication planning helpers that decide payloads, targets, and delivery
   modes without performing product-specific sends
 - golden fixtures and compatibility tests shared by both products
@@ -76,6 +78,8 @@ LXMF-rs remains responsible for:
 - Reticulum and LXMF wire/runtime internals
 - RNS/LXMF SDK behavior
 - daemon, RPC, transport, and packet/link primitives
+- generic propagation storage, retention and recovery; it has no R3AKT domain
+  types or dependency on this shared-crate workspace
 
 ## Current Repository Reality
 
